@@ -1,0 +1,10 @@
+{
+  "domain": 97,
+  "hardware": "mock_components/GenericSystem",
+  "held_before_approval": true,
+  "preview_sha256_checked": true,
+  "gripper_before": 0.4,
+  "gripper_after": 0.7,
+  "maximum_arm_delta_rad": 0.0,
+  "terminal_and_hand_standstill_confirmed": true
+}

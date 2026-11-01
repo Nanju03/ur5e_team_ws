@@ -1,0 +1,16 @@
+{
+  "domain": 98,
+  "hardware": [
+    "mock_components/GenericSystem"
+  ],
+  "default_gripper_position": 0.4,
+  "initial_arm": {
+    "shoulder_pan_joint": 0.0,
+    "shoulder_lift_joint": -1.5,
+    "elbow_joint": 1.5,
+    "wrist_1_joint": -1.5,
+    "wrist_2_joint": -1.5,
+    "wrist_3_joint": 0.0
+  },
+  "result": "passed"
+}

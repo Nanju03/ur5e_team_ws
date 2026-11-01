@@ -1,0 +1,61 @@
+{
+  "actual_goals_sent": false,
+  "plan_id": "293399cdcd2a33e7",
+  "step": "Prepare vertical working home",
+  "joints": {
+    "shoulder_pan_joint": {
+      "expected": -0.33937911072287563,
+      "actual": -0.32148915926088506,
+      "error": 0.017889951461990572,
+      "velocity": 0.0,
+      "age": 0.006848809999610239
+    },
+    "shoulder_lift_joint": {
+      "expected": -1.843562888613038,
+      "actual": -1.8893629513182582,
+      "error": -0.04580006270522019,
+      "velocity": 0.0,
+      "age": 0.006844575999821245
+    },
+    "elbow_joint": {
+      "expected": 1.8207784307656418,
+      "actual": 1.77203876176943,
+      "error": -0.04873966899621185,
+      "velocity": -0.0,
+      "age": 0.006847568999546638
+    },
+    "wrist_1_joint": {
+      "expected": -1.5469372777519363,
+      "actual": -2.124967237512106,
+      "error": -0.5780299597601695,
+      "velocity": -0.0,
+      "age": 0.006851013999948918
+    },
+    "wrist_2_joint": {
+      "expected": -1.563891472709544,
+      "actual": -1.767113987599508,
+      "error": -0.203222514889964,
+      "velocity": 0.0,
+      "age": 0.006855238000753161
+    },
+    "wrist_3_joint": {
+      "expected": -0.33437690198388376,
+      "actual": -1.4469426313983362,
+      "error": -1.1125657294144524,
+      "velocity": 0.0,
+      "age": 0.006855441999505274
+    }
+  },
+  "statuses": [
+    {
+      "uuid": "26b782d709444065a453612723714bc9",
+      "status": 6,
+      "sec": 1793514956
+    }
+  ],
+  "last_result": {
+    "status": 6,
+    "error_code": -4,
+    "error_string": "Aborted due to path tolerance violation"
+  }
+}

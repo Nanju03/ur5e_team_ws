@@ -1,0 +1,32 @@
+{
+  "result": "passed",
+  "phase_scaling": {
+    "approach": {
+      "velocity": 0.05,
+      "acceleration": 0.05
+    },
+    "lift_retreat_transfer": {
+      "velocity": 0.2,
+      "acceleration": 0.2
+    }
+  },
+  "reported_closure": {
+    "original_contact": 0.70587,
+    "reported_position": 0.70959,
+    "delta": 0.0037200000000000566,
+    "current_stable_position": 0.71052,
+    "grip_state": 2,
+    "validated_stationary_range": [
+      0.70287,
+      0.733
+    ]
+  },
+  "holding_policy": "full command-bounded finger geometry checked for every upcoming arm sample; fixed original contact anchor; continued fresh grip required",
+  "gui": "left controls/right full-height log, initial half split, draggable divider,11pt mono + both scrollbars",
+  "tests_passed": 894,
+  "build": "2 packages passed",
+  "mock_runtime_result": "passed",
+  "new_policy_requires_replan": true,
+  "current_held_fault_preserved": true,
+  "actual_robot_goals_sent": false
+}

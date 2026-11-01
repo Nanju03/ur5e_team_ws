@@ -1,0 +1,34 @@
+# Exact clean MoveIt overlay source revisions on the development laptop.
+repositories:
+  launch_param_builder:
+    type: git
+    url: https://github.com/PickNikRobotics/launch_param_builder
+    version: 0695afe023ef01f5131b8fe4555f012d72049f0a
+  moveit2:
+    type: git
+    url: https://github.com/ros-planning/moveit2
+    version: c283a36186a6f7a5985360e6674bf8fd0790e485
+  moveit2_tutorials:
+    type: git
+    url: https://github.com/moveit/moveit2_tutorials.git
+    version: b8f954ce045b00f29de4da24146eb7732e7b2a9e
+  moveit_resources:
+    type: git
+    url: https://github.com/ros-planning/moveit_resources
+    version: 45ea3551aa74fd5dc40cc39ef53391425cda0af9
+  moveit_task_constructor:
+    type: git
+    url: https://github.com/ros-planning/moveit_task_constructor.git
+    version: 756634951326ae17ae099882f7110c6f1d0a98c0
+  moveit_visual_tools:
+    type: git
+    url: https://github.com/ros-planning/moveit_visual_tools
+    version: e5681a71c63c8a5610da7ca7964ce2fab751ea6e
+  rosparam_shortcuts:
+    type: git
+    url: https://github.com/PickNikRobotics/rosparam_shortcuts
+    version: fcb53f8dedbb4f84cb4633bca88d9ce845ecd95c
+  srdfdom:
+    type: git
+    url: https://github.com/ros-planning/srdfdom.git
+    version: 2c820aa46847fa4309e4dbfe432eaf7ebdbacd85

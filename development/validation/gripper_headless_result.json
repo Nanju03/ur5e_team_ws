@@ -1,0 +1,30 @@
+{
+  "domain": 96,
+  "fake_hardware": true,
+  "gui_used": false,
+  "real_commands_sent": false,
+  "monitor_sends_no_goals": true,
+  "permission_service_required": true,
+  "grasp_release_trials": 3,
+  "recommendation": {
+    "commanded_q": 0.7198500000000001,
+    "measured_q": 0.71796,
+    "force_percent": 20,
+    "measured_min": 0.71796,
+    "measured_max": 0.71796,
+    "trials": 3,
+    "trial_ids": [
+      1,
+      2,
+      3
+    ]
+  },
+  "mock_profile_apply_rejected": true,
+  "ready_revocation_cancels": true,
+  "shutdown_completed": true,
+  "startup_once": true,
+  "existing_driver_not_reinitialized": true,
+  "state_topic_received": true,
+  "step_preview_sends_no_goal_until_approved": true,
+  "one_approval_one_goal": true
+}

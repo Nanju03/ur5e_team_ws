@@ -1,0 +1,17 @@
+{
+  "actual_goals_sent": false,
+  "retained_statuses": [
+    {
+      "uuid": "f4e806a07b6d4fdea936754cf4d24cea",
+      "status": 6,
+      "stamp_sec": 1793458448
+    }
+  ],
+  "last_result": {
+    "status": 6,
+    "position": 0.0,
+    "effort": 0.0,
+    "stalled": true,
+    "reached_goal": false
+  }
+}

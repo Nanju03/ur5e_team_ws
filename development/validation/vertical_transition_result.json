@@ -1,0 +1,42 @@
+{
+  "block_height_mm": 25,
+  "vertical_through_tower_top_mm": 150,
+  "foundation_is_layer": 1,
+  "placements": [
+    {
+      "layer": 2,
+      "mode": "vertical",
+      "completed_tower_height_mm": 50
+    },
+    {
+      "layer": 3,
+      "mode": "vertical",
+      "completed_tower_height_mm": 75
+    },
+    {
+      "layer": 4,
+      "mode": "vertical",
+      "completed_tower_height_mm": 100
+    },
+    {
+      "layer": 5,
+      "mode": "vertical",
+      "completed_tower_height_mm": 125
+    },
+    {
+      "layer": 6,
+      "mode": "vertical",
+      "completed_tower_height_mm": 150
+    },
+    {
+      "layer": 7,
+      "mode": "side",
+      "completed_tower_height_mm": 175
+    }
+  ],
+  "preflight": "6 moved blocks, 7 total layers, 92 trajectory/event segments",
+  "mode": "plan only; no arm or gripper execution goals",
+  "hardware": "GenericSystem on isolated domain 92",
+  "simulation_profile": "zero riser for the existing simulation workbench; physical_setup.yaml unchanged",
+  "real_pick_place_verified": false
+}

@@ -1,0 +1,11 @@
+# Development laptop snapshot: Ubuntu 22.04 / ROS 2 Humble, 2026-11-01.
+# Reference inventory, not an apt lockfile or a guarantee of future availability.
+python3-colcon-common-extensions 0.3.0-100
+ros-humble-control-msgs 4.9.0-1jammy.20260907.212955
+ros-humble-controller-manager 2.54.3-1jammy.20261005.213325
+ros-humble-joint-trajectory-controller 2.54.1-1jammy.20261005.215624
+ros-humble-moveit-msgs 2.2.3-1jammy.20260908.070153
+ros-humble-rclpy 3.3.22-1jammy.20260907.213431
+ros-humble-ur-client-library 2.15.2-3jammy.20260915.201813
+ros-humble-ur-description 2.14.0-1jammy.20260922.040002
+ros-humble-xacro 2.1.1-1jammy.20260304.195513

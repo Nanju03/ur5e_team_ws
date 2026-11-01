@@ -1,0 +1,306 @@
+[
+  {
+    "timeout": 0.005,
+    "avoid_collisions": false,
+    "samples": [
+      {
+        "dz": 0.0005,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.001275624258365804
+      },
+      {
+        "dz": 0.001,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012757934508882407
+      },
+      {
+        "dz": 0.0015,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012769350627970244
+      },
+      {
+        "dz": 0.002,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012785574702089963
+      },
+      {
+        "dz": 0.0025,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012801824220314284
+      },
+      {
+        "dz": 0.003,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012818099355806911
+      },
+      {
+        "dz": 0.0035,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012834400282630831
+      },
+      {
+        "dz": 0.004,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012850727175877097
+      },
+      {
+        "dz": 0.0045,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.001286708021157601
+      },
+      {
+        "dz": 0.005,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012883459566841449
+      }
+    ]
+  },
+  {
+    "timeout": 0.005,
+    "avoid_collisions": true,
+    "samples": [
+      {
+        "dz": 0.0005,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.001275624258365804
+      },
+      {
+        "dz": 0.001,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012757934508882407
+      },
+      {
+        "dz": 0.0015,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012769350627970244
+      },
+      {
+        "dz": 0.002,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012785574702089963
+      },
+      {
+        "dz": 0.0025,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012801824220314284
+      },
+      {
+        "dz": 0.003,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012818099355806911
+      },
+      {
+        "dz": 0.0035,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012834400282630831
+      },
+      {
+        "dz": 0.004,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012850727175877097
+      },
+      {
+        "dz": 0.0045,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.001286708021157601
+      },
+      {
+        "dz": 0.005,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012883459566841449
+      }
+    ]
+  },
+  {
+    "timeout": 0.12,
+    "avoid_collisions": false,
+    "samples": [
+      {
+        "dz": 0.0005,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.001275624258365804
+      },
+      {
+        "dz": 0.001,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012757934508882407
+      },
+      {
+        "dz": 0.0015,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012769350627970244
+      },
+      {
+        "dz": 0.002,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012785574702089963
+      },
+      {
+        "dz": 0.0025,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012801824220314284
+      },
+      {
+        "dz": 0.003,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012818099355806911
+      },
+      {
+        "dz": 0.0035,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012834400282630831
+      },
+      {
+        "dz": 0.004,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012850727175877097
+      },
+      {
+        "dz": 0.0045,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.001286708021157601
+      },
+      {
+        "dz": 0.005,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012883459566841449
+      }
+    ]
+  },
+  {
+    "timeout": 0.12,
+    "avoid_collisions": true,
+    "samples": [
+      {
+        "dz": 0.0005,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.001275624258365804
+      },
+      {
+        "dz": 0.001,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012757934508882407
+      },
+      {
+        "dz": 0.0015,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012769350627970244
+      },
+      {
+        "dz": 0.002,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012785574702089963
+      },
+      {
+        "dz": 0.0025,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012801824220314284
+      },
+      {
+        "dz": 0.003,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012818099355806911
+      },
+      {
+        "dz": 0.0035,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012834400282630831
+      },
+      {
+        "dz": 0.004,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012850727175877097
+      },
+      {
+        "dz": 0.0045,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.001286708021157601
+      },
+      {
+        "dz": 0.005,
+        "error_code": 1,
+        "state_valid": true,
+        "contacts": [],
+        "max_arm_step": 0.0012883459566841449
+      }
+    ]
+  }
+]

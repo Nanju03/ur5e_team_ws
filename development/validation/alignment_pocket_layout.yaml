@@ -1,0 +1,13 @@
+/**:
+  ros__parameters:
+    empty_hand_clearance: 0.05
+    geometry_profile: cube_plate_v1
+    plate_alignment_test: true
+    plate_center_xy:
+    - 0.4
+    - 0.0
+    plate_enabled: true
+    plate_task_revision: 2
+    plate_yaw_deg: -90.0
+    target_cell: 13
+    velocity_scaling: 0.05

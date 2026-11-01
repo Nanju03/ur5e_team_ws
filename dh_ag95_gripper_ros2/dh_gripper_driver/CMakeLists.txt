@@ -40,6 +40,7 @@ add_library(
   src/default_serial_factory.cpp
 )
 target_link_libraries(dh_gripper_driver atomic)
+target_compile_features(dh_gripper_driver PUBLIC cxx_std_17)
 target_include_directories(
   dh_gripper_driver
   PRIVATE
@@ -82,11 +83,23 @@ ament_export_dependencies(
 
 # INSTALL
 
-install(DIRECTORY config launch urdf rviz 
+install(DIRECTORY config launch urdf rviz
   DESTINATION share/${PROJECT_NAME}
 )
+install(FILES README.md DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_default_driver test/test_default_driver.cpp)
+  target_include_directories(test_default_driver PRIVATE include)
+  target_link_libraries(test_default_driver dh_gripper_driver)
+  ament_target_dependencies(test_default_driver ${THIS_PACKAGE_INCLUDE_DEPENDS})
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/test_hardware_feedback.cpp")
+    ament_add_gtest(test_hardware_feedback test/test_hardware_feedback.cpp)
+    target_include_directories(test_hardware_feedback PRIVATE include)
+    target_link_libraries(test_hardware_feedback dh_gripper_driver)
+    ament_target_dependencies(test_hardware_feedback ${THIS_PACKAGE_INCLUDE_DEPENDS})
+  endif()
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files

@@ -1,0 +1,158 @@
+/**:
+  ros__parameters:
+    approach_velocity_scaling: 0.05
+    block_size_xyz:
+    - 0.025
+    - 0.025
+    - 0.025
+    cell_centers_xy:
+    - 0.3109
+    - 0.15
+    - 0.3703
+    - 0.15
+    - 0.4297
+    - 0.15
+    - 0.4891
+    - 0.15
+    - 0.3109
+    - 0.09
+    - 0.3703
+    - 0.09
+    - 0.4297
+    - 0.09
+    - 0.4891
+    - 0.09
+    - 0.3109
+    - 0.03
+    - 0.3703
+    - 0.03
+    - 0.4297
+    - 0.03
+    - 0.4891
+    - 0.03
+    - 0.3109
+    - -0.03
+    - 0.3703
+    - -0.03
+    - 0.4297
+    - -0.03
+    - 0.4891
+    - -0.03
+    - 0.3109
+    - -0.09
+    - 0.3703
+    - -0.09
+    - 0.4297
+    - -0.09
+    - 0.4891
+    - -0.09
+    - 0.3109
+    - -0.15
+    - 0.3703
+    - -0.15
+    - 0.4297
+    - -0.15
+    - 0.4891
+    - -0.15
+    center_from_home: false
+    center_offset_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    center_xyz:
+    - 0.4
+    - 0.0
+    - 1.1062628765296874
+    columns: 4
+    empty_cells:
+    - 13
+    - 14
+    - 17
+    - 18
+    - 21
+    - 22
+    empty_hand_clearance: 0.05
+    empty_xy_scan: false
+    geometry_profile: cube_plate_v1
+    grasp_height_above_table: 0.018
+    grid_yaw_deg: 0.0
+    gripper_grasp_position: 0.72
+    gripper_open_position: 0.4
+    independent_stack_target: false
+    keep_alive: false
+    obstacle_cells:
+    - 10
+    obstacle_size_xyz:
+    - 0.025
+    - 0.025
+    - 0.15
+    obstacle_surface_z: 0.805
+    physical_stack_task: true
+    placement_mode: vertical
+    plate_alignment_cell_ids:
+    - 1
+    - 4
+    - 24
+    - 21
+    plate_alignment_clearance: 0.05
+    plate_alignment_gripper_position: 0.65
+    plate_alignment_points_xyz:
+    - 0.3109
+    - 0.15
+    - 0.805
+    - 0.4891
+    - 0.15
+    - 0.805
+    - 0.4891
+    - -0.15
+    - 0.805
+    - 0.3109
+    - -0.15
+    - 0.805
+    plate_alignment_test: false
+    plate_alignment_tip_clearance: 0.01
+    plate_bottom_z: 0.8
+    plate_center_xy:
+    - 0.4
+    - 0.0
+    plate_corners_xyz:
+    - 0.2515
+    - 0.21
+    - 0.81
+    - 0.5485
+    - 0.21
+    - 0.81
+    - 0.5485
+    - -0.21
+    - 0.81
+    - 0.2515
+    - -0.21
+    - 0.81
+    plate_enabled: true
+    plate_layout_defaults:
+    - 0.4
+    - 0.0
+    - -90.0
+    plate_mesh_resource: package://ur5e_block_description/meshes/cube_plate.STL
+    plate_origin_xyz:
+    - 0.2515
+    - 0.21
+    - 0.8
+    plate_task_revision: 4
+    plate_yaw_deg: -90.0
+    release_clearance_position: 0.6
+    release_first_position: 0.7
+    rows: 6
+    size_x: 0.297
+    size_y: 0.42
+    source_surface_z: 0.805
+    stack_surface_z: 0.805
+    stack_target_xy:
+    - 0.4297
+    - 0.03
+    staged_release_enabled: true
+    target_cell: 11
+    target_has_foundation: true
+    transfer_velocity_scaling: 0.2
+    velocity_scaling: 0.05
+    vertical_placement_layers: 10

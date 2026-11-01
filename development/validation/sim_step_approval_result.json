@@ -1,0 +1,20 @@
+{
+  "mode": "step",
+  "domain": 93,
+  "hardware": "mock_components/GenericSystem",
+  "first_ready": {
+    "plan_id": "sim_39140_15003986230700",
+    "request_id": "sim_39140_15003986230700_1",
+    "index": 1,
+    "total": 11,
+    "label": "Initial gripper open",
+    "duration": 0.64543857,
+    "approve_service": "/ur5e_a3_stack/approve_next_sim_39140_15003986230700_1"
+  },
+  "waiting_max_joint_delta": 0.0,
+  "second_wait_max_joint_delta": 0.0,
+  "duplicate_accepted": false,
+  "stop_confirmed_max_joint_delta": 0.0,
+  "ready_count": 2,
+  "physical_motion_sent": false
+}

@@ -1,0 +1,11 @@
+{
+  "current_tcp_z": 1.106321271351815,
+  "target_tcp_z": 1.1113212713518148,
+  "rise": 0.004999999999999893,
+  "floor": 1.02,
+  "rotation_angle": 0.09420504603559972,
+  "orientation_samples": 10,
+  "radius": 0.20180869722785477,
+  "lowest_rotating_offset": 0.001027960280336101,
+  "current_min_gripper_cpp": 1.107349231632151
+}

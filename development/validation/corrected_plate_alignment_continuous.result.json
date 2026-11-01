@@ -1,0 +1,20 @@
+{
+  "domain": 98,
+  "hardware": [
+    "mock_components/GenericSystem"
+  ],
+  "held_before_OK": true,
+  "one_OK_full_path": true,
+  "completed": "DONE",
+  "final_pocket_cell": 21,
+  "final_tcp_world_m": [
+    0.3108999995477416,
+    -0.14999999948848391,
+    0.8306334594679168
+  ],
+  "final_gripper_position": 0.7,
+  "final_gripper_min_z_m": 0.8200999920954051,
+  "sampled_gripper_min_z_m": 0.8200999920954051,
+  "feedback_samples": 2311,
+  "result": "passed"
+}

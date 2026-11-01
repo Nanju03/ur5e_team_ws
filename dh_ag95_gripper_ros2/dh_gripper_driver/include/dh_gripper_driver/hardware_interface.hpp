@@ -29,9 +29,13 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <limits>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <dh_gripper_driver/visibility_control.hpp>
@@ -77,7 +81,7 @@ public:
    * parsed or CallbackReturn::ERROR if any error happens or data are missing.
    */
   DH_DRIVER_PUBLIC
-  CallbackReturn on_init(const hardware_interface::HardwareInfo& info) override;
+  CallbackReturn on_init(const hardware_interface::HardwareInfo & info) override;
 
   /**
    * Connect to the hardware.
@@ -86,7 +90,7 @@ public:
    * parsed or CallbackReturn::ERROR if any error happens or data are missing.
    */
   DH_DRIVER_PUBLIC
-  CallbackReturn on_configure(const rclcpp_lifecycle::State& previous_state) override;
+  CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
   /**
    * This method exposes position and velocity of joints for reading.
@@ -106,7 +110,7 @@ public:
    * @returns CallbackReturn::SUCCESS or CallbackReturn::ERROR.
    */
   DH_DRIVER_PUBLIC
-  CallbackReturn on_activate(const rclcpp_lifecycle::State& previous_state) override;
+  CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state) override;
 
   /**
    * This method is invoked when the hardware is disconnected.
@@ -114,19 +118,23 @@ public:
    * @returns CallbackReturn::SUCCESS or CallbackReturn::ERROR.
    */
   DH_DRIVER_PUBLIC
-  CallbackReturn on_deactivate(const rclcpp_lifecycle::State& previous_state) override;
+  CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
 
   /**
    * Read data from the hardware.
    */
   DH_DRIVER_PUBLIC
-  hardware_interface::return_type read(const rclcpp::Time& time, const rclcpp::Duration& period) override;
+  hardware_interface::return_type read(
+    const rclcpp::Time & time,
+    const rclcpp::Duration & period) override;
 
   /**
    * Write data to hardware.
    */
   DH_DRIVER_PUBLIC
-  hardware_interface::return_type write(const rclcpp::Time& time, const rclcpp::Duration& period) override;
+  hardware_interface::return_type write(
+    const rclcpp::Time & time,
+    const rclcpp::Duration & period) override;
 
 protected:
   // Interface to send binary data to the hardware using the serial port.
@@ -137,8 +145,23 @@ protected:
 
   // We use a thread to read/write to the driver so that we dont block the hardware_interface read/write.
   std::thread communication_thread_;
-  std::atomic<bool> communication_thread_is_running_;
-  void background_task();
+  std::atomic<bool> communication_thread_is_running_{false};
+  void background_task(uint16_t initial_target);
+  void store_feedback(
+    const Driver::Feedback & feedback,
+    std::chrono::steady_clock::time_point acquired = std::chrono::steady_clock::now());
+  std::mutex feedback_mutex_;
+  Driver::Feedback feedback_;
+  std::chrono::steady_clock::time_point feedback_received_{};
+  bool feedback_valid_ = false;
+  uint64_t feedback_sequence_ = 0;
+  double feedback_velocity_ = std::numeric_limits<double>::quiet_NaN();
+  double communication_timeout_ = .5;
+  double grip_state_ = std::numeric_limits<double>::quiet_NaN();
+  double raw_position_ = std::numeric_limits<double>::quiet_NaN();
+  double force_percent_ = std::numeric_limits<double>::quiet_NaN();
+  double communication_age_ = std::numeric_limits<double>::infinity();
+  double sample_sequence_ = 0.;
 
   double gripper_closed_pos_ = 0.0;
 
@@ -148,17 +171,27 @@ protected:
   double gripper_velocity_ = 0.0;
   double gripper_position_command_ = 0.0;
 
-  std::atomic<uint16_t> write_command_;
-  std::atomic<uint8_t> write_force_;
-  std::atomic<uint16_t> write_speed_;
-  std::atomic<uint16_t> gripper_current_state_;
+  struct CommandSnapshot { uint16_t position; uint8_t force; };
+  CommandSnapshot pending_command() const
+  {
+    const auto packed = write_request_.load();
+    return {static_cast<uint16_t>(packed & 0xffffU), static_cast<uint8_t>(packed >> 16)};
+  }
+  void queue_command(uint16_t position, uint8_t force)
+  {
+    write_request_.store(static_cast<uint32_t>(position) | (static_cast<uint32_t>(force) << 16));
+  }
+  // Position and force belong to one controller update and must be read together.
+  std::atomic<uint32_t> write_request_{1000U | (20U << 16)};
+  std::atomic<uint16_t> write_speed_{0};
+  std::atomic<uint16_t> gripper_current_state_{1000};
 
   double reactivate_gripper_cmd_ = 0.0;
-  std::atomic<bool> reactivate_gripper_async_cmd_;
+  std::atomic<bool> reactivate_gripper_async_cmd_{false};
   double reactivate_gripper_response_ = 0.0;
   double gripper_force_ = 0.0;
   double gripper_speed_ = 0.0;
-  std::atomic<std::optional<bool>> reactivate_gripper_async_response_;
+  std::atomic<std::optional<bool>> reactivate_gripper_async_response_{std::nullopt};
 };
 
 }  // namespace dh_gripper_driver

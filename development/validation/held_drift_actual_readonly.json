@@ -1,0 +1,31 @@
+{
+  "actual_goals_sent": false,
+  "joints": {
+    "shoulder_pan_joint": -0.385690991078512,
+    "wrist_2_joint": -1.565986458455221,
+    "wrist_3_joint": -1.946066681538717,
+    "wrist_1_joint": -2.375643392602438,
+    "elbow_joint": 2.2849629561053675,
+    "shoulder_lift_joint": -1.4789541971734543,
+    "left_outer_knuckle_joint": 0.7105199999999999
+  },
+  "last_sensor": {
+    "position": 0.7105199999999999,
+    "velocity": 0.0,
+    "raw_position": 236.0,
+    "grip_state": 2.0,
+    "force_percent": 20.0,
+    "communication_age": 0.098088251,
+    "sample_sequence": 32831.0
+  },
+  "position_range": [
+    0.7105199999999999,
+    0.7105199999999999
+  ],
+  "attached": [
+    {
+      "id": "ur5e_stack/block_15",
+      "link": "grasp_link"
+    }
+  ]
+}

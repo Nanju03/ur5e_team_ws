@@ -1,0 +1,48 @@
+/**:
+  ros__parameters:
+    block_size_xyz:
+    - 0.025
+    - 0.025
+    - 0.025
+    center_from_home: false
+    center_offset_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    center_xyz:
+    - 0.501488
+    - 0.151445
+    - 1.1062628765296874
+    empty_cells:
+    - 1
+    - 2
+    - 3
+    - 5
+    - 6
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 22
+    - 23
+    - 24
+    empty_hand_clearance: 0.05
+    empty_xy_scan: true
+    obstacle_cells:
+    - 7
+    obstacle_size_xyz:
+    - 0.025
+    - 0.025
+    - 0.15
+    placement_mode: side
+    target_cell: 21
+    velocity_scaling: 0.05
+    vertical_placement_layers: 10

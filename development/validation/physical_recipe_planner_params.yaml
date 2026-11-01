@@ -1,0 +1,923 @@
+/**:
+  ros__parameters:
+    acceleration_scaling: 0.05
+    approach_link: ag95_base_link
+    approach_velocity_scaling: 0.05
+    block_size_xyz:
+    - 0.025
+    - 0.025
+    - 0.025
+    cartesian_step: 0.005
+    cell_centers_xy:
+    - 0.3109
+    - 0.15
+    - 0.3703
+    - 0.15
+    - 0.4297
+    - 0.15
+    - 0.4891
+    - 0.15
+    - 0.3109
+    - 0.09
+    - 0.3703
+    - 0.09
+    - 0.4297
+    - 0.09
+    - 0.4891
+    - 0.09
+    - 0.3109
+    - 0.03
+    - 0.3703
+    - 0.03
+    - 0.4297
+    - 0.03
+    - 0.4891
+    - 0.03
+    - 0.3109
+    - -0.03
+    - 0.3703
+    - -0.03
+    - 0.4297
+    - -0.03
+    - 0.4891
+    - -0.03
+    - 0.3109
+    - -0.09
+    - 0.3703
+    - -0.09
+    - 0.4297
+    - -0.09
+    - 0.4891
+    - -0.09
+    - 0.3109
+    - -0.15
+    - 0.3703
+    - -0.15
+    - 0.4297
+    - -0.15
+    - 0.4891
+    - -0.15
+    cell_id: 1
+    center_from_home: true
+    center_offset_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    center_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    check_corners: true
+    chomp:
+      enable_failure_recovery: true
+      jiggle_fraction: 0.05
+      planning_plugin: chomp_interface/CHOMPPlanner
+      request_adapters: default_planner_request_adapters/AddTimeOptimalParameterization
+        default_planner_request_adapters/ResolveConstraintFrames default_planner_request_adapters/FixWorkspaceBounds
+        default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision
+        default_planner_request_adapters/FixStartStatePathConstraints
+      ridge_factor: 0.01
+      start_state_max_bounds_error: 0.1
+    columns: 4
+    coordinates_file: ''
+    default_planning_pipeline: ompl
+    empty_cells:
+    - 1
+    - 2
+    - 3
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    empty_hand_test: false
+    execute: false
+    geometry_profile: cube_plate_v1
+    grasp_height_above_table: 0.018
+    grid_yaw_deg: 0.0
+    gripper_acceleration_scaling: 0.4
+    gripper_grasp_position: 0.73
+    gripper_group: dh_ag95_gripper
+    gripper_joint: left_outer_knuckle_joint
+    gripper_open_position: 0.4
+    gripper_pause: 0.2
+    gripper_velocity_scaling: 0.4
+    height_tolerance: 0.001
+    home_pose: home
+    ik_link: tool0
+    independent_stack_target: false
+    jump_threshold: 5.0
+    keep_alive: true
+    max_joint_step: 0.35
+    moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+    moveit_manage_controllers: true
+    moveit_simple_controller_manager:
+      controller_names:
+      - ur5e_arm_controller
+      - dh_ag95_gripper_controller
+      dh_ag95_gripper_controller:
+        action_ns: gripper_cmd
+        default: true
+        joints:
+        - left_outer_knuckle_joint
+        type: GripperCommand
+      ur5e_arm_controller:
+        action_ns: follow_joint_trajectory
+        default: true
+        joints:
+        - shoulder_pan_joint
+        - shoulder_lift_joint
+        - elbow_joint
+        - wrist_1_joint
+        - wrist_2_joint
+        - wrist_3_joint
+        type: FollowJointTrajectory
+    obstacle_size_xyz:
+    - 0.025
+    - 0.025
+    - 0.15
+    obstacle_surface_z: 0.805
+    ompl:
+      jiggle_fraction: 0.05
+      planner_configs:
+        AnytimePathShortening:
+          hybridize: 1
+          max_hybrid_paths: 24
+          num_planners: 4
+          planners: ''
+          shortcut: 1
+          type: geometric::AnytimePathShortening
+        BFMT:
+          balanced: 0
+          cache_cc: 1
+          extended_fmt: 1
+          heuristics: 1
+          nearest_k: 1
+          num_samples: 1000
+          optimality: 1
+          radius_multiplier: 1.0
+          type: geometric::BFMT
+        BKPIECE:
+          border_fraction: 0.9
+          failed_expansion_score_factor: 0.5
+          min_valid_path_fraction: 0.5
+          range: 0.0
+          type: geometric::BKPIECE
+        BiEST:
+          range: 0.0
+          type: geometric::BiEST
+        BiTRRT:
+          cost_threshold: 1e300
+          frountier_node_ratio: 0.1
+          frountier_threshold: 0.0
+          init_temperature: 100
+          range: 0.0
+          temp_change_factor: 0.1
+          type: geometric::BiTRRT
+        EST:
+          goal_bias: 0.05
+          range: 0.0
+          type: geometric::EST
+        FMT:
+          cache_cc: 1
+          extended_fmt: 1
+          heuristics: 0
+          nearest_k: 1
+          num_samples: 1000
+          radius_multiplier: 1.1
+          type: geometric::FMT
+        KPIECE:
+          border_fraction: 0.9
+          failed_expansion_score_factor: 0.5
+          goal_bias: 0.05
+          min_valid_path_fraction: 0.5
+          range: 0.0
+          type: geometric::KPIECE
+        LBKPIECE:
+          border_fraction: 0.9
+          min_valid_path_fraction: 0.5
+          range: 0.0
+          type: geometric::LBKPIECE
+        LBTRRT:
+          epsilon: 0.4
+          goal_bias: 0.05
+          range: 0.0
+          type: geometric::LBTRRT
+        LazyPRM:
+          range: 0.0
+          type: geometric::LazyPRM
+        LazyPRMstar:
+          type: geometric::LazyPRMstar
+        PDST:
+          type: geometric::PDST
+        PRM:
+          max_nearest_neighbors: 10
+          type: geometric::PRM
+        PRMstar:
+          type: geometric::PRMstar
+        ProjEST:
+          goal_bias: 0.05
+          range: 0.0
+          type: geometric::ProjEST
+        RRT:
+          goal_bias: 0.05
+          range: 0.0
+          type: geometric::RRT
+        RRTConnect:
+          range: 0.0
+          type: geometric::RRTConnect
+        RRTstar:
+          delay_collision_checking: 1
+          goal_bias: 0.05
+          range: 0.0
+          type: geometric::RRTstar
+        SBL:
+          range: 0.0
+          type: geometric::SBL
+        SPARS:
+          dense_delta_fraction: 0.001
+          max_failures: 1000
+          sparse_delta_fraction: 0.25
+          stretch_factor: 3.0
+          type: geometric::SPARS
+        SPARStwo:
+          dense_delta_fraction: 0.001
+          max_failures: 5000
+          sparse_delta_fraction: 0.25
+          stretch_factor: 3.0
+          type: geometric::SPARStwo
+        STRIDE:
+          degree: 16
+          estimated_dimension: 0.0
+          goal_bias: 0.05
+          max_degree: 18
+          max_pts_per_leaf: 6
+          min_degree: 12
+          min_valid_path_fraction: 0.2
+          range: 0.0
+          type: geometric::STRIDE
+          use_projected_distance: 0
+        TRRT:
+          frountierNodeRatio: 0.1
+          frountier_threshold: 0.0
+          goal_bias: 0.05
+          init_temperature: 10e-6
+          k_constant: 0.0
+          max_states_failed: 10
+          min_temperature: 10e-10
+          range: 0.0
+          temp_change_factor: 2.0
+          type: geometric::TRRT
+      planning_plugin: ompl_interface/OMPLPlanner
+      request_adapters: default_planner_request_adapters/AddTimeOptimalParameterization
+        default_planner_request_adapters/ResolveConstraintFrames default_planner_request_adapters/FixWorkspaceBounds
+        default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision
+        default_planner_request_adapters/FixStartStatePathConstraints
+      start_state_max_bounds_error: 0.1
+    operation: scan
+    orientation_mode: vertical
+    orientation_tolerance: 0.001
+    pilz_industrial_motion_planner:
+      capabilities: pilz_industrial_motion_planner/MoveGroupSequenceAction pilz_industrial_motion_planner/MoveGroupSequenceService
+      default_planner_config: PTP
+      planning_plugin: pilz_industrial_motion_planner/CommandPlanner
+      request_adapters: ''
+    place_clearance: 0.04
+    placement_mode: side
+    planning_group: ur5e_arm
+    planning_pipelines:
+    - ompl
+    - pilz_industrial_motion_planner
+    - chomp
+    planning_scene_service: /get_planning_scene
+    planning_time: 10.0
+    plate_alignment_cell_ids:
+    - 1
+    - 4
+    - 24
+    - 21
+    plate_alignment_clearance: 0.05
+    plate_alignment_gripper_position: 0.65
+    plate_alignment_points_xyz:
+    - 0.3109
+    - 0.15
+    - 0.805
+    - 0.4891
+    - 0.15
+    - 0.805
+    - 0.4891
+    - -0.15
+    - 0.805
+    - 0.3109
+    - -0.15
+    - 0.805
+    plate_alignment_tip_clearance: 0.01
+    plate_bottom_z: 0.8
+    plate_center_xy:
+    - 0.4
+    - 0.0
+    plate_corners_xyz:
+    - 0.2515
+    - 0.21
+    - 0.81
+    - 0.5485
+    - 0.21
+    - 0.81
+    - 0.5485
+    - -0.21
+    - 0.81
+    - 0.2515
+    - -0.21
+    - 0.81
+    plate_enabled: true
+    plate_mesh_resource: package://ur5e_block_description/meshes/cube_plate.STL
+    plate_origin_xyz:
+    - 0.2515
+    - 0.21
+    - 0.8
+    plate_task_revision: 4
+    plate_yaw_deg: -90.0
+    prepare_home_if_needed: true
+    publish_geometry_updates: true
+    publish_planning_scene: true
+    publish_robot_description: false
+    publish_robot_description_semantic: false
+    publish_state_updates: true
+    publish_transforms_updates: true
+    recipe_manifest_file: /home/ksn/ur5e_ws/validation/physical_recipe_raw.recipe.json
+    reference_frame: world
+    release_clearance_position: 0.6
+    release_first_position: 0.7
+    return_to_center: true
+    robot_description: "<robot name=\"ur5e_on_box\">\n  \n  <link name=\"world\" />\n\
+      \  <link name=\"workbench\">\n    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"\
+      0 0 0\" />\n      <geometry>\n        <box size=\"2.0 1.0 0.8\" />\n      </geometry>\n\
+      \      <material name=\"workbench_gray\">\n        <color rgba=\"0.55 0.58 0.62\
+      \ 1\" />\n      </material>\n    </visual>\n    <collision>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"0 0 0\" />\n      <geometry>\n        <box size=\"2.0 1.0 0.8\"\
+      \ />\n      </geometry>\n    </collision>\n  </link>\n  <joint name=\"world_to_workbench\"\
+      \ type=\"fixed\">\n    <parent link=\"world\" />\n    <child link=\"workbench\"\
+      \ />\n    <origin rpy=\"0 0 0\" xyz=\"0 0 0.4\" />\n  </joint>\n  <link name=\"\
+      base_link\" />\n  <link name=\"base_link_inertia\">\n    <visual>\n      <origin\
+      \ rpy=\"0 0 3.141592653589793\" xyz=\"0 0 0\" />\n      <geometry>\n       \
+      \ <mesh filename=\"package://ur_description/meshes/ur5e/visual/base.dae\" />\n\
+      \      </geometry>\n    </visual>\n    <collision>\n      <origin rpy=\"0 0\
+      \ 3.141592653589793\" xyz=\"0 0 0\" />\n      <geometry>\n        <mesh filename=\"\
+      package://ur_description/meshes/ur5e/collision/base.stl\" />\n      </geometry>\n\
+      \    </collision>\n    <inertial>\n      <mass value=\"4.0\" />\n      <origin\
+      \ rpy=\"0 0 0\" xyz=\"0 0 0\" />\n      <inertia ixx=\"0.00443333156\" ixy=\"\
+      0.0\" ixz=\"0.0\" iyy=\"0.00443333156\" iyz=\"0.0\" izz=\"0.0072\" />\n    </inertial>\n\
+      \  </link>\n  <link name=\"shoulder_link\">\n    <visual>\n      <origin rpy=\"\
+      0 0 3.141592653589793\" xyz=\"0 0 0\" />\n      <geometry>\n        <mesh filename=\"\
+      package://ur_description/meshes/ur5e/visual/shoulder.dae\" />\n      </geometry>\n\
+      \    </visual>\n    <collision>\n      <origin rpy=\"0 0 3.141592653589793\"\
+      \ xyz=\"0 0 0\" />\n      <geometry>\n        <mesh filename=\"package://ur_description/meshes/ur5e/collision/shoulder.stl\"\
+      \ />\n      </geometry>\n    </collision>\n    <inertial>\n      <mass value=\"\
+      3.761\" />\n      <origin rpy=\"1.570796326794897 0 0\" xyz=\"0.0 -0.00193 -0.02561\"\
+      \ />\n      <inertia ixx=\"0.0070021\" ixy=\"7.3e-07\" ixz=\"-1.053e-05\" iyy=\"\
+      0.00648091\" iyz=\"0.00049994\" izz=\"0.00657286\" />\n    </inertial>\n  </link>\n\
+      \  <link name=\"upper_arm_link\">\n    <visual>\n      <origin rpy=\"1.5707963267948966\
+      \ 0 -1.5707963267948966\" xyz=\"0 0 0.138\" />\n      <geometry>\n        <mesh\
+      \ filename=\"package://ur_description/meshes/ur5e/visual/upperarm.dae\" />\n\
+      \      </geometry>\n    </visual>\n    <collision>\n      <origin rpy=\"1.5707963267948966\
+      \ 0 -1.5707963267948966\" xyz=\"0 0 0.138\" />\n      <geometry>\n        <mesh\
+      \ filename=\"package://ur_description/meshes/ur5e/collision/upperarm.stl\" />\n\
+      \      </geometry>\n    </collision>\n    <inertial>\n      <mass value=\"8.058\"\
+      \ />\n      <origin rpy=\"0 0 0\" xyz=\"-0.2125 0.0 0.11336\" />\n      <inertia\
+      \ ixx=\"0.01505885\" ixy=\"-5.4e-05\" ixz=\"5.63e-06\" iyy=\"0.33388086\" iyz=\"\
+      -1.81e-06\" izz=\"0.33247207\" />\n    </inertial>\n  </link>\n  <link name=\"\
+      forearm_link\">\n    <visual>\n      <origin rpy=\"1.5707963267948966 0 -1.5707963267948966\"\
+      \ xyz=\"0 0 0.007\" />\n      <geometry>\n        <mesh filename=\"package://ur_description/meshes/ur5e/visual/forearm.dae\"\
+      \ />\n      </geometry>\n    </visual>\n    <collision>\n      <origin rpy=\"\
+      1.5707963267948966 0 -1.5707963267948966\" xyz=\"0 0 0.007\" />\n      <geometry>\n\
+      \        <mesh filename=\"package://ur_description/meshes/ur5e/collision/forearm.stl\"\
+      \ />\n      </geometry>\n    </collision>\n    <inertial>\n      <mass value=\"\
+      2.846\" />\n      <origin rpy=\"0 0 0\" xyz=\"-0.2422 0.0 0.0265\" />\n    \
+      \  <inertia ixx=\"0.00399632\" ixy=\"-1.365e-05\" ixz=\"0.00137272\" iyy=\"\
+      0.07879254\" iyz=\"-6.6e-06\" izz=\"0.0784851\" />\n    </inertial>\n  </link>\n\
+      \  <link name=\"wrist_1_link\">\n    <visual>\n      <origin rpy=\"1.5707963267948966\
+      \ 0 0\" xyz=\"0 0 -0.127\" />\n      <geometry>\n        <mesh filename=\"package://ur_description/meshes/ur5e/visual/wrist1.dae\"\
+      \ />\n      </geometry>\n    </visual>\n    <collision>\n      <origin rpy=\"\
+      1.5707963267948966 0 0\" xyz=\"0 0 -0.127\" />\n      <geometry>\n        <mesh\
+      \ filename=\"package://ur_description/meshes/ur5e/collision/wrist1.stl\" />\n\
+      \      </geometry>\n    </collision>\n    <inertial>\n      <mass value=\"1.37\"\
+      \ />\n      <origin rpy=\"1.570796326794897 0 0\" xyz=\"0.0 -0.01634 -0.0018\"\
+      \ />\n      <inertia ixx=\"0.00165491\" ixy=\"-2.82e-06\" ixz=\"-4.38e-06\"\
+      \ iyy=\"0.00135962\" iyz=\"0.00010157\" izz=\"0.00126279\" />\n    </inertial>\n\
+      \  </link>\n  <link name=\"wrist_2_link\">\n    <visual>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"0 0 -0.0997\" />\n      <geometry>\n        <mesh filename=\"\
+      package://ur_description/meshes/ur5e/visual/wrist2.dae\" />\n      </geometry>\n\
+      \    </visual>\n    <collision>\n      <origin rpy=\"0 0 0\" xyz=\"0 0 -0.0997\"\
+      \ />\n      <geometry>\n        <mesh filename=\"package://ur_description/meshes/ur5e/collision/wrist2.stl\"\
+      \ />\n      </geometry>\n    </collision>\n    <inertial>\n      <mass value=\"\
+      1.3\" />\n      <origin rpy=\"-1.570796326794897 0 0\" xyz=\"0.0 0.01634 -0.0018\"\
+      \ />\n      <inertia ixx=\"0.00135617\" ixy=\"-2.74e-06\" ixz=\"4.44e-06\" iyy=\"\
+      0.00127827\" iyz=\"-5.048e-05\" izz=\"0.00096614\" />\n    </inertial>\n  </link>\n\
+      \  <link name=\"wrist_3_link\">\n    <visual>\n      <origin rpy=\"1.5707963267948966\
+      \ 0 0\" xyz=\"0 -0.0005 -0.0989\" />\n      <geometry>\n        <mesh filename=\"\
+      package://ur_description/meshes/ur5e/visual/wrist3.dae\" />\n      </geometry>\n\
+      \    </visual>\n    <collision>\n      <origin rpy=\"1.5707963267948966 0 0\"\
+      \ xyz=\"0 -0.0005 -0.0989\" />\n      <geometry>\n        <mesh filename=\"\
+      package://ur_description/meshes/ur5e/collision/wrist3.stl\" />\n      </geometry>\n\
+      \    </collision>\n    <inertial>\n      <mass value=\"0.365\" />\n      <origin\
+      \ rpy=\"0 0 0\" xyz=\"0.0 0.0 -0.001159\" />\n      <inertia ixx=\"0.00018694\"\
+      \ ixy=\"6e-08\" ixz=\"-1.7e-07\" iyy=\"0.00018908\" iyz=\"-9.2e-07\" izz=\"\
+      0.00025756\" />\n    </inertial>\n  </link>\n  <joint name=\"base_joint\" type=\"\
+      fixed\">\n    <origin rpy=\"0 0 0.0\" xyz=\"0 0 0.41600000000000004\" />\n \
+      \   <parent link=\"workbench\" />\n    <child link=\"base_link\" />\n  </joint>\n\
+      \  <joint name=\"base_link-base_link_inertia\" type=\"fixed\">\n    <parent\
+      \ link=\"base_link\" />\n    <child link=\"base_link_inertia\" />\n    <origin\
+      \ rpy=\"0 0 3.141592653589793\" xyz=\"0 0 0\" />\n  </joint>\n  <joint name=\"\
+      shoulder_pan_joint\" type=\"revolute\">\n    <parent link=\"base_link_inertia\"\
+      \ />\n    <child link=\"shoulder_link\" />\n    <origin rpy=\"0 0 9.3657816502279445e-09\"\
+      \ xyz=\"0 0 0.1625179096510691\" />\n    <axis xyz=\"0 0 1\" />\n    <limit\
+      \ effort=\"150.0\" lower=\"-6.283185307179586\" upper=\"6.283185307179586\"\
+      \ velocity=\"3.141592653589793\" />\n    <dynamics damping=\"0\" friction=\"\
+      0\" />\n  </joint>\n  <joint name=\"shoulder_lift_joint\" type=\"revolute\"\
+      >\n    <parent link=\"shoulder_link\" />\n    <child link=\"upper_arm_link\"\
+      \ />\n    <origin rpy=\"-1.5708103746406015 3.1415885951191895 3.1415926535327805\"\
+      \ xyz=\"0.00019440285183292355 0 0\" />\n    <axis xyz=\"0 0 1\" />\n    <limit\
+      \ effort=\"150.0\" lower=\"-6.283185307179586\" upper=\"6.283185307179586\"\
+      \ velocity=\"3.141592653589793\" />\n    <dynamics damping=\"0\" friction=\"\
+      0\" />\n  </joint>\n  <joint name=\"elbow_joint\" type=\"revolute\">\n    <parent\
+      \ link=\"upper_arm_link\" />\n    <child link=\"forearm_link\" />\n    <origin\
+      \ rpy=\"0.0011553483004846387 -0.00037389734343185239 1.8087977465083776e-06\"\
+      \ xyz=\"-0.42501171583919639 0 0\" />\n    <axis xyz=\"0 0 1\" />\n    <limit\
+      \ effort=\"150.0\" lower=\"-3.141592653589793\" upper=\"3.141592653589793\"\
+      \ velocity=\"3.141592653589793\" />\n    <dynamics damping=\"0\" friction=\"\
+      0\" />\n  </joint>\n  <joint name=\"wrist_1_joint\" type=\"revolute\">\n   \
+      \ <parent link=\"forearm_link\" />\n    <child link=\"wrist_1_link\" />\n  \
+      \  <origin rpy=\"-3.1340028364328085 3.1414345216617008 3.1415878449382006\"\
+      \ xyz=\"-0.39210718907710823 -0.0010145468723860719 0.13366952798905696\" />\n\
+      \    <axis xyz=\"0 0 1\" />\n    <limit effort=\"28.0\" lower=\"-6.283185307179586\"\
+      \ upper=\"6.283185307179586\" velocity=\"3.141592653589793\" />\n    <dynamics\
+      \ damping=\"0\" friction=\"0\" />\n  </joint>\n  <joint name=\"wrist_2_joint\"\
+      \ type=\"revolute\">\n    <parent link=\"wrist_1_link\" />\n    <child link=\"\
+      wrist_2_link\" />\n    <origin rpy=\"1.5700739089610845 -4.5458951561190119e-07\
+      \ 3.2840363027201593e-10\" xyz=\"5.300092906208335e-05 -0.099713997961964201\
+      \ 7.2035182939854587e-05\" />\n    <axis xyz=\"0 0 1\" />\n    <limit effort=\"\
+      28.0\" lower=\"-6.283185307179586\" upper=\"6.283185307179586\" velocity=\"\
+      3.141592653589793\" />\n    <dynamics damping=\"0\" friction=\"0\" />\n  </joint>\n\
+      \  <joint name=\"wrist_3_joint\" type=\"revolute\">\n    <parent link=\"wrist_2_link\"\
+      \ />\n    <child link=\"wrist_3_link\" />\n    <origin rpy=\"1.5718687474121575\
+      \ -3.141592592935385 3.141592653524746\" xyz=\"6.943318541729439e-05 0.099404465992493682\
+      \ 0.00010660343964586273\" />\n    <axis xyz=\"0 0 1\" />\n    <limit effort=\"\
+      28.0\" lower=\"-6.283185307179586\" upper=\"6.283185307179586\" velocity=\"\
+      3.141592653589793\" />\n    <dynamics damping=\"0\" friction=\"0\" />\n  </joint>\n\
+      \  <link name=\"ft_frame\" />\n  <joint name=\"wrist_3_link-ft_frame\" type=\"\
+      fixed\">\n    <parent link=\"wrist_3_link\" />\n    <child link=\"ft_frame\"\
+      \ />\n    <origin rpy=\"3.141592653589793 0 0\" xyz=\"0 0 0\" />\n  </joint>\n\
+      \  <link name=\"base\" />\n  <joint name=\"base_link-base_fixed_joint\" type=\"\
+      fixed\">\n    <origin rpy=\"0 0 3.141592653589793\" xyz=\"0 0 0\" />\n    <parent\
+      \ link=\"base_link\" />\n    <child link=\"base\" />\n  </joint>\n  <link name=\"\
+      flange\" />\n  <joint name=\"wrist_3-flange\" type=\"fixed\">\n    <parent link=\"\
+      wrist_3_link\" />\n    <child link=\"flange\" />\n    <origin rpy=\"0 -1.5707963267948966\
+      \ -1.5707963267948966\" xyz=\"0 0 0\" />\n  </joint>\n  <link name=\"tool0\"\
+      \ />\n  <joint name=\"flange-tool0\" type=\"fixed\">\n    <origin rpy=\"1.5707963267948966\
+      \ 0 1.5707963267948966\" xyz=\"0 0 0\" />\n    <parent link=\"flange\" />\n\
+      \    <child link=\"tool0\" />\n  </joint>\n  <link name=\"ag95_base_link\">\n\
+      \    <inertial>\n      <origin rpy=\"0 0 0\" xyz=\"7.892486664218268e-13 9.73814800116557e-05\
+      \ 0.0030311891257515876\" />\n      <mass value=\"0.05335674905975589\" />\n\
+      \      <inertia ixx=\"1.1649107960000001e-05\" ixy=\"0.0\" ixz=\"-0.0\" iyy=\"\
+      3.5238551579e-05\" iyz=\"0.0\" izz=\"4.6013976442e-05\" />\n    </inertial>\n\
+      \    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"0 0 0\" />\n      <geometry>\n\
+      \        <mesh filename=\"package://dh_ag95_description/meshes/visual/base_link.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_ag95_base_link_material_0\">\n        <color rgba=\"0.792156862745098 0.819607843137255\
+      \ 0.933333333333333 1\" />\n      </material>\n    </visual>\n    <collision>\n\
+      \      <origin rpy=\"0 0 0\" xyz=\"0 0 0\" />\n      <geometry>\n        <mesh\
+      \ filename=\"package://dh_ag95_description/meshes/collision/base_link.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n\
+      \  <link name=\"ag95_body\">\n    <inertial>\n      <origin rpy=\"0 0 0\" xyz=\"\
+      0.040363309423792425 0.014263796342398428 0.04377145101823153\" />\n      <mass\
+      \ value=\"0.7808032509181286\" />\n      <inertia ixx=\"0.001123265235043\"\
+      \ ixy=\"-8.736830970000001e-07\" ixz=\"-2.621049291e-06\" iyy=\"0.001299749220637\"\
+      \ iyz=\"-5.82455398e-07\" izz=\"0.00045489766583800003\" />\n    </inertial>\n\
+      \    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"0.0405 0.0143 -0.0147\" />\n\
+      \      <geometry>\n        <mesh filename=\"package://dh_ag95_description/meshes/visual/gripper_body.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_ag95_body_material_0\">\n        <color rgba=\"0.1 0.1 0.1 1\" />\n   \
+      \   </material>\n    </visual>\n    <collision>\n      <origin rpy=\"0 0 0\"\
+      \ xyz=\"0.0405 0.0143 -0.0147\" />\n      <geometry>\n        <mesh filename=\"\
+      package://dh_ag95_description/meshes/collision/gripper_body.stl\" scale=\"0.001\
+      \ 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n  <joint\
+      \ name=\"ag95_body_joint\" type=\"fixed\">\n    <origin rpy=\"0 0 0\" xyz=\"\
+      -0.0405 -0.0143 0.0147\" />\n    <parent link=\"ag95_base_link\" />\n    <child\
+      \ link=\"ag95_body\" />\n  </joint>\n  <link name=\"grasp_link\" />\n  <joint\
+      \ name=\"grasp_joint\" type=\"fixed\">\n    <parent link=\"ag95_base_link\"\
+      \ />\n    <child link=\"grasp_link\" />\n    <origin rpy=\"1.5707963267948966\
+      \ -1.5707963267948966 0\" xyz=\"0.0 0.0 0.19\" />\n  </joint>\n  <link name=\"\
+      left_outer_knuckle\">\n    <inertial>\n      <origin rpy=\"0 0 0\" xyz=\"0.027678515816713697\
+      \ 0.008750002359538555 -4.432690447753185e-07\" />\n      <mass value=\"0.0589066057773107\"\
+      \ />\n      <inertia ixx=\"1e-06\" ixy=\"0.0\" ixz=\"-0.0\" iyy=\"1.7e-05\"\
+      \ iyz=\"0.0\" izz=\"1.7e-05\" />\n    </inertial>\n    <visual>\n      <origin\
+      \ rpy=\"0 0 0\" xyz=\"-0.036673 0.00875 -0.098336\" />\n      <geometry>\n \
+      \       <mesh filename=\"package://dh_ag95_description/meshes/visual/outer_knuckle.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_left_outer_knuckle_material_0\">\n        <color rgba=\"0.1 0.1 0.1 1\"\
+      \ />\n      </material>\n    </visual>\n    <collision>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"-0.036673 0.00875 -0.098336\" />\n      <geometry>\n        <mesh\
+      \ filename=\"package://dh_ag95_description/meshes/collision/outer_knuckle.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n\
+      \  <link name=\"left_inner_knuckle\">\n    <inertial>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"-0.001773347637755853 0.025399999999162655 0.028950024725163018\"\
+      \ />\n      <mass value=\"0.07116672022913799\" />\n      <inertia ixx=\"3.7e-05\"\
+      \ ixy=\"0.0\" ixz=\"0.0\" iyy=\"1.7e-05\" iyz=\"-0.0\" izz=\"2.1e-05\" />\n\
+      \    </inertial>\n    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"-0.016 0.0254\
+      \ -0.10586\" />\n      <geometry>\n        <mesh filename=\"package://dh_ag95_description/meshes/visual/inner_knuckle.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_left_inner_knuckle_material_0\">\n        <color rgba=\"0.1 0.1 0.1 1\"\
+      \ />\n      </material>\n    </visual>\n    <collision>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"-0.016 0.0254 -0.10586\" />\n      <geometry>\n        <mesh filename=\"\
+      package://dh_ag95_description/meshes/collision/inner_knuckle.stl\" scale=\"\
+      0.001 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n  <link\
+      \ name=\"left_finger\">\n    <inertial>\n      <origin rpy=\"0 0 0\" xyz=\"\
+      -0.013763205176003518 0.008750002316393751 0.007315452388518454\" />\n     \
+      \ <mass value=\"0.035304126564626004\" />\n      <inertia ixx=\"2e-06\" ixy=\"\
+      0.0\" ixz=\"1e-06\" iyy=\"4e-06\" iyz=\"-0.0\" izz=\"3e-06\" />\n    </inertial>\n\
+      \    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"-0.091673 0.00875 -0.098336\"\
+      \ />\n      <geometry>\n        <mesh filename=\"package://dh_ag95_description/meshes/visual/finger.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_left_finger_material_0\">\n        <color rgba=\"0.1 0.1 0.1 1\" />\n \
+      \     </material>\n    </visual>\n    <collision>\n      <origin rpy=\"0 0 0\"\
+      \ xyz=\"-0.091673 0.00875 -0.098336\" />\n      <geometry>\n        <mesh filename=\"\
+      package://dh_ag95_description/meshes/collision/finger.stl\" scale=\"0.001 0.001\
+      \ 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n  <link name=\"\
+      left_finger_pad\">\n    <inertial>\n      <origin rpy=\"0 0 0\" xyz=\"-0.0022695421476374017\
+      \ 2.3166990085415594e-09 0.00779073905191241\" />\n      <mass value=\"0.047823655444711066\"\
+      \ />\n      <inertia ixx=\"5e-06\" ixy=\"-0.0\" ixz=\"0.0\" iyy=\"4e-06\" iyz=\"\
+      0.0\" izz=\"2e-06\" />\n    </inertial>\n    <visual>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"-0.0705 -0.0 -0.12056\" />\n      <geometry>\n        <mesh filename=\"\
+      package://dh_ag95_description/meshes/visual/finger_pad.stl\" scale=\"0.001 0.001\
+      \ 0.001\" />\n      </geometry>\n      <material name=\"ag95_left_finger_pad_material_0\"\
+      >\n        <color rgba=\"0.792156862745098 0.819607843137255 0.933333333333333\
+      \ 1\" />\n      </material>\n    </visual>\n    <collision>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"-0.0705 -0.0 -0.12056\" />\n      <geometry>\n        <mesh filename=\"\
+      package://dh_ag95_description/meshes/collision/finger_pad.stl\" scale=\"0.001\
+      \ 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n  <joint\
+      \ name=\"left_finger_joint\" type=\"revolute\">\n    <origin rpy=\"0 0.7800050960087859\
+      \ 0\" xyz=\"0.055 0.0 0.0\" />\n    <parent link=\"left_outer_knuckle\" />\n\
+      \    <child link=\"left_finger\" />\n    <axis xyz=\"0.0 1.0 -0.0\" />\n   \
+      \ <limit effort=\"50.0\" lower=\"-0.01\" upper=\"0.9400000000000001\" velocity=\"\
+      2.1\" />\n    <mimic joint=\"left_outer_knuckle_joint\" multiplier=\"1\" offset=\"\
+      0\" />\n  </joint>\n  <joint name=\"left_inner_knuckle_joint\" type=\"revolute\"\
+      >\n    <origin rpy=\"0 0.7907912307861107 0.0\" xyz=\"0.0565 -0.0111 0.09116\"\
+      \ />\n    <parent link=\"ag95_body\" />\n    <child link=\"left_inner_knuckle\"\
+      \ />\n    <axis xyz=\"0.0 -1.0 -0.0\" />\n    <limit effort=\"50.0\" lower=\"\
+      -0.01\" upper=\"0.9400000000000001\" velocity=\"2.1\" />\n    <mimic joint=\"\
+      left_outer_knuckle_joint\" multiplier=\"1\" offset=\"0\" />\n  </joint>\n  <joint\
+      \ name=\"left_inner_finger_pad_joint\" type=\"fixed\">\n    <origin rpy=\"0\
+      \ 0 0\" xyz=\"-0.021173 0.00875 0.022224\" />\n    <parent link=\"left_finger\"\
+      \ />\n    <child link=\"left_finger_pad\" />\n  </joint>\n  <joint name=\"left_outer_knuckle_joint\"\
+      \ type=\"revolute\">\n    <origin rpy=\"0 -0.7800050960087859 0\" xyz=\"0.077173\
+      \ 0.00555 0.083636\" />\n    <parent link=\"ag95_body\" />\n    <child link=\"\
+      left_outer_knuckle\" />\n    <axis xyz=\"-0.0 -1.0 0.0\" />\n    <limit effort=\"\
+      50.0\" lower=\"0.0\" upper=\"0.93\" velocity=\"2.1\" />\n  </joint>\n  <joint\
+      \ name=\"right_finger_joint\" type=\"revolute\">\n    <origin rpy=\"0 0.7800050960087859\
+      \ 0\" xyz=\"0.055 0.0 0.0\" />\n    <parent link=\"right_outer_knuckle\" />\n\
+      \    <child link=\"right_finger\" />\n    <axis xyz=\"0.0 1.0 -0.0\" />\n  \
+      \  <limit effort=\"50.0\" lower=\"-0.01\" upper=\"0.9400000000000001\" velocity=\"\
+      2.1\" />\n    <mimic joint=\"left_outer_knuckle_joint\" multiplier=\"1\" offset=\"\
+      0\" />\n  </joint>\n  <joint name=\"right_inner_knuckle_joint\" type=\"revolute\"\
+      >\n    <origin rpy=\"0 0.7907912307861107 -3.141592653589793\" xyz=\"0.0245\
+      \ 0.0397 0.09116\" />\n    <parent link=\"ag95_body\" />\n    <child link=\"\
+      right_inner_knuckle\" />\n    <axis xyz=\"0.0 -1.0 -0.0\" />\n    <limit effort=\"\
+      50.0\" lower=\"-0.01\" upper=\"0.9400000000000001\" velocity=\"2.1\" />\n  \
+      \  <mimic joint=\"left_outer_knuckle_joint\" multiplier=\"1\" offset=\"0\" />\n\
+      \  </joint>\n  <joint name=\"right_inner_finger_pad_joint\" type=\"fixed\">\n\
+      \    <origin rpy=\"0 0 0\" xyz=\"-0.021173 0.00875 0.022224\" />\n    <parent\
+      \ link=\"right_finger\" />\n    <child link=\"right_finger_pad\" />\n  </joint>\n\
+      \  <link name=\"right_outer_knuckle\">\n    <inertial>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"0.027678515816713697 0.008750002359538555 -4.432690447753185e-07\"\
+      \ />\n      <mass value=\"0.0589066057773107\" />\n      <inertia ixx=\"1e-06\"\
+      \ ixy=\"0.0\" ixz=\"-0.0\" iyy=\"1.7e-05\" iyz=\"0.0\" izz=\"1.7e-05\" />\n\
+      \    </inertial>\n    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"-0.036673\
+      \ 0.00875 -0.098336\" />\n      <geometry>\n        <mesh filename=\"package://dh_ag95_description/meshes/visual/outer_knuckle.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_right_outer_knuckle_material_0\">\n        <color rgba=\"0.1 0.1 0.1 1\"\
+      \ />\n      </material>\n    </visual>\n    <collision>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"-0.036673 0.00875 -0.098336\" />\n      <geometry>\n        <mesh\
+      \ filename=\"package://dh_ag95_description/meshes/collision/outer_knuckle.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n\
+      \  <link name=\"right_inner_knuckle\">\n    <inertial>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"-0.001773347637755853 0.025399999999162655 0.028950024725163018\"\
+      \ />\n      <mass value=\"0.07116672022913799\" />\n      <inertia ixx=\"3.7e-05\"\
+      \ ixy=\"0.0\" ixz=\"0.0\" iyy=\"1.7e-05\" iyz=\"-0.0\" izz=\"2.1e-05\" />\n\
+      \    </inertial>\n    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"-0.016 0.0254\
+      \ -0.10586\" />\n      <geometry>\n        <mesh filename=\"package://dh_ag95_description/meshes/visual/inner_knuckle.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_right_inner_knuckle_material_0\">\n        <color rgba=\"0.1 0.1 0.1 1\"\
+      \ />\n      </material>\n    </visual>\n    <collision>\n      <origin rpy=\"\
+      0 0 0\" xyz=\"-0.016 0.0254 -0.10586\" />\n      <geometry>\n        <mesh filename=\"\
+      package://dh_ag95_description/meshes/collision/inner_knuckle.stl\" scale=\"\
+      0.001 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n  <link\
+      \ name=\"right_finger\">\n    <inertial>\n      <origin rpy=\"0 0 0\" xyz=\"\
+      -0.013763205176003518 0.008750002316393751 0.007315452388518454\" />\n     \
+      \ <mass value=\"0.035304126564626004\" />\n      <inertia ixx=\"2e-06\" ixy=\"\
+      0.0\" ixz=\"1e-06\" iyy=\"4e-06\" iyz=\"-0.0\" izz=\"3e-06\" />\n    </inertial>\n\
+      \    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"-0.091673 0.00875 -0.098336\"\
+      \ />\n      <geometry>\n        <mesh filename=\"package://dh_ag95_description/meshes/visual/finger.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_right_finger_material_0\">\n        <color rgba=\"0.1 0.1 0.1 1\" />\n\
+      \      </material>\n    </visual>\n    <collision>\n      <origin rpy=\"0 0\
+      \ 0\" xyz=\"-0.091673 0.00875 -0.098336\" />\n      <geometry>\n        <mesh\
+      \ filename=\"package://dh_ag95_description/meshes/collision/finger.stl\" scale=\"\
+      0.001 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n  <link\
+      \ name=\"right_finger_pad\">\n    <inertial>\n      <origin rpy=\"0 0 0\" xyz=\"\
+      -0.0022695421476374017 2.3166990085415594e-09 0.00779073905191241\" />\n   \
+      \   <mass value=\"0.047823655444711066\" />\n      <inertia ixx=\"5e-06\" ixy=\"\
+      -0.0\" ixz=\"0.0\" iyy=\"4e-06\" iyz=\"0.0\" izz=\"2e-06\" />\n    </inertial>\n\
+      \    <visual>\n      <origin rpy=\"0 0 0\" xyz=\"-0.0705 -0.0 -0.12056\" />\n\
+      \      <geometry>\n        <mesh filename=\"package://dh_ag95_description/meshes/visual/finger_pad.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n      <material name=\"\
+      ag95_right_finger_pad_material_0\">\n        <color rgba=\"0.792156862745098\
+      \ 0.819607843137255 0.933333333333333 1\" />\n      </material>\n    </visual>\n\
+      \    <collision>\n      <origin rpy=\"0 0 0\" xyz=\"-0.0705 -0.0 -0.12056\"\
+      \ />\n      <geometry>\n        <mesh filename=\"package://dh_ag95_description/meshes/collision/finger_pad.stl\"\
+      \ scale=\"0.001 0.001 0.001\" />\n      </geometry>\n    </collision>\n  </link>\n\
+      \  <joint name=\"right_outer_knuckle_joint\" type=\"revolute\">\n    <origin\
+      \ rpy=\"0 -0.7800050960087859 3.141592653589793\" xyz=\"0.003827000000000011\
+      \ 0.02305 0.083636\" />\n    <parent link=\"ag95_body\" />\n    <child link=\"\
+      right_outer_knuckle\" />\n    <axis xyz=\"-0.0 -1.0 0.0\" />\n    <limit effort=\"\
+      50.0\" lower=\"-0.01\" upper=\"0.9400000000000001\" velocity=\"2.1\" />\n  \
+      \  <mimic joint=\"left_outer_knuckle_joint\" multiplier=\"1\" offset=\"0\" />\n\
+      \  </joint>\n  <joint name=\"gripper_base_joint\" type=\"fixed\">\n    <parent\
+      \ link=\"tool0\" />\n    <child link=\"ag95_base_link\" />\n    <origin rpy=\"\
+      0 0 0\" xyz=\"0 0 0\" />\n  </joint>\n<link name=\"base_riser\"><visual><origin\
+      \ xyz=\"0 0 0\" rpy=\"0 0 0\" /><geometry><box size=\"0.20000000000000001 0.20000000000000001\
+      \ 0.016\" /></geometry><material name=\"base_riser_gray\"><color rgba=\"0.30\
+      \ 0.32 0.35 1\" /></material></visual><collision><origin xyz=\"0 0 0\" rpy=\"\
+      0 0 0\" /><geometry><box size=\"0.20000000000000001 0.20000000000000001 0.016\"\
+      \ /></geometry></collision></link><joint name=\"workbench_to_base_riser\" type=\"\
+      fixed\"><parent link=\"workbench\" /><child link=\"base_riser\" /><origin xyz=\"\
+      0 0 0.40800000000000003\" rpy=\"0 0 0\" /></joint></robot>"
+    robot_description_kinematics:
+      ur5e_arm:
+        kinematics_solver: kdl_kinematics_plugin/KDLKinematicsPlugin
+        kinematics_solver_search_resolution: 0.005
+        kinematics_solver_timeout: 0.005
+    robot_description_planning:
+      cartesian_limits:
+        max_rot_vel: 1.57
+        max_trans_acc: 2.25
+        max_trans_dec: -5.0
+        max_trans_vel: 1.0
+      default_acceleration_scaling_factor: 0.1
+      default_velocity_scaling_factor: 0.1
+      joint_limits:
+        elbow_joint:
+          has_acceleration_limits: true
+          has_velocity_limits: true
+          max_acceleration: 1.0
+          max_velocity: 3.141592653589793
+        left_finger_joint:
+          has_acceleration_limits: false
+          has_velocity_limits: true
+          max_acceleration: 0
+          max_velocity: 2.1
+        left_inner_knuckle_joint:
+          has_acceleration_limits: false
+          has_velocity_limits: true
+          max_acceleration: 0
+          max_velocity: 2.1
+        left_outer_knuckle_joint:
+          has_acceleration_limits: false
+          has_velocity_limits: true
+          max_acceleration: 0
+          max_velocity: 2.1
+        right_finger_joint:
+          has_acceleration_limits: false
+          has_velocity_limits: true
+          max_acceleration: 0
+          max_velocity: 2.1
+        right_inner_knuckle_joint:
+          has_acceleration_limits: false
+          has_velocity_limits: true
+          max_acceleration: 0
+          max_velocity: 2.1
+        right_outer_knuckle_joint:
+          has_acceleration_limits: false
+          has_velocity_limits: true
+          max_acceleration: 0
+          max_velocity: 2.1
+        shoulder_lift_joint:
+          has_acceleration_limits: true
+          has_velocity_limits: true
+          max_acceleration: 1.0
+          max_velocity: 3.141592653589793
+        shoulder_pan_joint:
+          has_acceleration_limits: true
+          has_velocity_limits: true
+          max_acceleration: 1.0
+          max_velocity: 3.141592653589793
+        wrist_1_joint:
+          has_acceleration_limits: true
+          has_velocity_limits: true
+          max_acceleration: 1.0
+          max_velocity: 3.141592653589793
+        wrist_2_joint:
+          has_acceleration_limits: true
+          has_velocity_limits: true
+          max_acceleration: 1.0
+          max_velocity: 3.141592653589793
+        wrist_3_joint:
+          has_acceleration_limits: true
+          has_velocity_limits: true
+          max_acceleration: 1.0
+          max_velocity: 3.141592653589793
+    robot_description_semantic: <robot name="ur5e_on_box"><group name="ur5e_arm"><joint
+      name="shoulder_pan_joint" /><joint name="shoulder_lift_joint" /><joint name="elbow_joint"
+      /><joint name="wrist_1_joint" /><joint name="wrist_2_joint" /><joint name="wrist_3_joint"
+      /><joint name="wrist_3-flange" /><joint name="flange-tool0" /></group><group
+      name="dh_ag95_gripper"><link name="ag95_base_link" /><link name="ag95_body"
+      /><link name="left_inner_knuckle" /><link name="left_outer_knuckle" /><link
+      name="left_finger" /><link name="left_finger_pad" /><link name="right_inner_knuckle"
+      /><link name="right_outer_knuckle" /><link name="right_finger" /><link name="right_finger_pad"
+      /><link name="grasp_link" /></group><group_state group="ur5e_arm" name="home"><joint
+      name="elbow_joint" value="1.5" /><joint name="shoulder_lift_joint" value="-1.5"
+      /><joint name="shoulder_pan_joint" value="0" /><joint name="wrist_1_joint" value="-1.5"
+      /><joint name="wrist_2_joint" value="-1.5" /><joint name="wrist_3_joint" value="0"
+      /></group_state><group_state group="dh_ag95_gripper" name="open"><joint name="left_outer_knuckle_joint"
+      value="0" /></group_state><group_state group="dh_ag95_gripper" name="close"><joint
+      name="left_outer_knuckle_joint" value="0.93" /></group_state><end_effector group="dh_ag95_gripper"
+      name="dh_ag95_gripper" parent_group="ur5e_arm" parent_link="tool0" /><disable_collisions
+      link1="ag95_base_link" link2="ag95_body" reason="Adjacent" /><disable_collisions
+      link1="ag95_base_link" link2="base_link_inertia" reason="User" /><disable_collisions
+      link1="ag95_base_link" link2="forearm_link" reason="User" /><disable_collisions
+      link1="ag95_base_link" link2="left_finger" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="left_finger_pad" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="left_inner_knuckle" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="left_outer_knuckle" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="right_finger" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="right_finger_pad" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="right_inner_knuckle" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="right_outer_knuckle" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="shoulder_link" reason="User" /><disable_collisions
+      link1="ag95_base_link" link2="upper_arm_link" reason="User" /><disable_collisions
+      link1="ag95_base_link" link2="wrist_1_link" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="wrist_2_link" reason="Never" /><disable_collisions
+      link1="ag95_base_link" link2="wrist_3_link" reason="Adjacent" /><disable_collisions
+      link1="ag95_body" link2="base_link_inertia" reason="User" /><disable_collisions
+      link1="ag95_body" link2="forearm_link" reason="User" /><disable_collisions link1="ag95_body"
+      link2="left_finger" reason="Never" /><disable_collisions link1="ag95_body" link2="left_finger_pad"
+      reason="Never" /><disable_collisions link1="ag95_body" link2="left_inner_knuckle"
+      reason="Adjacent" /><disable_collisions link1="ag95_body" link2="left_outer_knuckle"
+      reason="Adjacent" /><disable_collisions link1="ag95_body" link2="right_finger"
+      reason="Never" /><disable_collisions link1="ag95_body" link2="right_finger_pad"
+      reason="Never" /><disable_collisions link1="ag95_body" link2="right_inner_knuckle"
+      reason="Adjacent" /><disable_collisions link1="ag95_body" link2="right_outer_knuckle"
+      reason="Adjacent" /><disable_collisions link1="ag95_body" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="ag95_body" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="ag95_body" link2="wrist_1_link" reason="Never"
+      /><disable_collisions link1="ag95_body" link2="wrist_2_link" reason="Never"
+      /><disable_collisions link1="ag95_body" link2="wrist_3_link" reason="Never"
+      /><disable_collisions link1="base_link_inertia" link2="forearm_link" reason="User"
+      /><disable_collisions link1="base_link_inertia" link2="left_finger" reason="User"
+      /><disable_collisions link1="base_link_inertia" link2="left_finger_pad" reason="User"
+      /><disable_collisions link1="base_link_inertia" link2="left_inner_knuckle" reason="User"
+      /><disable_collisions link1="base_link_inertia" link2="left_outer_knuckle" reason="User"
+      /><disable_collisions link1="base_link_inertia" link2="right_finger" reason="User"
+      /><disable_collisions link1="base_link_inertia" link2="right_finger_pad" reason="User"
+      /><disable_collisions link1="base_link_inertia" link2="right_inner_knuckle"
+      reason="User" /><disable_collisions link1="base_link_inertia" link2="right_outer_knuckle"
+      reason="User" /><disable_collisions link1="base_link_inertia" link2="shoulder_link"
+      reason="Adjacent" /><disable_collisions link1="base_link_inertia" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="base_link_inertia" link2="workbench"
+      reason="Adjacent" /><disable_collisions link1="base_link_inertia" link2="wrist_1_link"
+      reason="User" /><disable_collisions link1="base_link_inertia" link2="wrist_2_link"
+      reason="User" /><disable_collisions link1="base_link_inertia" link2="wrist_3_link"
+      reason="User" /><disable_collisions link1="forearm_link" link2="left_finger"
+      reason="User" /><disable_collisions link1="forearm_link" link2="left_finger_pad"
+      reason="User" /><disable_collisions link1="forearm_link" link2="left_inner_knuckle"
+      reason="User" /><disable_collisions link1="forearm_link" link2="left_outer_knuckle"
+      reason="User" /><disable_collisions link1="forearm_link" link2="right_finger"
+      reason="User" /><disable_collisions link1="forearm_link" link2="right_finger_pad"
+      reason="User" /><disable_collisions link1="forearm_link" link2="right_inner_knuckle"
+      reason="User" /><disable_collisions link1="forearm_link" link2="right_outer_knuckle"
+      reason="User" /><disable_collisions link1="forearm_link" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="forearm_link" link2="upper_arm_link"
+      reason="Adjacent" /><disable_collisions link1="forearm_link" link2="wrist_1_link"
+      reason="Adjacent" /><disable_collisions link1="forearm_link" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="forearm_link" link2="wrist_3_link"
+      reason="User" /><disable_collisions link1="left_finger" link2="left_finger_pad"
+      reason="Adjacent" /><disable_collisions link1="left_finger" link2="left_inner_knuckle"
+      reason="Default" /><disable_collisions link1="left_finger" link2="left_outer_knuckle"
+      reason="Adjacent" /><disable_collisions link1="left_finger" link2="right_finger"
+      reason="Never" /><disable_collisions link1="left_finger" link2="right_finger_pad"
+      reason="Never" /><disable_collisions link1="left_finger" link2="right_inner_knuckle"
+      reason="Never" /><disable_collisions link1="left_finger" link2="right_outer_knuckle"
+      reason="Never" /><disable_collisions link1="left_finger" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="left_finger" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="left_finger" link2="wrist_1_link"
+      reason="Never" /><disable_collisions link1="left_finger" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="left_finger" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="left_finger_pad" link2="left_inner_knuckle"
+      reason="Default" /><disable_collisions link1="left_finger_pad" link2="left_outer_knuckle"
+      reason="Never" /><disable_collisions link1="left_finger_pad" link2="right_finger"
+      reason="Never" /><disable_collisions link1="left_finger_pad" link2="right_finger_pad"
+      reason="Never" /><disable_collisions link1="left_finger_pad" link2="right_inner_knuckle"
+      reason="Never" /><disable_collisions link1="left_finger_pad" link2="right_outer_knuckle"
+      reason="Never" /><disable_collisions link1="left_finger_pad" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="left_finger_pad" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="left_finger_pad" link2="wrist_1_link"
+      reason="Never" /><disable_collisions link1="left_finger_pad" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="left_finger_pad" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="left_inner_knuckle" link2="left_outer_knuckle"
+      reason="Never" /><disable_collisions link1="left_inner_knuckle" link2="right_finger"
+      reason="Never" /><disable_collisions link1="left_inner_knuckle" link2="right_finger_pad"
+      reason="Never" /><disable_collisions link1="left_inner_knuckle" link2="right_inner_knuckle"
+      reason="Never" /><disable_collisions link1="left_inner_knuckle" link2="right_outer_knuckle"
+      reason="Never" /><disable_collisions link1="left_inner_knuckle" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="left_inner_knuckle" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="left_inner_knuckle" link2="wrist_1_link"
+      reason="Never" /><disable_collisions link1="left_inner_knuckle" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="left_inner_knuckle" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="left_outer_knuckle" link2="right_finger"
+      reason="Never" /><disable_collisions link1="left_outer_knuckle" link2="right_finger_pad"
+      reason="Never" /><disable_collisions link1="left_outer_knuckle" link2="right_inner_knuckle"
+      reason="Never" /><disable_collisions link1="left_outer_knuckle" link2="right_outer_knuckle"
+      reason="Never" /><disable_collisions link1="left_outer_knuckle" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="left_outer_knuckle" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="left_outer_knuckle" link2="wrist_1_link"
+      reason="Never" /><disable_collisions link1="left_outer_knuckle" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="left_outer_knuckle" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="right_finger" link2="right_finger_pad"
+      reason="Adjacent" /><disable_collisions link1="right_finger" link2="right_inner_knuckle"
+      reason="Default" /><disable_collisions link1="right_finger" link2="right_outer_knuckle"
+      reason="Adjacent" /><disable_collisions link1="right_finger" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="right_finger" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="right_finger" link2="wrist_1_link"
+      reason="Never" /><disable_collisions link1="right_finger" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="right_finger" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="right_finger_pad" link2="right_inner_knuckle"
+      reason="Default" /><disable_collisions link1="right_finger_pad" link2="right_outer_knuckle"
+      reason="Never" /><disable_collisions link1="right_finger_pad" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="right_finger_pad" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="right_finger_pad" link2="wrist_1_link"
+      reason="Never" /><disable_collisions link1="right_finger_pad" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="right_finger_pad" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="right_inner_knuckle" link2="right_outer_knuckle"
+      reason="Never" /><disable_collisions link1="right_inner_knuckle" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="right_inner_knuckle" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="right_inner_knuckle" link2="wrist_1_link"
+      reason="Never" /><disable_collisions link1="right_inner_knuckle" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="right_inner_knuckle" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="right_outer_knuckle" link2="shoulder_link"
+      reason="User" /><disable_collisions link1="right_outer_knuckle" link2="upper_arm_link"
+      reason="User" /><disable_collisions link1="right_outer_knuckle" link2="wrist_1_link"
+      reason="Never" /><disable_collisions link1="right_outer_knuckle" link2="wrist_2_link"
+      reason="Never" /><disable_collisions link1="right_outer_knuckle" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="shoulder_link" link2="upper_arm_link"
+      reason="Adjacent" /><disable_collisions link1="shoulder_link" link2="wrist_1_link"
+      reason="User" /><disable_collisions link1="shoulder_link" link2="wrist_2_link"
+      reason="User" /><disable_collisions link1="shoulder_link" link2="wrist_3_link"
+      reason="User" /><disable_collisions link1="upper_arm_link" link2="wrist_1_link"
+      reason="User" /><disable_collisions link1="upper_arm_link" link2="wrist_2_link"
+      reason="User" /><disable_collisions link1="upper_arm_link" link2="wrist_3_link"
+      reason="User" /><disable_collisions link1="wrist_1_link" link2="wrist_2_link"
+      reason="Adjacent" /><disable_collisions link1="wrist_1_link" link2="wrist_3_link"
+      reason="Never" /><disable_collisions link1="wrist_2_link" link2="wrist_3_link"
+      reason="Adjacent" /><disable_collisions link1="base_riser" link2="base_link_inertia"
+      reason="Fixed mounting contact" /><disable_collisions link1="base_riser" link2="workbench"
+      reason="Fixed mounting contact" /></robot>
+    rows: 6
+    side_clearance: 0.06
+    size_x: 0.297
+    size_y: 0.42
+    source_surface_z: 0.805
+    split_stack_speeds: true
+    stack_acceleration_scaling: 0.05
+    stack_mode: plan
+    stack_surface_z: 0.805
+    stack_target_xy:
+    - 0.4297
+    - 0.03
+    staged_release_enabled: true
+    table_link: workbench
+    table_surface_z: 0.8
+    target_cell: 11
+    target_has_foundation: true
+    tcp_link: grasp_link
+    touch_links:
+    - left_finger_pad
+    - right_finger_pad
+    - left_finger
+    - right_finger
+    transfer_velocity_scaling: 0.2
+    velocity_scaling: 0.2
+    vertical_fallback_layers: 4
+    vertical_placement_layers: 10

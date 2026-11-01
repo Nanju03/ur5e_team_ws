@@ -1,0 +1,99 @@
+{
+  "result": "passed",
+  "domain": 103,
+  "recipe_policy": "physical_phase_acceleration_contact_tracking_v5",
+  "phases": {
+    "transfer": {
+      "velocity": 0.2,
+      "acceleration": 0.2
+    },
+    "approach": {
+      "velocity": 0.05,
+      "acceleration": 0.05
+    },
+    "lift": {
+      "velocity": 0.2,
+      "acceleration": 0.2
+    },
+    "retreat": {
+      "velocity": 0.2,
+      "acceleration": 0.2
+    }
+  },
+  "steps": 18,
+  "motions": 12,
+  "validated_samples": 3830,
+  "old_duration_seconds": 97.298032529,
+  "new_duration_seconds": 59.15172826800001,
+  "time_reduction_percent": 39.20562756459681,
+  "unchanged_arm_geometric_path_points": true,
+  "all_motion_endpoints_at_rest": true,
+  "all_seven_joint_vectors_continuous": true,
+  "all_scene_hashes_continuous": true,
+  "hand_targets": [
+    0.4,
+    0.73,
+    0.7,
+    0.6
+  ],
+  "arm_execution_profile": {
+    "joint_names": [
+      "shoulder_pan_joint",
+      "shoulder_lift_joint",
+      "elbow_joint",
+      "wrist_1_joint",
+      "wrist_2_joint",
+      "wrist_3_joint"
+    ],
+    "phase_path_position": {
+      "approach": [
+        0.005,
+        0.005,
+        0.005,
+        0.005,
+        0.005,
+        0.005
+      ],
+      "lift": [
+        0.005,
+        0.005,
+        0.005,
+        0.005,
+        0.005,
+        0.005
+      ],
+      "retreat": [
+        0.005,
+        0.005,
+        0.005,
+        0.005,
+        0.005,
+        0.005
+      ],
+      "transfer": [
+        0.005,
+        0.005,
+        0.005,
+        0.005,
+        0.005,
+        0.01
+      ]
+    },
+    "goal_position": 0.001,
+    "goal_velocity": 0.01,
+    "goal_time_seconds": 5,
+    "start_position": 0.001,
+    "transfer_sweep_joint": "wrist_3_joint",
+    "transfer_sweep_step": 0.005
+  },
+  "transfer_steps_checked": 4,
+  "wrist3_transfer_offsets_rad": [
+    -0.01,
+    -0.005,
+    0.0,
+    0.005,
+    0.01
+  ],
+  "all_expanded_tracking_samples_accounted_for": true,
+  "actual_robot_goals_sent": false
+}

@@ -1,0 +1,152 @@
+{
+  "policy": "physical_normalized_pose_round12_v1",
+  "steps": [
+    {
+      "index": 1,
+      "kind": "hand",
+      "before": "5e3715b11ad2c8d27ea23feb3a5e332cc3ad6cffdf198d617d06a998f43e8dc9",
+      "after": "5e3715b11ad2c8d27ea23feb3a5e332cc3ad6cffdf198d617d06a998f43e8dc9",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 2,
+      "kind": "arm",
+      "before": "5e3715b11ad2c8d27ea23feb3a5e332cc3ad6cffdf198d617d06a998f43e8dc9",
+      "after": "5e3715b11ad2c8d27ea23feb3a5e332cc3ad6cffdf198d617d06a998f43e8dc9",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 3,
+      "kind": "scene",
+      "before": "5e3715b11ad2c8d27ea23feb3a5e332cc3ad6cffdf198d617d06a998f43e8dc9",
+      "after": "94ec2a2ee77e36c460e5cc4504319a78ba8fd19d57b0fe881231d5be911eddbd",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 4,
+      "kind": "arm",
+      "before": "94ec2a2ee77e36c460e5cc4504319a78ba8fd19d57b0fe881231d5be911eddbd",
+      "after": "94ec2a2ee77e36c460e5cc4504319a78ba8fd19d57b0fe881231d5be911eddbd",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 5,
+      "kind": "arm",
+      "before": "94ec2a2ee77e36c460e5cc4504319a78ba8fd19d57b0fe881231d5be911eddbd",
+      "after": "94ec2a2ee77e36c460e5cc4504319a78ba8fd19d57b0fe881231d5be911eddbd",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 6,
+      "kind": "hand",
+      "before": "94ec2a2ee77e36c460e5cc4504319a78ba8fd19d57b0fe881231d5be911eddbd",
+      "after": "94ec2a2ee77e36c460e5cc4504319a78ba8fd19d57b0fe881231d5be911eddbd",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 7,
+      "kind": "scene",
+      "before": "94ec2a2ee77e36c460e5cc4504319a78ba8fd19d57b0fe881231d5be911eddbd",
+      "after": "5973023990ba8d4534551561030ce8313ebc3ca70a731e6e180b4d4f9796f184",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 8,
+      "kind": "arm",
+      "before": "5973023990ba8d4534551561030ce8313ebc3ca70a731e6e180b4d4f9796f184",
+      "after": "5973023990ba8d4534551561030ce8313ebc3ca70a731e6e180b4d4f9796f184",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 9,
+      "kind": "scene",
+      "before": "5973023990ba8d4534551561030ce8313ebc3ca70a731e6e180b4d4f9796f184",
+      "after": "fd95b5fa105257e454049ef43bec4d673028a36f0e137ce0896cb9a96d53908e",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 10,
+      "kind": "scene",
+      "before": "fd95b5fa105257e454049ef43bec4d673028a36f0e137ce0896cb9a96d53908e",
+      "after": "1ceb2888794ebc8d52b2d0388c766a8744ead4fce9ec8425925240c9d022b3e2",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 11,
+      "kind": "arm",
+      "before": "1ceb2888794ebc8d52b2d0388c766a8744ead4fce9ec8425925240c9d022b3e2",
+      "after": "1ceb2888794ebc8d52b2d0388c766a8744ead4fce9ec8425925240c9d022b3e2",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 12,
+      "kind": "arm",
+      "before": "1ceb2888794ebc8d52b2d0388c766a8744ead4fce9ec8425925240c9d022b3e2",
+      "after": "1ceb2888794ebc8d52b2d0388c766a8744ead4fce9ec8425925240c9d022b3e2",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 13,
+      "kind": "hand",
+      "before": "1ceb2888794ebc8d52b2d0388c766a8744ead4fce9ec8425925240c9d022b3e2",
+      "after": "1ceb2888794ebc8d52b2d0388c766a8744ead4fce9ec8425925240c9d022b3e2",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 14,
+      "kind": "scene",
+      "before": "1ceb2888794ebc8d52b2d0388c766a8744ead4fce9ec8425925240c9d022b3e2",
+      "after": "46060810a85331d2a65f4f2ac68cddcef92560af7262b64b83d59f82f82d812e",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 15,
+      "kind": "hand",
+      "before": "46060810a85331d2a65f4f2ac68cddcef92560af7262b64b83d59f82f82d812e",
+      "after": "46060810a85331d2a65f4f2ac68cddcef92560af7262b64b83d59f82f82d812e",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 16,
+      "kind": "arm",
+      "before": "46060810a85331d2a65f4f2ac68cddcef92560af7262b64b83d59f82f82d812e",
+      "after": "46060810a85331d2a65f4f2ac68cddcef92560af7262b64b83d59f82f82d812e",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 17,
+      "kind": "scene",
+      "before": "46060810a85331d2a65f4f2ac68cddcef92560af7262b64b83d59f82f82d812e",
+      "after": "f59ee9b85fed0728c12696bd038ad81e8317fc8d047ddbe86067f3a68191aa7e",
+      "chain": true,
+      "motion_unchanged": true
+    },
+    {
+      "index": 18,
+      "kind": "arm",
+      "before": "f59ee9b85fed0728c12696bd038ad81e8317fc8d047ddbe86067f3a68191aa7e",
+      "after": "f59ee9b85fed0728c12696bd038ad81e8317fc8d047ddbe86067f3a68191aa7e",
+      "chain": true,
+      "motion_unchanged": true
+    }
+  ],
+  "initial_restored": "5e3715b11ad2c8d27ea23feb3a5e332cc3ad6cffdf198d617d06a998f43e8dc9",
+  "restore_matches_first": true,
+  "pass": true
+}

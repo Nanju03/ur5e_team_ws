@@ -1,0 +1,80 @@
+{
+  "real_motion_sent": false,
+  "default_mode": "step",
+  "step": {
+    "mode": "step",
+    "preview_hash_checked": true,
+    "held_before_first_OK": true,
+    "held_before_second_OK": true,
+    "one_OK_one_segment": true,
+    "old_approval_service_removed": true,
+    "stop_while_waiting_confirmed": true
+  },
+  "continuous": {
+    "mode": "continuous",
+    "preview_hash_checked": true,
+    "held_before_OK": true,
+    "one_OK_full_path": true,
+    "completed": "DONE"
+  },
+  "simulation_step": {
+    "mode": "step",
+    "domain": 93,
+    "hardware": "mock_components/GenericSystem",
+    "first_ready": {
+      "plan_id": "sim_39140_15003986230700",
+      "request_id": "sim_39140_15003986230700_1",
+      "index": 1,
+      "total": 11,
+      "label": "Initial gripper open",
+      "duration": 0.64543857,
+      "approve_service": "/ur5e_a3_stack/approve_next_sim_39140_15003986230700_1"
+    },
+    "waiting_max_joint_delta": 0.0,
+    "second_wait_max_joint_delta": 0.0,
+    "duplicate_accepted": false,
+    "stop_confirmed_max_joint_delta": 0.0,
+    "ready_count": 2,
+    "physical_motion_sent": false
+  },
+  "simulation_continuous": {
+    "mode": "continuous",
+    "domain": 93,
+    "hardware": "mock_components/GenericSystem",
+    "first_ready": {
+      "plan_id": "sim_39650_15096073369083",
+      "request_id": "sim_39650_15096073369083_1",
+      "index": 1,
+      "total": 1,
+      "label": "Entire stacking path",
+      "duration": 15.836473893,
+      "approve_service": "/ur5e_a3_stack/approve_next_sim_39650_15096073369083_1"
+    },
+    "waiting_max_joint_delta": 0.0,
+    "second_wait_max_joint_delta": null,
+    "duplicate_accepted": false,
+    "stop_confirmed_max_joint_delta": 0.0,
+    "ready_count": 1,
+    "physical_motion_sent": false
+  },
+  "gripper_service_roundtrip": {
+    "domain": 94,
+    "backend": "pure fake, no action clients or hardware",
+    "physical_motion_sent": false,
+    "execution_mode": "step",
+    "approval_service_response_received": true,
+    "retired_after_response": true,
+    "duplicate_rejected": true
+  },
+  "tests": "624 passed",
+  "fixed_scene_hash": "correct MoveIt source/target semantics; irrelevant controller TF excluded",
+  "native_start_state": "fixed: require all seven finite measured joints within one second; no zero defaults",
+  "native_plan_only": {
+    "status": "PLAN_READY",
+    "plan_id": "ebc83fede8702730",
+    "validated_samples": 3640,
+    "segments": 26,
+    "hardware": "ur_robot_driver/URPositionHardwareInterface",
+    "physical_execution_sent": false
+  }
+}

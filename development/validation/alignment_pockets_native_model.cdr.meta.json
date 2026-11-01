@@ -1,0 +1,483 @@
+{
+  "schema": 2,
+  "created_at": 1793448670.2745407,
+  "trajectory_sha256": "bef2edb62227ae556fd46faf3c18de0709101b65d96a9af485cf845640c7121b",
+  "input_sha256": {
+    "selection_file": "606674f48253c06ca15400c546825fbdca80b2c0a1e4ab2e4e093f957b7a15ca",
+    "calibration_file": "9e6a22f33e0bda052b39040e92f8c45c7d7cb6f08b29aa05f7e70a0ad9754c5a",
+    "physical_profile": "9679ee91820252235ffb8dff3e7d76f4d8828696c052bfc4e745a28f8a145ee8",
+    "gripper_calibration": null,
+    "plate_mesh": "5621960c23a7f50757680df35345b0186e1fc1cd971f1f744734debe1f96c040"
+  },
+  "model_sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+  "semantic_sha256": "9b85ef545c255f1ec8f37362f201a559b9b9236550a4bf7d8321464f8085bfe3",
+  "scene_sha256": "7f282d7d970623b5e7f5ffb5f0109d41b8a7ebcfbde88f400eed4aaa054d632b",
+  "hardware_class": "mock_components/GenericSystem",
+  "gripper_position": 0.7,
+  "metrics": {
+    "joint_names": [
+      "shoulder_pan_joint",
+      "shoulder_lift_joint",
+      "elbow_joint",
+      "wrist_1_joint",
+      "wrist_2_joint",
+      "wrist_3_joint"
+    ],
+    "points": 582,
+    "duration": 175.185794247,
+    "max_velocity": 0.07438860242878614,
+    "max_acceleration": 0.04564134636200299,
+    "joint_velocity_maxima": [
+      0.06865998275369259,
+      0.06214185436713969,
+      0.057097697657863516,
+      0.07438860242878614,
+      0.02269647537175986,
+      0.06865992350763214
+    ],
+    "joint_acceleration_maxima": [
+      0.045265404053736025,
+      0.04485494323915736,
+      0.04564134636200299,
+      0.045280545834093244,
+      0.03129829318428047,
+      0.045258934001376025
+    ],
+    "time_scale": 1.5804790843392984,
+    "velocity_limit": 0.1,
+    "acceleration_limit": 0.1,
+    "segments": 13,
+    "segment_end_indices": [
+      1,
+      11,
+      50,
+      107,
+      164,
+      200,
+      257,
+      314,
+      374,
+      431,
+      488,
+      524,
+      581
+    ],
+    "normalized_acceleration_boundaries": 12,
+    "acceleration_boundary_changes": [
+      {
+        "point_index": 1,
+        "time_before_scaling": 0.661541575,
+        "previous_acceleration": [
+          -9.775156931846183e-05,
+          -0.00023571850972953096,
+          0.058534873628216806,
+          -0.05832262599629054,
+          1.7384453935093448e-05,
+          0.0003453155328538545
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 1.045552623
+      },
+      {
+        "point_index": 11,
+        "time_before_scaling": 2.940590154,
+        "previous_acceleration": [
+          -0.025953961773915644,
+          0.023535106643039802,
+          -0.03611192780925491,
+          0.05917340374123588,
+          0.04556641228449775,
+          -0.02812753831309927
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 4.647541234
+      },
+      {
+        "point_index": 50,
+        "time_before_scaling": 8.706798999,
+        "previous_acceleration": [
+          -0.0034556450632560517,
+          0.05871893197587858,
+          -0.033262949153669,
+          -0.02545657046276319,
+          6.573754975651258e-05,
+          -0.003309713322687287
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 13.760913709
+      },
+      {
+        "point_index": 107,
+        "time_before_scaling": 17.103172004,
+        "previous_acceleration": [
+          0.00012186867939221407,
+          -0.03919038938164593,
+          -0.020466220493920582,
+          0.059656394344364205,
+          0.00028270204015788626,
+          -0.00017249308845422676
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 27.031205628
+      },
+      {
+        "point_index": 164,
+        "time_before_scaling": 25.493227686,
+        "previous_acceleration": [
+          -0.00018714346640645677,
+          -0.004481174985096426,
+          0.059697967946863474,
+          -0.05521804518328919,
+          2.1561268012125787e-05,
+          0.00023485690139963742
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 40.29151315
+      },
+      {
+        "point_index": 200,
+        "time_before_scaling": 31.066715142,
+        "previous_acceleration": [
+          0.0017659719145657602,
+          -0.059340726108498526,
+          0.05932460749994938,
+          1.614642149572847e-05,
+          -6.841351196714913e-05,
+          0.0017885467912696358
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 49.100293501
+      },
+      {
+        "point_index": 257,
+        "time_before_scaling": 38.780943338,
+        "previous_acceleration": [
+          7.87552043298753e-05,
+          -0.037875231835297535,
+          -0.020473255771254428,
+          0.05834854644661745,
+          0.00026174125026212137,
+          -0.00023753983854441364
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 61.292469817
+      },
+      {
+        "point_index": 314,
+        "time_before_scaling": 46.387677387,
+        "previous_acceleration": [
+          -0.00010954747681779984,
+          0.0006941556780817412,
+          0.058755392887304636,
+          -0.0594510761148782,
+          -1.3421910913959609e-05,
+          0.00034130078509752654
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 73.314753881
+      },
+      {
+        "point_index": 374,
+        "time_before_scaling": 53.228554247,
+        "previous_acceleration": [
+          0.05799416071624883,
+          -0.02370685732555462,
+          0.023803381752887404,
+          -9.651347149439432e-05,
+          -2.742397404179375e-05,
+          0.058003740210400966
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 84.126616677
+      },
+      {
+        "point_index": 431,
+        "time_before_scaling": 60.942782468,
+        "previous_acceleration": [
+          7.919438741783822e-05,
+          -0.03787510707760226,
+          -0.020473412289715127,
+          0.05834859928277221,
+          0.0002595616683291525,
+          -0.00023898056628638177
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 96.318793032
+      },
+      {
+        "point_index": 488,
+        "time_before_scaling": 68.549516656,
+        "previous_acceleration": [
+          -0.00010955613226004397,
+          0.0006941529012467653,
+          0.058755395656111334,
+          -0.05945107638347596,
+          -1.337891335045707e-05,
+          0.0003413295133267618
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 108.341077316
+      },
+      {
+        "point_index": 524,
+        "time_before_scaling": 74.058620511,
+        "previous_acceleration": [
+          0.056733548680855186,
+          0.05913332836688627,
+          -0.03350098853590899,
+          -0.025632940403670465,
+          6.619652799747346e-05,
+          0.05688049194999425
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 117.048100733
+      }
+    ],
+    "input_effort_removed": false,
+    "max_tcp_speed": 0.03331309912361664,
+    "max_tcp_step": 0.0012678520112220945,
+    "bounds_xyz": {
+      "min": [
+        0.3108938884417498,
+        -0.15000216541259234,
+        0.8306334595396032
+      ],
+      "max": [
+        0.5014956330303819,
+        0.15144553697097535,
+        1.1112643970506113
+      ]
+    },
+    "additional_tcp_time_scale": 1.344290618245125
+  },
+  "validated_samples": 3844,
+  "path_kind": "plate_alignment",
+  "scan_min_gripper_z": 0.8200000000000001,
+  "scan_safe_after": 1.4055265815884566,
+  "scan_cells": [
+    {
+      "cell": 1,
+      "x": 0.3109,
+      "y": 0.15,
+      "z": 0.830633466,
+      "pocket_cell": 1
+    },
+    {
+      "cell": 2,
+      "x": 0.4891,
+      "y": 0.15,
+      "z": 0.830633466,
+      "pocket_cell": 4
+    },
+    {
+      "cell": 3,
+      "x": 0.4891,
+      "y": -0.15,
+      "z": 0.830633466,
+      "pocket_cell": 24
+    },
+    {
+      "cell": 4,
+      "x": 0.3109,
+      "y": -0.15,
+      "z": 0.830633466,
+      "pocket_cell": 21
+    }
+  ],
+  "segment_labels": [
+    "\ud604\uc7ac \ubc29\ud5a5\uc744 \uc720\uc9c0\ud558\uba70 \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ub192\uc774\ub97c \uc720\uc9c0\ud558\uba70 \uadf8\ub9ac\ud37c \ubc29\ud5a5 \ub9de\ucd94\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \uc704 \uc548\uc804 \ub192\uc774\ub85c \uc811\uadfc",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \uc704 \uc548\uc804 \ub192\uc774\ub85c \uc811\uadfc",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \uc704 \uc548\uc804 \ub192\uc774\ub85c \uc811\uadfc",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 D \u00b7 21\ubc88 \uc704 \uc548\uc804 \ub192\uc774\ub85c \uc811\uadfc",
+    "\ubaa8\uc11c\ub9ac \ud648 D \u00b7 21\ubc88 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30"
+  ],
+  "plan_id": "60e72ee19c8468c2"
+}

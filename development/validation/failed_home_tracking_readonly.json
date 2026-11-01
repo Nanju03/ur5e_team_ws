@@ -1,0 +1,19 @@
+{
+  "actual_goals_sent": false,
+  "scene_writes_sent": false,
+  "plan_id": "293399cdcd2a33e7",
+  "step": "Prepare vertical working home",
+  "nominal_arm_samples": 257,
+  "wrist3_offsets": [
+    -0.01,
+    -0.005,
+    0.0,
+    0.005,
+    0.01
+  ],
+  "checked": 1285,
+  "invalid": [],
+  "elapsed_seconds": 0.9138667080005689,
+  "scene_unchanged": true,
+  "result": "passed"
+}

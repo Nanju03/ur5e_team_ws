@@ -1,0 +1,34 @@
+{
+  "result": "passed",
+  "velocity_acceleration_scaling": {
+    "approach": 0.05,
+    "transfer_lift_retreat": 0.2
+  },
+  "tracking_position_tolerances": {
+    "wrist_3_transfer": 0.01,
+    "other_joints_and_near_contact_phases": 0.005
+  },
+  "goal_position_rad": 0.001,
+  "goal_velocity_rad_s": 0.01,
+  "goal_time_seconds": 5,
+  "start_position_rad": 0.001,
+  "actual_failed_path_collision_checks": 1285,
+  "actual_goals_sent": false,
+  "project_restarted": false,
+  "tests_passed": 925,
+  "mock_runtime_result": "passed",
+  "active_payload_readonly": {
+    "mass": 0.82,
+    "cog.z": 0.046,
+    "cog.x": 0.006,
+    "inertia.ixx": 0.001106,
+    "cog.y": 0.013,
+    "inertia.iyy": 0.001106,
+    "inertia.izz": 0.001106,
+    "inertia.ixy": 0.0,
+    "inertia.ixz": 0.0,
+    "inertia.iyz": 0.0
+  },
+  "payload_changed": false,
+  "new_plan_required": true
+}

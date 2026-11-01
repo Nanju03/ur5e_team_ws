@@ -1,0 +1,80 @@
+{
+  "trajectory_goals_sent": false,
+  "gripper_goals_sent": false,
+  "/controller_manager": {
+    "controllers": [
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "io_and_status_controller",
+        "state": "active"
+      },
+      {
+        "name": "speed_scaling_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "force_torque_sensor_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "tcp_pose_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "ur_configuration_controller",
+        "state": "active"
+      },
+      {
+        "name": "friction_model_controller",
+        "state": "active"
+      },
+      {
+        "name": "scaled_joint_trajectory_controller",
+        "state": "active"
+      }
+    ],
+    "hardware": [
+      {
+        "name": "ur5e",
+        "plugin": "ur_robot_driver/URPositionHardwareInterface",
+        "state": "active"
+      }
+    ]
+  },
+  "/gripper/controller_manager": {
+    "controllers": [
+      {
+        "name": "dh_ag95_gripper_controller",
+        "state": "active"
+      },
+      {
+        "name": "force_forward_controller",
+        "state": "active"
+      },
+      {
+        "name": "forward_position_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active"
+      }
+    ],
+    "hardware": [
+      {
+        "name": "dh_ag95_gripper",
+        "plugin": "dh_gripper_driver/DHGripperHardwareInterface",
+        "state": "active"
+      }
+    ]
+  },
+  "dashboard": {
+    "running": "Program running: true",
+    "safetystatus": "Safetystatus: NORMAL",
+    "is in remote control": "true"
+  },
+  "result": "passed"
+}

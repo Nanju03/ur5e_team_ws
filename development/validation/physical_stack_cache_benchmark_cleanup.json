@@ -1,0 +1,12 @@
+{
+  "fixture_launch_pid": 26215,
+  "fixture_children": [
+    26236,
+    26240,
+    26242
+  ],
+  "all_exited": true,
+  "remaining": [],
+  "domain": 103,
+  "actual_domain_touched": false
+}

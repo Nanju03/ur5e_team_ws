@@ -1,0 +1,102 @@
+{
+  "startup": {
+    "domain": 98,
+    "hardware": [
+      "mock_components/GenericSystem"
+    ],
+    "default_gripper_position": 0.4,
+    "initial_arm": {
+      "shoulder_pan_joint": 0.0,
+      "shoulder_lift_joint": -1.5,
+      "elbow_joint": 1.5,
+      "wrist_1_joint": -1.5,
+      "wrist_2_joint": -1.5,
+      "wrist_3_joint": 0.0
+    },
+    "result": "passed"
+  },
+  "target_stack_plan": {
+    "domain": 98,
+    "hardware": [
+      "mock_components/GenericSystem"
+    ],
+    "default_gripper_position": 0.4,
+    "initial_arm": {
+      "shoulder_pan_joint": 0.0,
+      "shoulder_lift_joint": -1.5,
+      "elbow_joint": 1.5,
+      "wrist_1_joint": -1.5,
+      "wrist_2_joint": -1.5,
+      "wrist_3_joint": 0.0
+    },
+    "target_cell": 11,
+    "sources": [
+      13,
+      4,
+      21
+    ],
+    "layers": [
+      1,
+      2,
+      3
+    ],
+    "target_excluded_from_sources": true,
+    "target_pocket_initially_empty": true,
+    "source_support_z_m": 0.805,
+    "default_open_position": 0.4,
+    "preflight": true,
+    "result": "passed"
+  },
+  "step_alignment": {
+    "domain": 98,
+    "hardware": [
+      "mock_components/GenericSystem"
+    ],
+    "held_before_OK": true,
+    "first_OK_moves_only_gripper": true,
+    "gripper_position": 0.7,
+    "arm_unchanged": true,
+    "next_segment_waits_for_OK": true,
+    "old_approval_removed": true,
+    "stop_while_waiting_confirmed": true,
+    "segment_count": 14,
+    "result": "passed"
+  },
+  "continuous_alignment": {
+    "domain": 98,
+    "hardware": [
+      "mock_components/GenericSystem"
+    ],
+    "held_before_OK": true,
+    "one_OK_full_path": true,
+    "completed": "DONE",
+    "final_pocket_cell": 21,
+    "final_tcp_world_m": [
+      0.3108999995477416,
+      -0.14999999948848391,
+      0.8306334594679168
+    ],
+    "final_gripper_position": 0.7,
+    "final_gripper_min_z_m": 0.8200999920954051,
+    "sampled_gripper_min_z_m": 0.8200999920954051,
+    "feedback_samples": 2311,
+    "result": "passed"
+  },
+  "result": "passed",
+  "domain": 98,
+  "real_robot_goals_sent": false,
+  "user_domain_42_touched": false,
+  "fixture_stopped": true,
+  "validation_velocity_scaling": 0.6,
+  "default_open_position": 0.4,
+  "requested_tip_clearance_m": 0.01,
+  "numerical_target_reserve_m": 0.0001,
+  "alignment_pocket_cell_ids": [
+    1,
+    4,
+    24,
+    21
+  ],
+  "stack_plan_segments": 47,
+  "alignment_plan_segments": 14
+}

@@ -1,0 +1,164 @@
+{
+  "actual_goals_sent": false,
+  "hardware": {
+    "/controller_manager": [
+      {
+        "name": "ur5e",
+        "plugin": "ur_robot_driver/URPositionHardwareInterface",
+        "state": "active"
+      }
+    ],
+    "/gripper/controller_manager": [
+      {
+        "name": "dh_ag95_gripper",
+        "plugin": "dh_gripper_driver/DHGripperHardwareInterface",
+        "state": "active"
+      }
+    ]
+  },
+  "controllers": {
+    "/controller_manager": [
+      {
+        "name": "joint_trajectory_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "forward_velocity_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "forward_position_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "forward_effort_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "force_mode_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "io_and_status_controller",
+        "state": "active"
+      },
+      {
+        "name": "passthrough_trajectory_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "freedrive_mode_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "speed_scaling_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "tool_contact_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "force_torque_sensor_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "tcp_pose_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "ur_configuration_controller",
+        "state": "active"
+      },
+      {
+        "name": "friction_model_controller",
+        "state": "active"
+      },
+      {
+        "name": "scaled_joint_trajectory_controller",
+        "state": "active"
+      }
+    ],
+    "/gripper/controller_manager": [
+      {
+        "name": "dh_ag95_gripper_controller",
+        "state": "active"
+      },
+      {
+        "name": "force_forward_controller",
+        "state": "active"
+      },
+      {
+        "name": "forward_position_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active"
+      }
+    ]
+  },
+  "services": {
+    "/controller_manager/list_hardware_components": 1.821201992999704,
+    "/controller_manager/list_controllers": 0.016385779999836814,
+    "/gripper/controller_manager/list_hardware_components": 0.2530520609998348,
+    "/gripper/controller_manager/list_controllers": 0.0023843460003263317,
+    "/get_planning_scene": 3.0192967200000567,
+    "/move_group/get_parameters": 0.002068870000584866
+  },
+  "joints": {
+    "left_outer_knuckle_joint": 0.39990000000000003,
+    "shoulder_pan_joint": -0.30122167268861944,
+    "wrist_2_joint": -1.563923184071676,
+    "wrist_3_joint": -0.2961543242083948,
+    "wrist_1_joint": -1.54480427437041,
+    "elbow_joint": 1.8259576002704065,
+    "shoulder_lift_joint": -1.8509069881834925
+  },
+  "program_running": null,
+  "max_joint_message_gap": 0.43327931800013175,
+  "scene_hash": "371bb7ec31fd1aced43ed28a6653ecfd7c3db00cd7ea0d02de7b306ea8802018",
+  "matching_steps": [
+    {
+      "index": 4,
+      "label": "Source 2 approach",
+      "phase": "transfer"
+    },
+    {
+      "index": 5,
+      "label": "Source 2 descend",
+      "phase": "approach"
+    },
+    {
+      "index": 6,
+      "label": "Close on block 2",
+      "phase": "grasp"
+    },
+    {
+      "index": 7,
+      "label": "ATTACH ur5e_stack/block_2",
+      "phase": "attach"
+    }
+  ],
+  "model_parameter_sizes": [
+    22468,
+    12989
+  ],
+  "sensor_sample_count": 3017,
+  "last_sensor": {
+    "position": 0.39990000000000003,
+    "velocity": 0.0,
+    "raw_position": 570.0,
+    "grip_state": 1.0,
+    "force_percent": 20.0,
+    "communication_age": 0.09697921,
+    "sample_sequence": 65660.0
+  },
+  "max_communication_age": 0.128229957,
+  "max_sensor_message_gap": 0.2576185460002307,
+  "all7_fresh": true
+}

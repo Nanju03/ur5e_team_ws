@@ -1,0 +1,52 @@
+{
+  "domain": 105,
+  "owned_launches": [
+    {
+      "pid": 22694,
+      "ppid": 22679,
+      "start_ticks": 1314516,
+      "domain": "105",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch /home/ksn/ur5e_ws/validation/xy_alignment_mock_system.launch.py "
+    },
+    {
+      "pid": 22782,
+      "ppid": 22679,
+      "start_ticks": 1314692,
+      "domain": "105",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup block_task.launch.py selection_file:=/home/ksn/ur5e_ws/validation/xy_alignment_selection.yaml trajectory_file:=/home/ksn/ur5e_ws/validation/xy_alignment_plan.cdr allow_mock_hardware:=true execution_mode:=continuous stack_mode:=dry_plan "
+    },
+    {
+      "pid": 22886,
+      "ppid": 22679,
+      "start_ticks": 1320656,
+      "domain": "105",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup block_task.launch.py selection_file:=/home/ksn/ur5e_ws/validation/xy_alignment_selection.yaml trajectory_file:=/home/ksn/ur5e_ws/validation/xy_alignment_plan.cdr allow_mock_hardware:=true execution_mode:=continuous stack_mode:=dry_run workspace_clear:=true "
+    }
+  ],
+  "children_before_stop": [
+    {
+      "pid": 22706,
+      "ppid": 22694,
+      "start_ticks": 1314614,
+      "domain": "105",
+      "args": "/opt/ros/humble/lib/controller_manager/ros2_control_node --ros-args --params-file /tmp/launch_params__47oubiq --params-file /home/ksn/ur5e_ws/validation/xy_alignment_controllers.yaml "
+    },
+    {
+      "pid": 22710,
+      "ppid": 22694,
+      "start_ticks": 1314614,
+      "domain": "105",
+      "args": "/opt/ros/humble/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_scgbizdi "
+    },
+    {
+      "pid": 22712,
+      "ppid": 22694,
+      "start_ticks": 1314615,
+      "domain": "105",
+      "args": "/home/ksn/ws_moveit2/install/moveit_ros_move_group/lib/moveit_ros_move_group/move_group --ros-args -r __node:=move_group --params-file /tmp/launch_params_i027mapc "
+    }
+  ],
+  "all_exited": true,
+  "remaining": [],
+  "actual_domain_touched": false
+}

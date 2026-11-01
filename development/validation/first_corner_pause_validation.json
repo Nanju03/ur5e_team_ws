@@ -1,0 +1,142 @@
+{
+  "first_corner": "A / pocket 1",
+  "mandatory_operator_resume": true,
+  "automatic_timed_resume": false,
+  "continuous_approval_batches": 2,
+  "unit_tests_passed": 749,
+  "simulation": {
+    "continuous": {
+      "domain": 99,
+      "hardware": [
+        "mock_components/GenericSystem"
+      ],
+      "mode": "continuous",
+      "held_before_first_OK": true,
+      "first_pocket_cell": 1,
+      "first_pocket_tcp_world_m": [
+        0.31089999931547585,
+        0.14999999995679075,
+        0.8306334594679166
+      ],
+      "first_pocket_gripper_position": 0.7,
+      "first_pocket_min_gripper_z_m": 0.8200999920954191,
+      "held_at_A_for_seconds": 2.0,
+      "explicit_resume_required": true,
+      "no_automatic_B_motion": true,
+      "expired_first_approval_unavailable": true,
+      "resumed_with_fresh_OK": true,
+      "completed": "DONE",
+      "final_pocket_cell": 21,
+      "final_tcp_world_m": [
+        0.3108999995477416,
+        -0.14999999948848391,
+        0.8306334594679168
+      ],
+      "final_gripper_position": 0.7,
+      "result": "passed",
+      "feedback_samples": 2507,
+      "real_robot_goals_sent": false
+    },
+    "stop": {
+      "domain": 99,
+      "hardware": [
+        "mock_components/GenericSystem"
+      ],
+      "mode": "stop",
+      "held_before_first_OK": true,
+      "first_pocket_cell": 1,
+      "first_pocket_tcp_world_m": [
+        0.31089999931615125,
+        0.1499999999567507,
+        0.8306334594738485
+      ],
+      "first_pocket_gripper_position": 0.7,
+      "first_pocket_min_gripper_z_m": 0.8200999921013141,
+      "held_at_A_for_seconds": 2.0,
+      "explicit_resume_required": true,
+      "no_automatic_B_motion": true,
+      "expired_first_approval_unavailable": true,
+      "stop_while_adjusting_confirmed": true,
+      "no_resume_after_Stop": true,
+      "result": "passed",
+      "feedback_samples": 1102,
+      "real_robot_goals_sent": false
+    },
+    "step": {
+      "domain": 99,
+      "hardware": [
+        "mock_components/GenericSystem"
+      ],
+      "mode": "step",
+      "held_before_first_OK": true,
+      "first_pocket_cell": 1,
+      "first_pocket_tcp_world_m": [
+        0.3108999993161514,
+        0.14999999995675065,
+        0.8306334594738485
+      ],
+      "first_pocket_gripper_position": 0.7,
+      "first_pocket_min_gripper_z_m": 0.820099992101314,
+      "held_at_A_for_seconds": 2.0,
+      "explicit_resume_required": true,
+      "no_automatic_B_motion": true,
+      "expired_first_approval_unavailable": true,
+      "stop_while_adjusting_confirmed": true,
+      "no_resume_after_Stop": true,
+      "result": "passed",
+      "feedback_samples": 879,
+      "real_robot_goals_sent": false
+    },
+    "result": "passed",
+    "domain": 99,
+    "fixture_stopped": true,
+    "user_domain_42_touched": false,
+    "physical_robot_goals_sent": false,
+    "continuous_approval_count": 2,
+    "mandatory_first_pocket_pause": true,
+    "step_mode_retained": true,
+    "stop_while_adjusting_confirmed": true,
+    "cpp_source_sha256": "0733eb4ce435c88a31c3289bbedd73b0449e5356b14f5c138f1f2a3556447601"
+  },
+  "calibrated_model_plan": {
+    "domain": 97,
+    "hardware_class": "mock_components/GenericSystem",
+    "path_kind": "plate_alignment",
+    "plan_id": "74fe23c85abf2357",
+    "alignment_pause_after_segment": 4,
+    "arm_segments": 13,
+    "validated_samples": 3844,
+    "continuous_groups": 2,
+    "group_durations_s": [
+      36.337796126,
+      138.847998121
+    ],
+    "group_waypoints": [
+      108,
+      475
+    ],
+    "original_waypoints": 582,
+    "exact_source_positions_derivatives_and_timing_retained": true,
+    "first_corner_endpoint_world_m": [
+      0.31089999930722734,
+      0.1499999999858947,
+      0.8306334595396263
+    ],
+    "first_corner_reference_error_m": 6.497427262120089e-09,
+    "gripper_position": 0.7,
+    "first_corner_gripper_min_z_m": 0.8200999921688602,
+    "mandatory_pause_zero_velocity": true,
+    "old_alignment_metadata_rejected": true,
+    "arm_goals_sent": false,
+    "gripper_goals_sent": false,
+    "physical_goals_sent": false,
+    "fixture_stopped": true,
+    "result": "passed"
+  },
+  "real_robot_goals_sent": false,
+  "source_sha256": {
+    "ur5e_a3_grid/src/stack_blocks.cpp": "0733eb4ce435c88a31c3289bbedd73b0449e5356b14f5c138f1f2a3556447601",
+    "ur5e_a3_grid/scripts/stack_gui.py": "07651d030bfa710d2d4f938884b577bd880334612dfd4a6218bd7f41c472a5f9",
+    "ur5e_block_bringup/ur5e_block_bringup/air_task.py": "8dd87ec6babcd0f1c49b6aacf15f2893b054bf869356b2516113b2599b6a9eeb"
+  }
+}

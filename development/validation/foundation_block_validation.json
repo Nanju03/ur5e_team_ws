@@ -1,0 +1,72 @@
+{
+  "target_has_foundation": true,
+  "foundation_layer": 1,
+  "first_carried_layer": 2,
+  "foundation_block_size_m": [
+    0.025,
+    0.025,
+    0.025
+  ],
+  "plate_task_revision": 3,
+  "unit_tests_passed": 750,
+  "runtime": {
+    "domain": 100,
+    "hardware": [
+      "mock_components/GenericSystem"
+    ],
+    "target_cell": 11,
+    "foundation_block_initial_xyz_m": [
+      0.4297,
+      0.03,
+      0.8175
+    ],
+    "foundation_present_before_motion": true,
+    "foundation_pose_unchanged": true,
+    "old_empty_target_layout_migrated_to_foundation": true,
+    "source_cells": [
+      4,
+      13
+    ],
+    "carried_layers": [
+      2,
+      3
+    ],
+    "final_layers": 3,
+    "final_top_world_z_m": 0.88,
+    "final_cube_positions_m": {
+      "ur5e_stack/block_11": [
+        0.4297,
+        0.03,
+        0.8175
+      ],
+      "ur5e_stack/block_13": [
+        0.42970000062890074,
+        0.029999999785336965,
+        0.8425000111508744
+      ],
+      "ur5e_stack/block_4": [
+        0.429699999989544,
+        0.030000000392845887,
+        0.8675000012834675
+      ]
+    },
+    "no_attached_objects": true,
+    "held_before_OK": true,
+    "continuous_OK_count": 1,
+    "feedback_samples": 2651,
+    "real_robot_goals_sent": false,
+    "result": "passed",
+    "fixture_stopped": true,
+    "user_domain_42_touched": false,
+    "foundation_never_used_as_source": true
+  },
+  "first_corner_pause_preserved": true,
+  "default_gripper_position_rad": 0.4,
+  "alignment_gripper_position_rad": 0.7,
+  "real_robot_goals_sent": false,
+  "source_sha256": {
+    "ur5e_a3_grid/scripts/stack_gui.py": "1a0b26265b09b035e236ac595ed5e7f5c9563ff67cefc631ec27bf5b0eb42183",
+    "ur5e_a3_grid/src/stack_blocks.cpp": "07442b28824aac84de8df15e95c6dca07d62ed75f75894a069a34fbcb1a37579",
+    "ur5e_block_bringup/ur5e_block_bringup/plate_geometry.py": "423de65cc156021e7548558388503cd9f658399817f069ab47477454bd48f533"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "before_fault_sha256": "8f9e98085205d7ba135acb1e5d69d56e80a92035ac503266e96e689fc5dde2f7",
+  "fault": {
+    "cause": "Physical pick/place failed or stopped while a block may remain held",
+    "model_sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+    "recorded_at": 1793512314.1194463
+  },
+  "gui_closed_pid": 4392,
+  "actual_goals_sent": false,
+  "after_fault_sha256": "8f9e98085205d7ba135acb1e5d69d56e80a92035ac503266e96e689fc5dde2f7",
+  "held_fault_preserved": true
+}

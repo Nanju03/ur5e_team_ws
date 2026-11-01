@@ -1,0 +1,52 @@
+{
+  "domain": 104,
+  "owned_launches": [
+    {
+      "pid": 20290,
+      "ppid": 20276,
+      "start_ticks": 1106215,
+      "domain": "104",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch /home/ksn/ur5e_ws/validation/recovery_mock_system.launch.py "
+    },
+    {
+      "pid": 20378,
+      "ppid": 20276,
+      "start_ticks": 1106389,
+      "domain": "104",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup block_task.launch.py stack_mode:=scene selection_file:=/home/ksn/ur5e_ws/validation/recovery_selection.yaml trajectory_file:=/home/ksn/ur5e_ws/validation/recovery_unused.cdr allow_mock_hardware:=true "
+    },
+    {
+      "pid": 20394,
+      "ppid": 20276,
+      "start_ticks": 1106618,
+      "domain": "104",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup block_task.launch.py stack_mode:=physical_recover selection_file:=/home/ksn/ur5e_ws/validation/recovery_selection.yaml trajectory_file:=/home/ksn/ur5e_ws/validation/recovery_mock.recipe.json recipe_manifest_file:=/home/ksn/ur5e_ws/validation/recovery_mock.recipe.json allow_mock_hardware:=true workspace_clear:=true recovery_empty_confirmed:=true preparation_id:=recover_mock_unique execution_mode:=step "
+    }
+  ],
+  "children_before_stop": [
+    {
+      "pid": 20302,
+      "ppid": 20290,
+      "start_ticks": 1106308,
+      "domain": "104",
+      "args": "/opt/ros/humble/lib/controller_manager/ros2_control_node --ros-args --params-file /tmp/launch_params_8_0kjqpb --params-file /home/ksn/ur5e_ws/validation/recovery_mock_controllers.yaml "
+    },
+    {
+      "pid": 20306,
+      "ppid": 20290,
+      "start_ticks": 1106308,
+      "domain": "104",
+      "args": "/opt/ros/humble/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_0a08w2vf "
+    },
+    {
+      "pid": 20308,
+      "ppid": 20290,
+      "start_ticks": 1106308,
+      "domain": "104",
+      "args": "/home/ksn/ws_moveit2/install/moveit_ros_move_group/lib/moveit_ros_move_group/move_group --ros-args -r __node:=move_group --params-file /tmp/launch_params_b9gqiy1e "
+    }
+  ],
+  "all_exited": true,
+  "remaining": [],
+  "actual_domain_touched": false
+}

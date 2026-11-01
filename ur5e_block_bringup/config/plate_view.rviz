@@ -1,0 +1,84 @@
+# Read-only scene/path viewer. Execute tasks with the project's GUI OK control.
+# No MotionPlanning display/panel or interactive pose handles are loaded here.
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded: []
+      Splitter Ratio: 0.45
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Table grid
+      Alpha: 0.2
+      Cell Size: 0.1
+      Plane: XY
+      Plane Cell Count: 20
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0.8
+      Value: true
+    - Class: moveit_rviz_plugin/PlanningScene
+      Name: Plate and robot
+      Robot Description: robot_description
+      Planning Scene Topic: /monitored_planning_scene
+      Scene Geometry:
+        Show Scene Geometry: true
+        Scene Alpha: 1.0
+      Scene Robot:
+        Show Robot Visual: true
+        Show Robot Collision: false
+        Robot Alpha: 1.0
+      Value: true
+    - Class: moveit_rviz_plugin/Trajectory
+      Name: Path preview
+      Robot Description: robot_description
+      Trajectory Topic: /display_planned_path
+      State Display Time: 0.05 s
+      Use Sim Time: false
+      Loop Animation: false
+      Show Trail: false
+      Interrupt Display: false
+      Show Robot Visual: true
+      Show Robot Collision: false
+      Robot Alpha: 0.45
+      Color Enabled: true
+      Robot Color: 80; 125; 210
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Plate points and labels
+      Enabled: true
+      Namespaces: {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /ur5e_a3_stack/markers
+      Value: true
+  Global Options:
+    Background Color: 238; 242; 246
+    Fixed Frame: world
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 1.8
+      Focal Point:
+        X: 0.3
+        Y: 0
+        Z: 1.0
+      Name: Current View
+      Pitch: 0.65
+      Target Frame: world
+      Yaw: -0.8
+Window Geometry:
+  Height: 900
+  Width: 1200

@@ -1,0 +1,186 @@
+{
+  "requested_changes": [
+    "alignment over corner pocket centres with gripper 0.7 and tip >=10mm above plate rim; default open 0.4",
+    "operator selects an empty destination pocket; first moved block is layer1"
+  ],
+  "default_gripper_position_rad": 0.4,
+  "alignment_gripper_position_rad": 0.7,
+  "minimum_tip_clearance_m": 0.01,
+  "numerical_hover_reserve_m": 0.0001,
+  "alignment_pocket_ids": [
+    1,
+    4,
+    24,
+    21
+  ],
+  "target_is_selected_in_gui": true,
+  "target_has_foundation": false,
+  "target_excluded_from_sources": true,
+  "unit_tests_passed": 735,
+  "simulation": {
+    "startup": {
+      "domain": 98,
+      "hardware": [
+        "mock_components/GenericSystem"
+      ],
+      "default_gripper_position": 0.4,
+      "initial_arm": {
+        "shoulder_pan_joint": 0.0,
+        "shoulder_lift_joint": -1.5,
+        "elbow_joint": 1.5,
+        "wrist_1_joint": -1.5,
+        "wrist_2_joint": -1.5,
+        "wrist_3_joint": 0.0
+      },
+      "result": "passed"
+    },
+    "target_stack_plan": {
+      "domain": 98,
+      "hardware": [
+        "mock_components/GenericSystem"
+      ],
+      "default_gripper_position": 0.4,
+      "initial_arm": {
+        "shoulder_pan_joint": 0.0,
+        "shoulder_lift_joint": -1.5,
+        "elbow_joint": 1.5,
+        "wrist_1_joint": -1.5,
+        "wrist_2_joint": -1.5,
+        "wrist_3_joint": 0.0
+      },
+      "target_cell": 11,
+      "sources": [
+        13,
+        4,
+        21
+      ],
+      "layers": [
+        1,
+        2,
+        3
+      ],
+      "target_excluded_from_sources": true,
+      "target_pocket_initially_empty": true,
+      "source_support_z_m": 0.805,
+      "default_open_position": 0.4,
+      "preflight": true,
+      "result": "passed"
+    },
+    "step_alignment": {
+      "domain": 98,
+      "hardware": [
+        "mock_components/GenericSystem"
+      ],
+      "held_before_OK": true,
+      "first_OK_moves_only_gripper": true,
+      "gripper_position": 0.7,
+      "arm_unchanged": true,
+      "next_segment_waits_for_OK": true,
+      "old_approval_removed": true,
+      "stop_while_waiting_confirmed": true,
+      "segment_count": 14,
+      "result": "passed"
+    },
+    "continuous_alignment": {
+      "domain": 98,
+      "hardware": [
+        "mock_components/GenericSystem"
+      ],
+      "held_before_OK": true,
+      "one_OK_full_path": true,
+      "completed": "DONE",
+      "final_pocket_cell": 21,
+      "final_tcp_world_m": [
+        0.3108999995477416,
+        -0.14999999948848391,
+        0.8306334594679168
+      ],
+      "final_gripper_position": 0.7,
+      "final_gripper_min_z_m": 0.8200999920954051,
+      "sampled_gripper_min_z_m": 0.8200999920954051,
+      "feedback_samples": 2311,
+      "result": "passed"
+    },
+    "result": "passed",
+    "domain": 98,
+    "real_robot_goals_sent": false,
+    "user_domain_42_touched": false,
+    "fixture_stopped": true,
+    "validation_velocity_scaling": 0.6,
+    "default_open_position": 0.4,
+    "requested_tip_clearance_m": 0.01,
+    "numerical_target_reserve_m": 0.0001,
+    "alignment_pocket_cell_ids": [
+      1,
+      4,
+      24,
+      21
+    ],
+    "stack_plan_segments": 47,
+    "alignment_plan_segments": 14
+  },
+  "calibrated_model_gripper_preparation": {
+    "domain": 97,
+    "hardware": "mock_components/GenericSystem",
+    "held_before_approval": true,
+    "preview_sha256_checked": true,
+    "gripper_before": 0.4,
+    "gripper_after": 0.7,
+    "maximum_arm_delta_rad": 0.0,
+    "terminal_and_hand_standstill_confirmed": true
+  },
+  "calibrated_model_arm_plan": {
+    "plan_id": "60e72ee19c8468c2",
+    "hardware_class": "mock_components/GenericSystem",
+    "path_kind": "plate_alignment",
+    "gripper_position": 0.7,
+    "validated_samples": 3844,
+    "segments": 13,
+    "scan_floor_world_z_m": 0.8200000000000001,
+    "scan_cells": [
+      {
+        "cell": 1,
+        "x": 0.3109,
+        "y": 0.15,
+        "z": 0.830633466,
+        "pocket_cell": 1
+      },
+      {
+        "cell": 2,
+        "x": 0.4891,
+        "y": 0.15,
+        "z": 0.830633466,
+        "pocket_cell": 4
+      },
+      {
+        "cell": 3,
+        "x": 0.4891,
+        "y": -0.15,
+        "z": 0.830633466,
+        "pocket_cell": 24
+      },
+      {
+        "cell": 4,
+        "x": 0.3109,
+        "y": -0.15,
+        "z": 0.830633466,
+        "pocket_cell": 21
+      }
+    ],
+    "minimum_required_tip_clearance_m": 0.01,
+    "numerical_target_reserve_m": 0.0001,
+    "arm_goals_sent": false,
+    "physical_goals_sent": false
+  },
+  "physical_robot_goals_sent": false,
+  "user_simulation_restarted": false,
+  "source_sha256": {
+    "ur5e_a3_grid/scripts/stack_gui.py": "9b9f4fae6046258c0dae4532d8b1455b554dc49aedc4628bca83e138a032bae7",
+    "ur5e_a3_grid/src/stack_blocks.cpp": "74a00cb3ea673211ecdc7f3c3bcdb1516851825bbb0f1c4b4d6eaec532a6c128",
+    "ur5e_a3_grid/launch/stack_model.py": "72266f5c0105f710c585d467be3f7c55f4e32d760a99763064fc50d04c4cf03d",
+    "ur5e_a3_grid/config/stack_blocks.yaml": "afa679c404cea87b6f5df512e9ee3c274da2210656e2d591162692126a1e3ef5",
+    "ur5e_block_bringup/ur5e_block_bringup/plate_geometry.py": "144f50f8dccd2454a7f36b5715205980e7cdf4b41ede761126881710a265e7a7",
+    "ur5e_block_bringup/ur5e_block_bringup/air_task.py": "e07b3c3cd901d2394cb0e61c2f191f3ae91eaf614c08e13cf41813eedda07d3d",
+    "ur5e_block_bringup/launch/block_task.launch.py": "4639e52533154b766ffaba49e0a290f5531134c6286654fe17be6a5717dad39d"
+  }
+}

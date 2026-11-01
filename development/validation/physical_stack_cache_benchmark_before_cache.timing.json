@@ -1,0 +1,31 @@
+{
+  "variant": "before_cache",
+  "elapsed_seconds": 22.564534576998994,
+  "source_sha256": "a53bc01b5a8f9ade0a7250a756c458f71cfb1f463dfe2e164217fa7c58b6831a",
+  "clients_created": {
+    "/robot_state_publisher/get_parameters": 1,
+    "/move_group/get_parameters": 1,
+    "/controller_manager/list_hardware_components": 2,
+    "/controller_manager/list_controllers": 2,
+    "/get_planning_scene": 74,
+    "/apply_planning_scene": 41,
+    "/check_state_validity": 12
+  },
+  "method_timings": {
+    "apply_scene_message": {
+      "calls": 41,
+      "seconds": 0.18994448199919134
+    },
+    "scene": {
+      "calls": 37,
+      "seconds": 0.6473168769898621
+    },
+    "validate_samples": {
+      "calls": 12,
+      "seconds": 2.2312585940017016
+    }
+  },
+  "domain": 103,
+  "mode": "physical_plan",
+  "movement_goals_sent": 0
+}

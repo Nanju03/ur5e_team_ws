@@ -1,0 +1,94 @@
+{
+  "read_at_utc": "2026-10-31T10:26:02.311273+00:00",
+  "domain": 0,
+  "physical_motion_sent": false,
+  "action_status": {
+    "/scaled_joint_trajectory_controller/follow_joint_trajectory/_action/status": {
+      "publishers": 1,
+      "received": false,
+      "goals": []
+    },
+    "/gripper/dh_ag95_gripper_controller/gripper_cmd/_action/status": {
+      "publishers": 1,
+      "received": false,
+      "goals": []
+    },
+    "/execute_trajectory/_action/status": {
+      "publishers": 1,
+      "received": false,
+      "goals": []
+    },
+    "/move_action/_action/status": {
+      "publishers": 1,
+      "received": false,
+      "goals": []
+    }
+  },
+  "active_or_unknown_goals": [],
+  "world_objects": [],
+  "attached_objects": [],
+  "external_world_objects": [],
+  "external_attached_objects": [],
+  "model_parameters": {
+    "/robot_state_publisher": {
+      "robot_description": {
+        "parameter_type": 4,
+        "sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+        "desired_sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+        "matches_desired": true
+      }
+    },
+    "/move_group": {
+      "robot_description": {
+        "parameter_type": 4,
+        "sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+        "desired_sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+        "matches_desired": true
+      },
+      "robot_description_semantic": {
+        "parameter_type": 4,
+        "sha256": "9b85ef545c255f1ec8f37362f201a559b9b9236550a4bf7d8321464f8085bfe3",
+        "desired_sha256": "9b85ef545c255f1ec8f37362f201a559b9b9236550a4bf7d8321464f8085bfe3",
+        "matches_desired": true
+      }
+    }
+  },
+  "processes": {
+    "44744": {
+      "domain": "0",
+      "command": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup real_robot.launch.py allow_execution:=true "
+    },
+    "45883": {
+      "domain": "0",
+      "command": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup real_robot.launch.py allow_execution:=true "
+    },
+    "45900": {
+      "domain": "0",
+      "command": "/home/ksn/ur5e_ws/install/ur_robot_driver/lib/ur_robot_driver/ur_ros2_control_node --ros-args --params-file /tmp/launch_params_wd8d1lrm --params-file /home/ksn/ur5e_ws/install/ur_robot_driver/share/ur_robot_driver/config/ur5e_update_rate.yaml --params-file /tmp/launch_params_ki54tyju --params-file /tmp/launch_params_yt2alwx5 "
+    },
+    "45944": {
+      "domain": "0",
+      "command": "/opt/ros/humble/lib/controller_manager/ros2_control_node --ros-args -r __ns:=/gripper --params-file /tmp/launch_params_jmqdmyuc --params-file /home/ksn/ur5e_ws/install/dh_gripper_driver/share/dh_gripper_driver/config/dh_ag95_controllers.yaml -r ~/robot_description:=robot_description -r joint_states:=/joint_states -r /joint_states:=/joint_states -r dynamic_joint_states:=dynamic_joint_states -r /dynamic_joint_states:=dynamic_joint_states "
+    },
+    "46016": {
+      "domain": "0",
+      "command": "/opt/ros/humble/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_7yw1k0tz "
+    },
+    "46019": {
+      "domain": "0",
+      "command": "/home/ksn/ws_moveit2/install/moveit_ros_move_group/lib/moveit_ros_move_group/move_group --ros-args -r __node:=move_group --params-file /tmp/launch_params_52821w3p "
+    },
+    "47068": {
+      "domain": "95",
+      "command": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch /home/ksn/ur5e_ws/validation/mock_plate_system.launch.py "
+    },
+    "47073": {
+      "domain": "95",
+      "command": "/opt/ros/humble/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_45o6ult4 "
+    },
+    "47075": {
+      "domain": "95",
+      "command": "/home/ksn/ws_moveit2/install/moveit_ros_move_group/lib/moveit_ros_move_group/move_group --ros-args -r __node:=move_group --params-file /tmp/launch_params_wd0l6p69 "
+    }
+  }
+}

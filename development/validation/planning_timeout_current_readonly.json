@@ -1,0 +1,127 @@
+{
+  "/controller_manager": {
+    "list_hardware_components": [
+      {
+        "name": "ur5e",
+        "plugin": "ur_robot_driver/URPositionHardwareInterface",
+        "state": "active"
+      }
+    ],
+    "list_hardware_components_seconds": 3.2724857129996963,
+    "list_controllers": [
+      {
+        "name": "joint_trajectory_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "forward_velocity_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "forward_position_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "forward_effort_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "io_and_status_controller",
+        "state": "active"
+      },
+      {
+        "name": "force_mode_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "speed_scaling_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "passthrough_trajectory_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "freedrive_mode_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "force_torque_sensor_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "tool_contact_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "tcp_pose_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "ur_configuration_controller",
+        "state": "active"
+      },
+      {
+        "name": "friction_model_controller",
+        "state": "active"
+      },
+      {
+        "name": "scaled_joint_trajectory_controller",
+        "state": "active"
+      }
+    ],
+    "list_controllers_seconds": 0.007648141998288338
+  },
+  "/gripper/controller_manager": {
+    "list_hardware_components": [
+      {
+        "name": "dh_ag95_gripper",
+        "plugin": "dh_gripper_driver/DHGripperHardwareInterface",
+        "state": "active"
+      }
+    ],
+    "list_hardware_components_seconds": 0.4318619949990534,
+    "list_controllers": [
+      {
+        "name": "force_forward_controller",
+        "state": "active"
+      },
+      {
+        "name": "forward_position_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "dh_ag95_gripper_controller",
+        "state": "active"
+      }
+    ],
+    "list_controllers_seconds": 0.0036093839989916887
+  },
+  "actual_goals_sent": false,
+  "last_gripper_sensor": {
+    "position": 0.0,
+    "velocity": 0.0,
+    "raw_position": 1000.0,
+    "grip_state": 1.0,
+    "force_percent": 20.0,
+    "communication_age": 0.073552309,
+    "sample_sequence": 2723.0
+  },
+  "fresh_joint_names": [
+    "left_outer_knuckle_joint",
+    "shoulder_pan_joint",
+    "wrist_2_joint",
+    "wrist_3_joint",
+    "wrist_1_joint",
+    "elbow_joint",
+    "shoulder_lift_joint"
+  ]
+}

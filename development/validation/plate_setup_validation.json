@@ -1,0 +1,105 @@
+{
+  "plate_yaw_deg": -90.0,
+  "plate_size_mm": [
+    420,
+    297,
+    10
+  ],
+  "robot_front_axis": "world +X, current model working side",
+  "centre_distance_mm": 400.0,
+  "near_edge_x_mm": 251.5,
+  "far_edge_x_mm": 548.5,
+  "stack": "empty central flat surface, first carried cube is layer 1",
+  "physical_support_z_world_m": {
+    "table": 0.8,
+    "pocket_floor": 0.805,
+    "stack_surface": 0.81,
+    "robot_base": 0.816
+  },
+  "riser": {
+    "height_m": 0.016,
+    "proxy_xy_m": [
+      0.2,
+      0.2
+    ],
+    "xy_physically_measured": false,
+    "tabletop_remains_m": 0.8
+  },
+  "corner_surface_coordinates_world_m": [
+    0.2515,
+    0.21,
+    0.81,
+    0.5485,
+    0.21,
+    0.81,
+    0.5485,
+    -0.21,
+    0.81,
+    0.2515,
+    -0.21,
+    0.81
+  ],
+  "candidate_count": 26,
+  "candidate_best": {
+    "distance_m": 0.4,
+    "yaw_deg": -90,
+    "pocket_pairs": 24,
+    "corner_poses": 4,
+    "stack_layers": 24,
+    "checked_poses": 100,
+    "all_required_poses_valid": true,
+    "score": 0.5555843692,
+    "minimum_scaled_jacobian_singular_value": 0.2736189025,
+    "minimum_joint_limit_margin_rad": 0.5583511577,
+    "minimum_collision_distance_m": 0.00193331456,
+    "mean_joint_distance_to_home_rad": 4.010864467
+  },
+  "candidate_scope": "finite calibrated IK and collision endpoint candidate search",
+  "candidate_full_transfer_paths": false,
+  "mock_step": {
+    "mode": "step",
+    "preview_hash_checked": true,
+    "held_before_first_OK": true,
+    "held_before_second_OK": true,
+    "one_OK_one_segment": true,
+    "old_approval_service_removed": true,
+    "stop_while_waiting_confirmed": true
+  },
+  "mock_continuous": {
+    "mode": "continuous",
+    "preview_hash_checked": true,
+    "held_before_OK": true,
+    "one_OK_full_path": true,
+    "completed": "DONE"
+  },
+  "mock_three_layer_air_plan": {
+    "validated_samples": 4593,
+    "segments": 22,
+    "first_layer": 1
+  },
+  "mock_24_pocket_scan": {
+    "points": 24,
+    "validated_samples": 3035
+  },
+  "native_alignment_plan_only": {
+    "hardware": "ur_robot_driver/URPositionHardwareInterface",
+    "path_kind": "plate_alignment",
+    "validated_samples": 2113,
+    "segments": 7
+  },
+  "unit_tests": "676 passed",
+  "physical_motion_goals_sent_by_agent": false,
+  "hardware_drivers_restarted_by_agent": false,
+  "stl_sha256": "5621960c23a7f50757680df35345b0186e1fc1cd971f1f744734debe1f96c040",
+  "screenshots": [
+    "plate_gui.png",
+    "plate_rviz.png"
+  ],
+  "chosen_plate_bottom_centre_world_m": [
+    0.4,
+    0.0,
+    0.8
+  ],
+  "latest_gui_tests": "50 passed after final label formatting",
+  "gui_source_sha256": "44cbf893aa786583f3e751f28c4b7fbf98e022a66789765c88c56f6ef4f76f54"
+}

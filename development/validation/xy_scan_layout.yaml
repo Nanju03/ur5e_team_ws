@@ -1,0 +1,24 @@
+/**:
+  ros__parameters:
+    center_from_home: false
+    center_offset_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    center_xyz:
+    - 0.5014877875145707
+    - 0.15144521238263245
+    - 1.1062628765296874
+    empty_cells: []
+    empty_hand_clearance: 0.05
+    empty_xy_scan: true
+    obstacle_cells:
+    - 7
+    obstacle_size_xyz:
+    - 0.025
+    - 0.025
+    - 0.15
+    placement_mode: side
+    robot_riser_height: 0.0
+    target_cell: 0
+    velocity_scaling: 0.05

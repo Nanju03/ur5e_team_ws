@@ -1,0 +1,35 @@
+{
+  "domain": 101,
+  "hardware": [
+    "mock_components/GenericSystem"
+  ],
+  "mode": "continuous",
+  "default_gripper_position": 0.4,
+  "alignment_target": 0.65,
+  "held_before_first_OK": true,
+  "first_pocket_cell": 1,
+  "first_pocket_tcp_world_m": [
+    0.31089999931001616,
+    0.14999999995650076,
+    0.8303157777166112
+  ],
+  "first_pocket_gripper_position": 0.65,
+  "first_pocket_min_gripper_z_m": 0.8200999920564116,
+  "held_at_A_for_seconds": 2.0,
+  "explicit_resume_required": true,
+  "no_automatic_B_motion": true,
+  "expired_first_approval_unavailable": true,
+  "resumed_with_fresh_OK": true,
+  "completed": "DONE",
+  "final_pocket_cell": 21,
+  "final_tcp_world_m": [
+    0.31089999954411635,
+    -0.149999999484391,
+    0.8303157777166112
+  ],
+  "final_gripper_position": 0.65,
+  "final_gripper_min_z_m": 0.8200999920563975,
+  "result": "passed",
+  "feedback_samples": 2536,
+  "real_robot_goals_sent": false
+}

@@ -1,0 +1,258 @@
+{
+  "result": "passed",
+  "domain": 104,
+  "hardware": "mock_components/GenericSystem",
+  "actual_domain_touched": false,
+  "actual_robot_goals_sent": false,
+  "initial_measured": {
+    "shoulder_pan_joint": -0.120678727,
+    "elbow_joint": 2.40886504,
+    "wrist_1_joint": -2.37550416,
+    "wrist_2_joint": -1.56599456,
+    "wrist_3_joint": -1.68091995,
+    "shoulder_lift_joint": -1.60306182,
+    "left_outer_knuckle_joint": 0.0
+  },
+  "final_measured": {
+    "shoulder_pan_joint": -1.2781158648431305e-05,
+    "elbow_joint": 1.5000774878171272,
+    "wrist_1_joint": -1.4999388579578605,
+    "wrist_2_joint": -1.5000123112536967,
+    "wrist_3_joint": -6.525072921067477e-05,
+    "shoulder_lift_joint": -1.4999733677238691,
+    "left_outer_knuckle_joint": 0.4
+  },
+  "home": {
+    "elbow_joint": 1.5,
+    "shoulder_lift_joint": -1.5,
+    "shoulder_pan_joint": 0.0,
+    "wrist_1_joint": -1.5,
+    "wrist_2_joint": -1.5,
+    "wrist_3_joint": 0.0
+  },
+  "movement_before_approval": false,
+  "approvals": 3,
+  "boundaries": [
+    {
+      "index": 1,
+      "label": "현재 그리퍼 모양을 유지하며 수직 상승",
+      "measured": {
+        "shoulder_pan_joint": -0.11855427581637103,
+        "elbow_joint": 1.854292159440317,
+        "wrist_1_joint": -1.5313174317300637,
+        "wrist_2_joint": -1.5638557102644544,
+        "wrist_3_joint": -1.6843508213512353,
+        "shoulder_lift_joint": -1.892664626897067,
+        "left_outer_knuckle_joint": 0.0
+      }
+    },
+    {
+      "index": 2,
+      "label": "빈 그리퍼를 유지하며 초기 자세로 복귀",
+      "measured": {
+        "shoulder_pan_joint": -1.2781158648431305e-05,
+        "elbow_joint": 1.5000774878171272,
+        "wrist_1_joint": -1.4999388579578605,
+        "wrist_2_joint": -1.5000123112536967,
+        "wrist_3_joint": -6.525072921067477e-05,
+        "shoulder_lift_joint": -1.4999733677238691,
+        "left_outer_knuckle_joint": 0.0
+      }
+    },
+    {
+      "index": 3,
+      "label": "초기 자세에서 그리퍼 0.4rad로 준비",
+      "measured": {
+        "shoulder_pan_joint": -1.2781158648431305e-05,
+        "elbow_joint": 1.5000774878171272,
+        "wrist_1_joint": -1.4999388579578605,
+        "wrist_2_joint": -1.5000123112536967,
+        "wrist_3_joint": -6.525072921067477e-05,
+        "shoulder_lift_joint": -1.4999733677238691,
+        "left_outer_knuckle_joint": 0.4
+      }
+    }
+  ],
+  "frozen_hand_during_arm": true,
+  "hand_open_only_after_home": true,
+  "vertical_lift_monotonic": true,
+  "scene_and_fault_preserved_until_final": true,
+  "attached_ghost_preserved_until_final": true,
+  "owned_objects_after": [],
+  "held_fault_after": false,
+  "foreign_object_preserved": true,
+  "arm_results": [
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 1.854292159440317,
+          "error": 0.0,
+          "target": 1.854292159440317
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.892664626897067,
+          "error": 0.0,
+          "target": -1.892664626897067
+        },
+        "shoulder_pan_joint": {
+          "actual": -0.11855427581637103,
+          "error": 0.0,
+          "target": -0.11855427581637103
+        },
+        "wrist_1_joint": {
+          "actual": -1.5313174317300637,
+          "error": 0.0,
+          "target": -1.5313174317300637
+        },
+        "wrist_2_joint": {
+          "actual": -1.5638557102644544,
+          "error": 0.0,
+          "target": -1.5638557102644544
+        },
+        "wrist_3_joint": {
+          "actual": -1.6843508213512353,
+          "error": 0.0,
+          "target": -1.6843508213512353
+        }
+      },
+      "label": "현재 그리퍼 모양을 유지하며 수직 상승",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 1.8542991025710749,
+          "shoulder_lift_joint": -1.8926648272146824,
+          "shoulder_pan_joint": -0.11855429552562594,
+          "wrist_1_joint": -1.5313241747029054,
+          "wrist_2_joint": -1.5638557098797035,
+          "wrist_3_joint": -1.6843507897316679
+        },
+        "age_seconds": 0.355,
+        "desired": {
+          "elbow_joint": 1.8542934261577817,
+          "shoulder_lift_joint": -1.892664663443378,
+          "shoulder_pan_joint": -0.11855427941216358,
+          "wrist_1_joint": -1.5313186619303534,
+          "wrist_2_joint": -1.5638557101942596,
+          "wrist_3_joint": -1.6843508155825027
+        },
+        "error": {
+          "elbow_joint": -5.6764132931874656e-06,
+          "shoulder_lift_joint": 1.637713045177236e-07,
+          "shoulder_pan_joint": 1.611346235608213e-08,
+          "wrist_1_joint": 5.512772552007661e-06,
+          "wrist_2_joint": -3.1455615889797173e-10,
+          "wrist_3_joint": -2.585083480610706e-08
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.005
+      },
+      "phase": "approach",
+      "quiet": true,
+      "status": 4,
+      "step": 1
+    },
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 1.5000774878171272,
+          "error": 0.0,
+          "target": 1.5000774878171272
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.4999733677238691,
+          "error": 0.0,
+          "target": -1.4999733677238691
+        },
+        "shoulder_pan_joint": {
+          "actual": -1.2781158648431305e-05,
+          "error": 0.0,
+          "target": -1.2781158648431305e-05
+        },
+        "wrist_1_joint": {
+          "actual": -1.4999388579578605,
+          "error": 0.0,
+          "target": -1.4999388579578605
+        },
+        "wrist_2_joint": {
+          "actual": -1.5000123112536967,
+          "error": 0.0,
+          "target": -1.5000123112536967
+        },
+        "wrist_3_joint": {
+          "actual": -6.525072921067477e-05,
+          "error": 0.0,
+          "target": -6.525072921067477e-05
+        }
+      },
+      "label": "빈 그리퍼를 유지하며 초기 자세로 복귀",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 1.5000975745709562,
+          "shoulder_lift_joint": -1.4999956364024014,
+          "shoulder_pan_joint": -1.950339240228904e-05,
+          "wrist_1_joint": -1.4999406373694357,
+          "wrist_2_joint": -1.5000159316758368,
+          "wrist_3_joint": -0.0001607629491861575
+        },
+        "age_seconds": 0.31,
+        "desired": {
+          "elbow_joint": 1.5000923366711858,
+          "shoulder_lift_joint": -1.4999898295354896,
+          "shoulder_pan_joint": -1.7750476678016847e-05,
+          "wrist_1_joint": -1.4999401733631776,
+          "wrist_2_joint": -1.500014987600529,
+          "wrist_3_joint": -0.00013585681256764325
+        },
+        "error": {
+          "elbow_joint": -5.237899770360599e-06,
+          "shoulder_lift_joint": 5.806866911761688e-06,
+          "shoulder_pan_joint": 1.7529157242721937e-06,
+          "wrist_1_joint": 4.640062580829607e-07,
+          "wrist_2_joint": 9.440753077072372e-07,
+          "wrist_3_joint": 2.490613661851424e-05
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.005
+      },
+      "phase": "approach",
+      "quiet": true,
+      "status": 4,
+      "step": 2
+    }
+  ],
+  "finished": [
+    {
+      "gripper_empty": true,
+      "hand_target": 0.4,
+      "home_reached": true,
+      "plan_id": "recover_mock_unique",
+      "scene_cleared": true
+    }
+  ],
+  "feedback_samples": 4788
+}

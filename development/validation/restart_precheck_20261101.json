@@ -1,0 +1,50 @@
+{
+  "last_sensor": {
+    "position": 0.39990000000000003,
+    "velocity": 0.0,
+    "raw_position": 570.0,
+    "grip_state": 1.0,
+    "force_percent": 20.0,
+    "communication_age": 0.05355744,
+    "sample_sequence": 9358.0
+  },
+  "sensor_samples": 1497,
+  "joints": {
+    "left_outer_knuckle_joint": {
+      "q": 0.39990000000000003,
+      "velocity": 0.0,
+      "age": 0.00100712499988731
+    },
+    "shoulder_pan_joint": {
+      "q": -0.3465927282916468,
+      "velocity": 0.0,
+      "age": 4.123500002606306e-05
+    },
+    "wrist_2_joint": {
+      "q": -1.6928632895099085,
+      "velocity": -0.0,
+      "age": 3.9183999433589634e-05
+    },
+    "wrist_3_joint": {
+      "q": -1.690718952809469,
+      "velocity": -0.0,
+      "age": 3.83059996238444e-05
+    },
+    "wrist_1_joint": {
+      "q": -2.251061578790182,
+      "velocity": -0.0,
+      "age": 3.749600000446662e-05
+    },
+    "elbow_joint": {
+      "q": 1.760923210774557,
+      "velocity": -0.0,
+      "age": 3.6997000279370695e-05
+    },
+    "shoulder_lift_joint": {
+      "q": -1.8910814724364222,
+      "velocity": 0.0,
+      "age": 3.678299981402233e-05
+    }
+  },
+  "held_fault": null
+}

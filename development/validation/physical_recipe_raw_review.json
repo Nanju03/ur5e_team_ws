@@ -1,0 +1,133 @@
+{
+  "result": "passed",
+  "snapshot_joints_continuous": true,
+  "foundation_unchanged": true,
+  "steps": [
+    {
+      "index": 1,
+      "kind": "hand",
+      "phase": "open",
+      "hand": 0.4,
+      "velocity": 0.4
+    },
+    {
+      "index": 2,
+      "kind": "arm",
+      "phase": "transfer",
+      "hand": 0.4,
+      "velocity": 0.2
+    },
+    {
+      "index": 3,
+      "kind": "scene",
+      "phase": "scene",
+      "hand": 0.4,
+      "velocity": 0
+    },
+    {
+      "index": 4,
+      "kind": "arm",
+      "phase": "transfer",
+      "hand": 0.4,
+      "velocity": 0.2
+    },
+    {
+      "index": 5,
+      "kind": "arm",
+      "phase": "approach",
+      "hand": 0.4,
+      "velocity": 0.05
+    },
+    {
+      "index": 6,
+      "kind": "hand",
+      "phase": "grasp",
+      "hand": 0.73,
+      "velocity": 0.4
+    },
+    {
+      "index": 7,
+      "kind": "scene",
+      "phase": "attach",
+      "hand": 0.73,
+      "velocity": 0
+    },
+    {
+      "index": 8,
+      "kind": "arm",
+      "phase": "lift",
+      "hand": 0.73,
+      "velocity": 0.05
+    },
+    {
+      "index": 9,
+      "kind": "scene",
+      "phase": "scene",
+      "hand": 0.73,
+      "velocity": 0
+    },
+    {
+      "index": 10,
+      "kind": "scene",
+      "phase": "scene",
+      "hand": 0.73,
+      "velocity": 0
+    },
+    {
+      "index": 11,
+      "kind": "arm",
+      "phase": "transfer",
+      "hand": 0.73,
+      "velocity": 0.2
+    },
+    {
+      "index": 12,
+      "kind": "arm",
+      "phase": "approach",
+      "hand": 0.73,
+      "velocity": 0.05
+    },
+    {
+      "index": 13,
+      "kind": "hand",
+      "phase": "release_first",
+      "hand": 0.7,
+      "velocity": 0.4
+    },
+    {
+      "index": 14,
+      "kind": "scene",
+      "phase": "place",
+      "hand": 0.7,
+      "velocity": 0
+    },
+    {
+      "index": 15,
+      "kind": "hand",
+      "phase": "release_clearance",
+      "hand": 0.6,
+      "velocity": 0.4
+    },
+    {
+      "index": 16,
+      "kind": "arm",
+      "phase": "retreat",
+      "hand": 0.6,
+      "velocity": 0.05
+    },
+    {
+      "index": 17,
+      "kind": "scene",
+      "phase": "scene",
+      "hand": 0.6,
+      "velocity": 0
+    },
+    {
+      "index": 18,
+      "kind": "arm",
+      "phase": "transfer",
+      "hand": 0.6,
+      "velocity": 0.2
+    }
+  ]
+}

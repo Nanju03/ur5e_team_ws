@@ -1,0 +1,28 @@
+{
+  "fake_hardware": true,
+  "domain": 95,
+  "gripper_only": true,
+  "arm_goals": 0,
+  "recorded_trials": 3,
+  "recommendation": {
+    "commanded_q": 0.7198500000000001,
+    "measured_q": 0.71796,
+    "force_percent": 20,
+    "measured_min": 0.71796,
+    "measured_max": 0.71796,
+    "trials": 3,
+    "trial_ids": [
+      1,
+      2,
+      3
+    ]
+  },
+  "stale_sensor_stop_confirmed": true,
+  "no_arm_feedback_required": true,
+  "late_arm_presence_cancelled": true,
+  "mock_profile_application_rejected": true,
+  "csv_path": "/home/ksn/ur5e_ws/validation/fake_gripper_sessions/20261031_163943_domain95_34832.csv",
+  "real_gripper_test_performed": false,
+  "cli": "ros2 run ur5e_block_bringup gripper_calibration_gui --gripper-only",
+  "test_status": "448 Python tests passed; no real gripper commands sent"
+}

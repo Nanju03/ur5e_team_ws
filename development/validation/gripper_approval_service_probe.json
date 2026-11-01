@@ -1,0 +1,9 @@
+{
+  "domain": 94,
+  "backend": "pure fake, no action clients or hardware",
+  "physical_motion_sent": false,
+  "execution_mode": "step",
+  "approval_service_response_received": true,
+  "retired_after_response": true,
+  "duplicate_rejected": true
+}

@@ -1,0 +1,733 @@
+{
+  "domain": 103,
+  "hardware": "mock_components/GenericSystem",
+  "held_before_OK": true,
+  "preview_hash_verified": true,
+  "continuous_approvals": 1,
+  "result": "passed",
+  "gripper_sequence": [
+    0.73,
+    0.7,
+    0.6
+  ],
+  "maximum_release_arm_delta_rad": 0.0,
+  "release_clearance_before_retreat": true,
+  "final_gripper_q": 0.6,
+  "foundation_pose_preserved": true,
+  "block_centers_world_m": {
+    "ur5e_stack/block_11": [
+      0.4297,
+      0.03,
+      0.8175
+    ],
+    "ur5e_stack/block_4": [
+      0.42970000035591166,
+      0.030000000005805463,
+      0.8425000012673582
+    ]
+  },
+  "attached_objects": 0,
+  "feedback_samples": 11045,
+  "motion_labels": [
+    "Initial gripper open",
+    "Prepare vertical working home",
+    "Source 4 approach",
+    "Source 4 descend",
+    "Close on block 4",
+    "Lift block 4",
+    "Place block 4 layer 2 approach",
+    "Place block 4 layer 2 descend",
+    "Release block 4 first opening",
+    "Release block 4 clearance opening before retreat",
+    "Retreat from layer 2",
+    "Return to clear working pose"
+  ],
+  "monitor_warmups": 12,
+  "monitored_services_per_motion": 7,
+  "monitor_stop_reasons": [],
+  "holding_envelope_validations": [
+    {
+      "step": 8,
+      "lower": 0.725,
+      "upper": 0.733,
+      "finger_shapes": 4,
+      "arm_samples": 178,
+      "checked": 712
+    },
+    {
+      "step": 11,
+      "lower": 0.725,
+      "upper": 0.733,
+      "finger_shapes": 4,
+      "arm_samples": 935,
+      "checked": 3740
+    },
+    {
+      "step": 12,
+      "lower": 0.725,
+      "upper": 0.733,
+      "finger_shapes": 4,
+      "arm_samples": 116,
+      "checked": 464
+    },
+    {
+      "step": 13,
+      "lower": 0.725,
+      "upper": 0.733,
+      "finger_shapes": 9,
+      "arm_samples": 1,
+      "checked": 9
+    }
+  ],
+  "arm_tracking_results": [
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 1.8207784348535845,
+          "error": 0.0,
+          "target": 1.8207784348535845
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.8435628928475265,
+          "error": 0.0,
+          "target": -1.8435628928475265
+        },
+        "shoulder_pan_joint": {
+          "actual": -0.33937911486647604,
+          "error": 0.0,
+          "target": -0.33937911486647604
+        },
+        "wrist_1_joint": {
+          "actual": -1.5469372789815463,
+          "error": 0.0,
+          "target": -1.5469372789815463
+        },
+        "wrist_2_joint": {
+          "actual": -1.5638914727052728,
+          "error": 0.0,
+          "target": -1.5638914727052728
+        },
+        "wrist_3_joint": {
+          "actual": -0.3343769054634073,
+          "error": 0.0,
+          "target": -0.3343769054634073
+        }
+      },
+      "label": "Prepare vertical working home",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 1.8207326340839505,
+          "shoulder_lift_joint": -1.843503416868475,
+          "shoulder_pan_joint": -0.33929530485156895,
+          "wrist_1_joint": -1.5469344444613118,
+          "wrist_2_joint": -1.5638844897632902,
+          "wrist_3_joint": -0.3342935694133733
+        },
+        "age_seconds": 0.301,
+        "desired": {
+          "elbow_joint": 1.8207475547694087,
+          "shoulder_lift_joint": -1.8435227901633684,
+          "shoulder_pan_joint": -0.33932259741966586,
+          "wrist_1_joint": -1.5469353684703566,
+          "wrist_2_joint": -1.5638867656798436,
+          "wrist_3_joint": -0.33432070752974863
+        },
+        "error": {
+          "elbow_joint": 1.4920685458275074e-05,
+          "shoulder_lift_joint": -1.9373294893432202e-05,
+          "shoulder_pan_joint": -2.7292568096914938e-05,
+          "wrist_1_joint": -9.240090448336957e-07,
+          "wrist_2_joint": -2.2759165534402825e-06,
+          "wrist_3_joint": -2.713811637533592e-05
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.01
+      },
+      "phase": "transfer",
+      "quiet": true,
+      "status": 4,
+      "step": 2
+    },
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 1.5826639145159496,
+          "error": 0.0,
+          "target": 1.5826639145159496
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.5654900517376245,
+          "error": 0.0,
+          "target": -1.5654900517376245
+        },
+        "shoulder_pan_joint": {
+          "actual": 0.03432310163299369,
+          "error": 0.0,
+          "target": 0.03432310163299369
+        },
+        "wrist_1_joint": {
+          "actual": -1.5868967152481788,
+          "error": 0.0,
+          "target": -1.5868967152481788
+        },
+        "wrist_2_joint": {
+          "actual": -1.5635934386374313,
+          "error": 0.0,
+          "target": -1.5635934386374313
+        },
+        "wrist_3_joint": {
+          "actual": 0.039482679730095394,
+          "error": 0.0,
+          "target": 0.039482679730095394
+        }
+      },
+      "label": "Source 4 approach",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 1.5826852526544386,
+          "shoulder_lift_joint": -1.5655112152823472,
+          "shoulder_pan_joint": 0.03430318698142135,
+          "wrist_1_joint": -1.5868968898355678,
+          "wrist_2_joint": -1.5635934631620199,
+          "wrist_3_joint": 0.039462774274853604
+        },
+        "age_seconds": 0.485,
+        "desired": {
+          "elbow_joint": 1.582674524744105,
+          "shoulder_lift_joint": -1.5655005745205044,
+          "shoulder_pan_joint": 0.03431320098439497,
+          "wrist_1_joint": -1.5868968026903005,
+          "wrist_2_joint": -1.563593450831775,
+          "wrist_3_joint": 0.03947278365817374
+        },
+        "error": {
+          "elbow_joint": -1.0727910333629964e-05,
+          "shoulder_lift_joint": 1.0640761842761748e-05,
+          "shoulder_pan_joint": 1.0014002973617042e-05,
+          "wrist_1_joint": 8.7145267224642e-08,
+          "wrist_2_joint": 1.2330244825164982e-08,
+          "wrist_3_joint": 1.0009383320137843e-05
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.01
+      },
+      "phase": "transfer",
+      "quiet": true,
+      "status": 4,
+      "step": 4
+    },
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 2.0726716112254215,
+          "error": 0.0,
+          "target": 2.0726716112254215
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.2973368056085923,
+          "error": 0.0,
+          "target": -1.2973368056085923
+        },
+        "shoulder_pan_joint": {
+          "actual": 0.033035185970039606,
+          "error": 0.0,
+          "target": 0.033035185970039606
+        },
+        "wrist_1_joint": {
+          "actual": -2.3450691594429807,
+          "error": 0.0,
+          "target": -2.3450691594429807
+        },
+        "wrist_2_joint": {
+          "actual": -1.5655497130542702,
+          "error": 0.0,
+          "target": -1.5655497130542702
+        },
+        "wrist_3_joint": {
+          "actual": 0.04327803391532854,
+          "error": 0.0,
+          "target": 0.04327803391532854
+        }
+      },
+      "label": "Source 4 descend",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 2.072671523058458,
+          "shoulder_lift_joint": -1.2973369882819525,
+          "shoulder_pan_joint": 0.03303518632313196,
+          "wrist_1_joint": -2.3450688886027784,
+          "wrist_2_joint": -1.5655497118020216,
+          "wrist_3_joint": 0.04327803284156767
+        },
+        "age_seconds": 0.353,
+        "desired": {
+          "elbow_joint": 2.0726715945116787,
+          "shoulder_lift_joint": -1.2973368402415733,
+          "shoulder_pan_joint": 0.0330351860369777,
+          "wrist_1_joint": -2.345069108096276,
+          "wrist_2_joint": -1.5655497128168592,
+          "wrist_3_joint": 0.043278033711766827
+        },
+        "error": {
+          "elbow_joint": 7.145322067358961e-08,
+          "shoulder_lift_joint": 1.4804037928861646e-07,
+          "shoulder_pan_joint": -2.861542600096634e-10,
+          "wrist_1_joint": -2.194934975996432e-07,
+          "wrist_2_joint": -1.0148375473306714e-09,
+          "wrist_3_joint": 8.701991557891198e-10
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.005
+      },
+      "phase": "approach",
+      "quiet": true,
+      "status": 4,
+      "step": 5
+    },
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 1.5826639180332185,
+          "error": 0.0,
+          "target": 1.5826639180332185
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.565490052437838,
+          "error": 0.0,
+          "target": -1.565490052437838
+        },
+        "shoulder_pan_joint": {
+          "actual": 0.034323090975382,
+          "error": 0.0,
+          "target": 0.034323090975382
+        },
+        "wrist_1_joint": {
+          "actual": -1.5868967186045955,
+          "error": 0.0,
+          "target": -1.5868967186045955
+        },
+        "wrist_2_joint": {
+          "actual": -1.5635933776169777,
+          "error": 0.0,
+          "target": -1.5635933776169777
+        },
+        "wrist_3_joint": {
+          "actual": 0.03948285003818605,
+          "error": 0.0,
+          "target": 0.03948285003818605
+        }
+      },
+      "label": "Lift block 4",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 1.5826925633104834,
+          "shoulder_lift_joint": -1.5654896138965093,
+          "shoulder_pan_joint": 0.03432303731774231,
+          "wrist_1_joint": -1.5869258031698386,
+          "wrist_2_joint": -1.5635933848832724,
+          "wrist_3_joint": 0.03948301690275957
+        },
+        "age_seconds": 0.35,
+        "desired": {
+          "elbow_joint": 1.5826798596974994,
+          "shoulder_lift_joint": -1.5654898093965042,
+          "shoulder_pan_joint": 0.03432306111616881,
+          "wrist_1_joint": -1.5869129037257188,
+          "wrist_2_joint": -1.5635933816534928,
+          "wrist_3_joint": 0.039482942897028764
+        },
+        "error": {
+          "elbow_joint": -1.270361298399969e-05,
+          "shoulder_lift_joint": -1.9549999485946046e-07,
+          "shoulder_pan_joint": 2.379842650029884e-08,
+          "wrist_1_joint": 1.2899444119751635e-05,
+          "wrist_2_joint": 3.229779554914103e-09,
+          "wrist_3_joint": -7.400573080740269e-08
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.005
+      },
+      "phase": "lift",
+      "quiet": true,
+      "status": 4,
+      "step": 8
+    },
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 2.2073479800215137,
+          "error": 0.0,
+          "target": 2.2073479800215137
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.5960090041772457,
+          "error": 0.0,
+          "target": -1.5960090041772457
+        },
+        "shoulder_pan_joint": {
+          "actual": -0.24596373286040238,
+          "error": 0.0,
+          "target": -0.24596373286040238
+        },
+        "wrist_1_joint": {
+          "actual": -2.181071657967759,
+          "error": 0.0,
+          "target": -2.181071657967759
+        },
+        "wrist_2_joint": {
+          "actual": -1.565090102254741,
+          "error": 0.0,
+          "target": -1.565090102254741
+        },
+        "wrist_3_joint": {
+          "actual": -0.23659323647915795,
+          "error": 0.0,
+          "target": -0.23659323647915795
+        }
+      },
+      "label": "Place block 4 layer 2 approach",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 2.207338211538687,
+          "shoulder_lift_joint": -1.59601298992029,
+          "shoulder_pan_joint": -0.2459573135168526,
+          "wrist_1_joint": -2.1810579036817113,
+          "wrist_2_joint": -1.5650900449373402,
+          "wrist_3_joint": -0.2365868997042745
+        },
+        "age_seconds": 0.352,
+        "desired": {
+          "elbow_joint": 2.207343485685114,
+          "shoulder_lift_joint": -1.5960108385072453,
+          "shoulder_pan_joint": -0.24596077920492715,
+          "wrist_1_joint": -2.181065329273686,
+          "wrist_2_joint": -1.5650900758797737,
+          "wrist_3_joint": -0.23659032081388828
+        },
+        "error": {
+          "elbow_joint": 5.274146427147741e-06,
+          "shoulder_lift_joint": 2.151413044604311e-06,
+          "shoulder_pan_joint": -3.465688074549833e-06,
+          "wrist_1_joint": -7.425591974641321e-06,
+          "wrist_2_joint": -3.09424335043218e-08,
+          "wrist_3_joint": -3.421109613793716e-06
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.01
+      },
+      "phase": "transfer",
+      "quiet": true,
+      "status": 4,
+      "step": 11
+    },
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 2.262081892527853,
+          "error": 0.0,
+          "target": 2.262081892527853
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.5209085363663033,
+          "error": 0.0,
+          "target": -1.5209085363663033
+        },
+        "shoulder_pan_joint": {
+          "actual": -0.24619548634298408,
+          "error": 0.0,
+          "target": -0.24619548634298408
+        },
+        "wrist_1_joint": {
+          "actual": -2.3109063993938044,
+          "error": 0.0,
+          "target": -2.3109063993938044
+        },
+        "wrist_2_joint": {
+          "actual": -1.5656353349014098,
+          "error": 0.0,
+          "target": -1.5656353349014098
+        },
+        "wrist_3_joint": {
+          "actual": -0.23609623685712774,
+          "error": 0.0,
+          "target": -0.23609623685712774
+        }
+      },
+      "label": "Place block 4 layer 2 descend",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 2.262081235486627,
+          "shoulder_lift_joint": -1.520909642319481,
+          "shoulder_pan_joint": -0.24619548340902797,
+          "wrist_1_joint": -2.3109046364001276,
+          "wrist_2_joint": -1.5656353269242058,
+          "wrist_3_joint": -0.23609624323667097
+        },
+        "age_seconds": 0.307,
+        "desired": {
+          "elbow_joint": 2.2620815845146542,
+          "shoulder_lift_joint": -1.5209090548756738,
+          "shoulder_pan_joint": -0.24619548496754348,
+          "wrist_1_joint": -2.310905572871575,
+          "wrist_2_joint": -1.5656353311614295,
+          "wrist_3_joint": -0.2360962398478835
+        },
+        "error": {
+          "elbow_joint": 3.490280273688029e-07,
+          "shoulder_lift_joint": 5.874438071540311e-07,
+          "shoulder_pan_joint": -1.5585155110908744e-09,
+          "wrist_1_joint": -9.364714474990876e-07,
+          "wrist_2_joint": -4.2372236830345855e-09,
+          "wrist_3_joint": 3.388787472857757e-09
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.005
+      },
+      "phase": "approach",
+      "quiet": true,
+      "status": 4,
+      "step": 12
+    },
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 2.207347978340724,
+          "error": 0.0,
+          "target": 2.207347978340724
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.5960090037300416,
+          "error": 0.0,
+          "target": -1.5960090037300416
+        },
+        "shoulder_pan_joint": {
+          "actual": -0.24596373163299015,
+          "error": 0.0,
+          "target": -0.24596373163299015
+        },
+        "wrist_1_joint": {
+          "actual": -2.181071656741761,
+          "error": 0.0,
+          "target": -2.181071656741761
+        },
+        "wrist_2_joint": {
+          "actual": -1.565090102253477,
+          "error": 0.0,
+          "target": -1.565090102253477
+        },
+        "wrist_3_joint": {
+          "actual": -0.23659323526170417,
+          "error": 0.0,
+          "target": -0.23659323526170417
+        }
+      },
+      "label": "Retreat from layer 2",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 2.207348372703976,
+          "shoulder_lift_joint": -1.596008561146991,
+          "shoulder_pan_joint": -0.24596373322405143,
+          "wrist_1_joint": -2.1810724936930286,
+          "wrist_2_joint": -1.5650901054862778,
+          "wrist_3_joint": -0.23659323189101414
+        },
+        "age_seconds": 0.356,
+        "desired": {
+          "elbow_joint": 2.207348005148744,
+          "shoulder_lift_joint": -1.5960089736495062,
+          "shoulder_pan_joint": -0.24596373174114286,
+          "wrist_1_joint": -2.1810717136306597,
+          "wrist_2_joint": -1.5650901024731987,
+          "wrist_3_joint": -0.23659323503258334
+        },
+        "error": {
+          "elbow_joint": -3.6755523202813833e-07,
+          "shoulder_lift_joint": -4.1250251525681847e-07,
+          "shoulder_pan_joint": 1.4829085737133596e-09,
+          "wrist_1_joint": 7.800623689213637e-07,
+          "wrist_2_joint": 3.013079119540407e-09,
+          "wrist_3_joint": -3.1415691992275896e-09
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.005
+      },
+      "phase": "retreat",
+      "quiet": true,
+      "status": 4,
+      "step": 16
+    },
+    {
+      "classification": "SUCCESS",
+      "endpoint_position_tolerance": 0.001,
+      "error_code": 0,
+      "error_string": "Goal successfully reached!",
+      "goal_position_tolerance": 0.001,
+      "goal_time_seconds": 5,
+      "goal_velocity_tolerance": 0.01,
+      "joints": {
+        "elbow_joint": {
+          "actual": 1.82077843346251,
+          "error": 0.0,
+          "target": 1.82077843346251
+        },
+        "shoulder_lift_joint": {
+          "actual": -1.8435628875648074,
+          "error": 0.0,
+          "target": -1.8435628875648074
+        },
+        "shoulder_pan_joint": {
+          "actual": -0.3393791112193341,
+          "error": 0.0,
+          "target": -0.3393791112193341
+        },
+        "wrist_1_joint": {
+          "actual": -1.5469372805455273,
+          "error": 0.0,
+          "target": -1.5469372805455273
+        },
+        "wrist_2_joint": {
+          "actual": -1.5638914716826842,
+          "error": 0.0,
+          "target": -1.5638914716826842
+        },
+        "wrist_3_joint": {
+          "actual": -0.334376901646132,
+          "error": 0.0,
+          "target": -0.334376901646132
+        }
+      },
+      "label": "Return to clear working pose",
+      "last_feedback": {
+        "actual": {
+          "elbow_joint": 1.8207806694282869,
+          "shoulder_lift_joint": -1.8435626091397987,
+          "shoulder_pan_joint": -0.3393786751692684,
+          "wrist_1_joint": -1.5469397949958736,
+          "wrist_2_joint": -1.5638914713085366,
+          "wrist_3_joint": -0.3343764466937641
+        },
+        "age_seconds": 0.359,
+        "desired": {
+          "elbow_joint": 1.8207788962321507,
+          "shoulder_lift_joint": -1.8435628299728528,
+          "shoulder_pan_joint": -0.33937902097470934,
+          "wrist_1_joint": -1.546937800919447,
+          "wrist_2_joint": -1.5638914716050472,
+          "wrist_3_joint": -0.3343768074895906
+        },
+        "error": {
+          "elbow_joint": -1.7731961361455717e-06,
+          "shoulder_lift_joint": -2.2083305406539466e-07,
+          "shoulder_pan_joint": -3.4580544094886534e-07,
+          "wrist_1_joint": 1.9940764266479505e-06,
+          "wrist_2_joint": -2.9651059385571443e-10,
+          "wrist_3_joint": -3.607958264928435e-07
+        }
+      },
+      "path_position_tolerance": {
+        "elbow_joint": 0.005,
+        "shoulder_lift_joint": 0.005,
+        "shoulder_pan_joint": 0.005,
+        "wrist_1_joint": 0.005,
+        "wrist_2_joint": 0.005,
+        "wrist_3_joint": 0.01
+      },
+      "phase": "transfer",
+      "quiet": true,
+      "status": 4,
+      "step": 18
+    }
+  ],
+  "actual_robot_goals_sent": false
+}

@@ -1,0 +1,58 @@
+{
+  "old_processes": [
+    {
+      "pid": 7367,
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup real_robot.launch.py allow_execution:=true use_rviz:=false "
+    },
+    {
+      "pid": 7383,
+      "args": "/home/ksn/ur5e_ws/install/ur_robot_driver/lib/ur_robot_driver/ur_ros2_control_node --ros-args --params-file /tmp/launch_params_gjjnr189 --params-file /home/ksn/ur5e_ws/install/ur_robot_driver/share/ur_robot_driver/config/ur5e_update_rate.yaml --params-file /tmp/launch_params_q79m66ib --params-file /tmp/launch_params_v8rpvtg4 "
+    },
+    {
+      "pid": 7387,
+      "args": "/home/ksn/ur5e_ws/install/ur_robot_driver/lib/ur_robot_driver/robot_state_helper --ros-args -r __node:=ur_robot_state_helper --params-file /tmp/launch_params_xhe7oq9q --params-file /tmp/launch_params__acvlqwl "
+    },
+    {
+      "pid": 7389,
+      "args": "/home/ksn/ur5e_ws/install/ur_robot_driver/lib/ur_robot_driver/controller_stopper_node --ros-args -r __node:=controller_stopper --params-file /tmp/launch_params_7zv9jlyd --params-file /tmp/launch_params_mqa8maim --params-file /tmp/launch_params_t2udlcog "
+    },
+    {
+      "pid": 7391,
+      "args": "/home/ksn/ur5e_ws/install/ur_robot_driver/lib/ur_robot_driver/urscript_interface --ros-args --params-file /tmp/launch_params_j4tlj92j "
+    },
+    {
+      "pid": 7393,
+      "args": "/home/ksn/ur5e_ws/install/ur_robot_driver/lib/ur_robot_driver/trajectory_until_node --ros-args -r __node:=trajectory_until_node --params-file /tmp/launch_params_asn16nsu "
+    },
+    {
+      "pid": 7430,
+      "args": "/opt/ros/humble/lib/controller_manager/ros2_control_node --ros-args -r __ns:=/gripper --params-file /tmp/launch_params_0wcq_svj --params-file /home/ksn/ur5e_ws/install/dh_gripper_driver/share/dh_gripper_driver/config/dh_ag95_controllers.yaml -r ~/robot_description:=robot_description -r joint_states:=/joint_states -r /joint_states:=/joint_states -r dynamic_joint_states:=dynamic_joint_states -r /dynamic_joint_states:=dynamic_joint_states "
+    },
+    {
+      "pid": 7475,
+      "args": "/opt/ros/humble/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_oyvpar3z "
+    },
+    {
+      "pid": 7481,
+      "args": "/home/ksn/ws_moveit2/install/moveit_ros_move_group/lib/moveit_ros_move_group/move_group --ros-args -r __node:=move_group --params-file /tmp/launch_params_fst8nud4 "
+    },
+    {
+      "pid": 7651,
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup view_only.launch.py "
+    },
+    {
+      "pid": 7665,
+      "args": "/opt/ros/humble/lib/rviz2/rviz2 -d /home/ksn/ur5e_ws/install/ur5e_block_bringup/share/ur5e_block_bringup/config/plate_view.rviz --ros-args -r __node:=rviz2 --params-file /tmp/launch_params_woxm5oqv "
+    },
+    {
+      "pid": 7742,
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_a3_grid stack_gui.launch.py backend:=real "
+    },
+    {
+      "pid": 7756,
+      "args": "python3 /home/ksn/ur5e_ws/install/ur5e_a3_grid/lib/ur5e_a3_grid/stack_gui --ros-args -r __node:=ur5e_a3_stack_gui --params-file /tmp/launch_params_amqgzf1s "
+    }
+  ],
+  "remaining_old_processes": [],
+  "actual_goals_sent": false
+}

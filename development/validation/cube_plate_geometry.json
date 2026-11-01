@@ -1,0 +1,384 @@
+{
+  "source": "/home/ksn/Downloads/cube_plate.STL",
+  "source_sha256": "5621960c23a7f50757680df35345b0186e1fc1cd971f1f744734debe1f96c040",
+  "coordinate_units": "STL is unitless; numerical units interpreted as mm by agreement with supplied drawing",
+  "mesh_scale_to_metres": 0.001,
+  "bounds_mm": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      420,
+      297,
+      10
+    ]
+  },
+  "columns": 6,
+  "rows": 4,
+  "pocket_count": 24,
+  "pocket_pitch_mm": [
+    60,
+    59.4
+  ],
+  "pockets": [
+    {
+      "column": 1,
+      "row_from_min_y": 1,
+      "center_mm": [
+        60.0,
+        59.4,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 2,
+      "row_from_min_y": 1,
+      "center_mm": [
+        120.0,
+        59.4,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 3,
+      "row_from_min_y": 1,
+      "center_mm": [
+        180.0,
+        59.4,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 4,
+      "row_from_min_y": 1,
+      "center_mm": [
+        240.0,
+        59.4,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 5,
+      "row_from_min_y": 1,
+      "center_mm": [
+        300.0,
+        59.4,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 6,
+      "row_from_min_y": 1,
+      "center_mm": [
+        360.0,
+        59.4,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 1,
+      "row_from_min_y": 2,
+      "center_mm": [
+        60.0,
+        118.8,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 2,
+      "row_from_min_y": 2,
+      "center_mm": [
+        120.0,
+        118.8,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 3,
+      "row_from_min_y": 2,
+      "center_mm": [
+        180.0,
+        118.8,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 4,
+      "row_from_min_y": 2,
+      "center_mm": [
+        240.0,
+        118.8,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 5,
+      "row_from_min_y": 2,
+      "center_mm": [
+        300.0,
+        118.8,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 6,
+      "row_from_min_y": 2,
+      "center_mm": [
+        360.0,
+        118.8,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 1,
+      "row_from_min_y": 3,
+      "center_mm": [
+        60.0,
+        178.2,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 2,
+      "row_from_min_y": 3,
+      "center_mm": [
+        120.0,
+        178.2,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 3,
+      "row_from_min_y": 3,
+      "center_mm": [
+        180.0,
+        178.2,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 4,
+      "row_from_min_y": 3,
+      "center_mm": [
+        240.0,
+        178.2,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 5,
+      "row_from_min_y": 3,
+      "center_mm": [
+        300.0,
+        178.2,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 6,
+      "row_from_min_y": 3,
+      "center_mm": [
+        360.0,
+        178.2,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 1,
+      "row_from_min_y": 4,
+      "center_mm": [
+        60.0,
+        237.6,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 2,
+      "row_from_min_y": 4,
+      "center_mm": [
+        120.0,
+        237.6,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 3,
+      "row_from_min_y": 4,
+      "center_mm": [
+        180.0,
+        237.6,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 4,
+      "row_from_min_y": 4,
+      "center_mm": [
+        240.0,
+        237.6,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 5,
+      "row_from_min_y": 4,
+      "center_mm": [
+        300.0,
+        237.6,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    },
+    {
+      "column": 6,
+      "row_from_min_y": 4,
+      "center_mm": [
+        360.0,
+        237.6,
+        5.0
+      ],
+      "opening_mm": [
+        25.5,
+        25.5
+      ],
+      "recess_depth_mm": 5.0
+    }
+  ],
+  "plate_bottom_z_mm": 0,
+  "plate_top_z_mm": 10,
+  "pocket_floor_z_mm": 5,
+  "central_stack_support": {
+    "xy_mm": [
+      210,
+      148.5
+    ],
+    "z_mm": 10,
+    "clear_flat_rectangle_mm": [
+      34.5,
+      33.9
+    ],
+    "central_25mm_block_edge_margins_mm": [
+      4.75,
+      4.45
+    ],
+    "note": "STL surfaces meet at x=210 and y=148.5; actual assembled seam level and gaps are not verified"
+  },
+  "physical_motion_sent": false,
+  "live_configuration_modified": false
+}

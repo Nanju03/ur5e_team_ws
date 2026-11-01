@@ -1,0 +1,395 @@
+{
+  "actual_goals_sent": false,
+  "scene_writes_sent": false,
+  "measured_joints": {
+    "shoulder_pan_joint": -0.1207039991961878,
+    "shoulder_lift_joint": -1.6030360660948695,
+    "elbow_joint": 2.408856455479757,
+    "wrist_1_joint": -2.375496049920553,
+    "wrist_2_joint": -1.5659974257098597,
+    "wrist_3_joint": -1.6809523741351526,
+    "left_outer_knuckle_joint": 0.0
+  },
+  "failed_plan": "20261101_163246_physical_plan",
+  "logged_start_sweep": [
+    {
+      "hand": 0.0,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.01,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.02,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.03,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.04,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.05,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.06,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.07,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.08,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.09,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.1,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.11,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.12,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.13,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.14,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.15,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.16,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.17,
+      "valid": false,
+      "contacts": [
+        {
+          "a": "left_finger_pad",
+          "b": "ur5e_stack/block_7",
+          "depth": 0.00026367830285800586,
+          "xyz": [
+            0.4178420094083175,
+            0.10026406149450903,
+            0.8298846788812227
+          ]
+        },
+        {
+          "a": "right_finger_pad",
+          "b": "ur5e_stack/block_5",
+          "depth": 0.0002634986573181175,
+          "xyz": [
+            0.3227484694952451,
+            0.07977687804676288,
+            0.8298847574212311
+          ]
+        }
+      ]
+    },
+    {
+      "hand": 0.18,
+      "valid": false,
+      "contacts": [
+        {
+          "a": "left_finger_pad",
+          "b": "ur5e_stack/block_7",
+          "depth": 0.00037616165074464834,
+          "xyz": [
+            0.4174195279342128,
+            0.10026635043137272,
+            0.8297804720657871
+          ]
+        },
+        {
+          "a": "right_finger_pad",
+          "b": "ur5e_stack/block_5",
+          "depth": 0.00038508932100344607,
+          "xyz": [
+            0.3231752584714354,
+            0.07977458484560467,
+            0.8297752584714353
+          ]
+        }
+      ]
+    },
+    {
+      "hand": 0.19,
+      "valid": false,
+      "contacts": [
+        {
+          "a": "left_finger_pad",
+          "b": "ur5e_stack/block_7",
+          "depth": 5.329971049329394e-05,
+          "xyz": [
+            0.4172311057103126,
+            0.10026735041207943,
+            0.8299688942896875
+          ]
+        },
+        {
+          "a": "right_finger_pad",
+          "b": "ur5e_stack/block_5",
+          "depth": 6.222747758434096e-05,
+          "xyz": [
+            0.32336368349453426,
+            0.07977355138287665,
+            0.8299636834945341
+          ]
+        }
+      ]
+    },
+    {
+      "hand": 0.2,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.21,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.22,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.23,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.24,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.25,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.26,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.27,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.28,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.29,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.3,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.31,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.32,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.33,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.34,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.35,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.36,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.37,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.38,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.39,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.4,
+      "valid": true,
+      "contacts": []
+    }
+  ],
+  "measured_sweep": [
+    {
+      "hand": 0.0,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand": 0.4,
+      "valid": true,
+      "contacts": []
+    }
+  ],
+  "scene_unchanged": true,
+  "objects": [
+    {
+      "id": "ur5e_stack/block_1",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_11",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_12",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_15",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_16",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_19",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_2",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_20",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_23",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_24",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_3",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_4",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_5",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_6",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_7",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_8",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/block_9",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/obstacle_10",
+      "primitives": 1,
+      "meshes": 0
+    },
+    {
+      "id": "ur5e_stack/plate",
+      "primitives": 0,
+      "meshes": 1
+    }
+  ],
+  "attached": []
+}

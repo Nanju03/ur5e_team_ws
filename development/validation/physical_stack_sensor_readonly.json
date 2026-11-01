@@ -1,0 +1,13 @@
+{
+  "samples": 559,
+  "sensor": {
+    "position": 0.65007,
+    "velocity": 0.0,
+    "raw_position": 301.0,
+    "grip_state": 1.0,
+    "force_percent": 20.0,
+    "communication_age": 0.106876116,
+    "sample_sequence": 20759.0
+  },
+  "sent_motion_goal": false
+}

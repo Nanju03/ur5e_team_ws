@@ -1,0 +1,14 @@
+{
+  "workspace": "/home/ksn/ur5e_ws",
+  "existing_driver": "ur_robot_driver",
+  "robot_ip": "192.168.0.2",
+  "rtde": "connected",
+  "factory_calibration_matches": true,
+  "gripper_started": false,
+  "headless_mode": false,
+  "arm_motion_controller_activated": false,
+  "block_stacking_started": false,
+  "packages_built": 6,
+  "calibration_tests_passed": 22,
+  "native_joint_states_received": true
+}

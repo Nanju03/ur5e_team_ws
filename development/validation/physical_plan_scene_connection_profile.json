@@ -1,0 +1,48 @@
+{
+  "actual_goals_sent": false,
+  "scene_writes_sent": false,
+  "measurements": [
+    {
+      "mode": "new_client",
+      "discovery_seconds": 0.754057610000018,
+      "response_seconds": 0.016000401999917813,
+      "total_seconds": 0.7700582599991321
+    },
+    {
+      "mode": "new_client",
+      "discovery_seconds": 7.403999916277826e-05,
+      "response_seconds": 0.10385864899944863,
+      "total_seconds": 0.10393300499890756
+    },
+    {
+      "mode": "new_client",
+      "discovery_seconds": 7.668199941690546e-05,
+      "response_seconds": 0.02056715099934081,
+      "total_seconds": 0.020644045998778893
+    },
+    {
+      "mode": "reused_client_first",
+      "discovery_seconds": 0.0001388929995300714,
+      "response_seconds": 0.015059456000017235,
+      "total_seconds": 0.015198609999060864
+    },
+    {
+      "mode": "reused_client",
+      "discovery_seconds": 9.697200039227027e-05,
+      "response_seconds": 0.021773078999103745,
+      "total_seconds": 0.021870295000553597
+    },
+    {
+      "mode": "reused_client",
+      "discovery_seconds": 7.854799878259655e-05,
+      "response_seconds": 0.03371879800033639,
+      "total_seconds": 0.03379767200021888
+    },
+    {
+      "mode": "reused_client",
+      "discovery_seconds": 0.00010237499918730464,
+      "response_seconds": 0.016087277999758953,
+      "total_seconds": 0.016189871999813477
+    }
+  ]
+}

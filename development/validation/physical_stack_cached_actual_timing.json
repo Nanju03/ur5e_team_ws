@@ -1,0 +1,12 @@
+{
+  "result_code": 0,
+  "elapsed_seconds": 88.1162344280001,
+  "actual_goals_sent": false,
+  "validated_samples": 9845,
+  "motion_steps": 52,
+  "plan_id": "71ac3394b8796be8",
+  "duration": 441.43913574299995,
+  "steps": 82,
+  "moves": 5,
+  "layers": 6
+}

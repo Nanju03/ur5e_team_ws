@@ -51,37 +51,42 @@ constexpr double kGripperForceMultiplierParamDefault = 1.0;
 constexpr auto kUseDummyParamName = "use_dummy";
 constexpr auto kUseDummyParamDefault = "false";
 
-std::unique_ptr<Driver> DefaultDriverFactory::create(const hardware_interface::HardwareInfo& info) const
+std::unique_ptr<Driver> DefaultDriverFactory::create(const hardware_interface::HardwareInfo & info)
+const
 {
   RCLCPP_INFO(kLogger, "Reading %s...", kSlaveAddressParamName);
   // Convert base-16 address stored as a string (for example, "0x9") into an integer
   const uint8_t slave_address =
-      info.hardware_parameters.count(kSlaveAddressParamName) ?
-          static_cast<uint8_t>(std::stoul(info.hardware_parameters.at(kSlaveAddressParamName), nullptr, 16)) :
-          kSlaveAddressParamDefault;
+    info.hardware_parameters.count(kSlaveAddressParamName) ?
+    static_cast<uint8_t>(std::stoul(
+      info.hardware_parameters.at(
+        kSlaveAddressParamName), nullptr, 16)) :
+    kSlaveAddressParamDefault;
   RCLCPP_INFO(kLogger, "%s: %d", kSlaveAddressParamName, slave_address);
 
   RCLCPP_INFO(kLogger, "Reading %s...", kGripperSpeedMultiplierParamName);
   double gripper_speed = info.hardware_parameters.count(kGripperSpeedMultiplierParamName) ?
-                             std::clamp(stod(info.hardware_parameters.at(kGripperSpeedMultiplierParamName)), 0.0, 1.0) :
-                             kGripperSpeedMultiplierParamDefault;
+    std::clamp(stod(info.hardware_parameters.at(kGripperSpeedMultiplierParamName)), 0.0, 1.0) :
+    kGripperSpeedMultiplierParamDefault;
   RCLCPP_INFO(kLogger, "%s: %fs", kGripperSpeedMultiplierParamName, gripper_speed);
 
   RCLCPP_INFO(kLogger, "Reading %s...", kGripperForceMultiplierParamName);
   double gripper_force = info.hardware_parameters.count(kGripperForceMultiplierParamName) ?
-                             std::clamp(stod(info.hardware_parameters.at(kGripperForceMultiplierParamName)), 0.0, 1.0) :
-                             kGripperForceMultiplierParamDefault;
+    std::clamp(stod(info.hardware_parameters.at(kGripperForceMultiplierParamName)), 0.0, 1.0) :
+    kGripperForceMultiplierParamDefault;
   RCLCPP_INFO(kLogger, "%s: %fs", kGripperForceMultiplierParamName, gripper_force);
 
   auto driver = create_driver(info);
   driver->set_slave_address(slave_address);
   driver->set_speed(gripper_speed * 0xFF);
-  driver->set_force(gripper_force * 0xFF);
+  // Force is applied by the hardware interface after connection/initialization.
+  // set_force() now performs an acknowledged DH 20..100% register write.
 
   return driver;
 }
 
-std::unique_ptr<Driver> DefaultDriverFactory::create_driver(const hardware_interface::HardwareInfo& info) const
+std::unique_ptr<Driver> DefaultDriverFactory::create_driver(
+  const hardware_interface::HardwareInfo & info) const
 {
   auto serial = DefaultSerialFactory().create(info);
   return std::make_unique<DefaultDriver>(std::move(serial));

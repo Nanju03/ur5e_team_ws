@@ -1,0 +1,20 @@
+{
+  "mode": "continuous",
+  "domain": 93,
+  "hardware": "mock_components/GenericSystem",
+  "first_ready": {
+    "plan_id": "sim_39650_15096073369083",
+    "request_id": "sim_39650_15096073369083_1",
+    "index": 1,
+    "total": 1,
+    "label": "Entire stacking path",
+    "duration": 15.836473893,
+    "approve_service": "/ur5e_a3_stack/approve_next_sim_39650_15096073369083_1"
+  },
+  "waiting_max_joint_delta": 0.0,
+  "second_wait_max_joint_delta": null,
+  "duplicate_accepted": false,
+  "stop_confirmed_max_joint_delta": 0.0,
+  "ready_count": 1,
+  "physical_motion_sent": false
+}

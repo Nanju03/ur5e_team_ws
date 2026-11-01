@@ -1,0 +1,23 @@
+{
+  "result": "passed",
+  "domain": 103,
+  "hardware": "mock_components/GenericSystem",
+  "approvals_before_grasp": 5,
+  "preview_hashes_checked": 6,
+  "each_READY_held_before_OK": true,
+  "lift_approval_pending_index": 6,
+  "gripper_held_q": 0.73,
+  "held_geometry_retained": true,
+  "attached_objects": [
+    "ur5e_stack/block_4"
+  ],
+  "physical_held_fault_expected": false,
+  "physical_held_fault_present": false,
+  "physical_fault_assertion_correction": "Mock mode deliberately does not write the physical recovery latch; original probe stopped only at that incorrect expectation.",
+  "stop_confirmed": true,
+  "no_auto_lift": true,
+  "no_auto_release": true,
+  "readonly_post_stop_samples": 156,
+  "maximum_post_stop_joint_delta_rad": 0.0,
+  "actual_robot_goals_sent": false
+}

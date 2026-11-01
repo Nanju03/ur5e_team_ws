@@ -1,0 +1,43 @@
+cmake_minimum_required(VERSION 3.8)
+project(ur5e_a3_grid)
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rcl_interfaces REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
+find_package(moveit_core REQUIRED)
+find_package(moveit_msgs REQUIRED)
+find_package(moveit_ros_planning REQUIRED)
+find_package(controller_manager_msgs REQUIRED)
+find_package(shape_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(geometric_shapes REQUIRED)
+
+add_executable(a3_grid src/a3_grid.cpp)
+target_compile_features(a3_grid PUBLIC cxx_std_17)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(a3_grid PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+ament_target_dependencies(a3_grid
+  rclcpp geometry_msgs visualization_msgs
+  moveit_ros_planning_interface moveit_core moveit_msgs)
+
+add_executable(stack_blocks src/stack_blocks.cpp)
+target_compile_features(stack_blocks PUBLIC cxx_std_17)
+ament_target_dependencies(stack_blocks
+  rclcpp rcl_interfaces visualization_msgs moveit_ros_planning_interface moveit_ros_planning
+  moveit_core moveit_msgs controller_manager_msgs shape_msgs sensor_msgs std_srvs geometric_shapes)
+
+add_executable(plate_placement_check src/plate_placement_check.cpp)
+target_compile_features(plate_placement_check PUBLIC cxx_std_17)
+ament_target_dependencies(plate_placement_check rclcpp moveit_ros_planning moveit_core moveit_msgs shape_msgs geometric_shapes)
+
+install(TARGETS a3_grid stack_blocks plate_placement_check DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/stack_gui.py DESTINATION lib/${PROJECT_NAME} RENAME stack_gui)
+install(PROGRAMS scripts/stack_sweep.py DESTINATION lib/${PROJECT_NAME} RENAME stack_sweep)
+install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
+install(FILES README.md DESTINATION share/${PROJECT_NAME})
+ament_package()

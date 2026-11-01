@@ -1,0 +1,733 @@
+{
+  "schema": 2,
+  "created_at": 1793442239.573235,
+  "trajectory_sha256": "06db0892650123957abed5880ccf6fe6c4e467ee950f1fb250cb1f546f6b6691",
+  "input_sha256": {
+    "selection_file": "5ec88b5b3a01355b127d454ded43ecf8b3b3e3fa614cc9f7e064051f52a50e49",
+    "calibration_file": "9e6a22f33e0bda052b39040e92f8c45c7d7cb6f08b29aa05f7e70a0ad9754c5a",
+    "physical_profile": "9679ee91820252235ffb8dff3e7d76f4d8828696c052bfc4e745a28f8a145ee8",
+    "gripper_calibration": null,
+    "plate_mesh": "5621960c23a7f50757680df35345b0186e1fc1cd971f1f744734debe1f96c040"
+  },
+  "model_sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+  "semantic_sha256": "9b85ef545c255f1ec8f37362f201a559b9b9236550a4bf7d8321464f8085bfe3",
+  "scene_sha256": "7f282d7d970623b5e7f5ffb5f0109d41b8a7ebcfbde88f400eed4aaa054d632b",
+  "hardware_class": "mock_components/GenericSystem",
+  "gripper_position": 0.0,
+  "metrics": {
+    "joint_names": [
+      "shoulder_pan_joint",
+      "shoulder_lift_joint",
+      "elbow_joint",
+      "wrist_1_joint",
+      "wrist_2_joint",
+      "wrist_3_joint"
+    ],
+    "points": 695,
+    "duration": 207.749504079,
+    "max_velocity": 0.08949532044796044,
+    "max_acceleration": 0.06594975662030914,
+    "joint_velocity_maxima": [
+      0.08178837463591436,
+      0.06331109169499545,
+      0.08402006772110458,
+      0.08949532044796044,
+      0.012456225920639767,
+      0.08183907023542143
+    ],
+    "joint_acceleration_maxima": [
+      0.0643485680451334,
+      0.06306421439945004,
+      0.06474175000430045,
+      0.06594975662030914,
+      0.008929654756337686,
+      0.0646847131721374
+    ],
+    "time_scale": 1.588164765408747,
+    "velocity_limit": 0.1,
+    "acceleration_limit": 0.1,
+    "segments": 22,
+    "segment_end_indices": [
+      37,
+      56,
+      103,
+      150,
+      193,
+      201,
+      210,
+      248,
+      283,
+      330,
+      377,
+      425,
+      433,
+      442,
+      475,
+      510,
+      557,
+      604,
+      649,
+      657,
+      666,
+      694
+    ],
+    "normalized_acceleration_boundaries": 21,
+    "acceleration_boundary_changes": [
+      {
+        "point_index": 37,
+        "time_before_scaling": 5.593598206,
+        "previous_acceleration": [
+          0.05855085828188813,
+          0.04220856910516697,
+          -0.03444197081982715,
+          0.0037984932816300166,
+          0.0051188697463042275,
+          0.05819364926259415
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 8.883555583
+      },
+      {
+        "point_index": 56,
+        "time_before_scaling": 9.532779229,
+        "previous_acceleration": [
+          0.05807478253756147,
+          0.05589352782692709,
+          -0.026616546690153956,
+          -0.02927764828406373,
+          6.73540287297382e-05,
+          0.05824696846225669
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 15.139624088
+      },
+      {
+        "point_index": 103,
+        "time_before_scaling": 16.943895502,
+        "previous_acceleration": [
+          0.00016899332774081448,
+          -0.031522159358858465,
+          -0.027796104424725358,
+          0.05931859184357207,
+          0.00022065355477760178,
+          -0.00018166112362030432
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 26.909697825
+      },
+      {
+        "point_index": 150,
+        "time_before_scaling": 24.319579962,
+        "previous_acceleration": [
+          -0.0002086425201783996,
+          -0.006214598275017182,
+          0.05877064125403658,
+          -0.052557198143478555,
+          3.418666104974072e-05,
+          0.00019391976439776085
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 38.623500005
+      },
+      {
+        "point_index": 193,
+        "time_before_scaling": 31.191020811,
+        "previous_acceleration": [
+          -0.013931342502712055,
+          -0.04682542555476065,
+          -0.01202745965539049,
+          0.05885357348058457,
+          0.0001711959778192394,
+          -0.014293456819283009
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 49.536480249
+      },
+      {
+        "point_index": 201,
+        "time_before_scaling": 33.987482693,
+        "previous_acceleration": [
+          0.0001200271602576359,
+          -0.03226691083281201,
+          -0.026738665887305682,
+          0.05900583500957628,
+          0.00023526870140941082,
+          -0.00022123182676319768
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 53.977722478
+      },
+      {
+        "point_index": 210,
+        "time_before_scaling": 36.786204731,
+        "previous_acceleration": [
+          -0.00013393269360211096,
+          0.02745844036612497,
+          0.03228550502127911,
+          -0.059744516216649855,
+          -0.00020110459807536364,
+          0.00024172391971674363
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 58.422554207
+      },
+      {
+        "point_index": 248,
+        "time_before_scaling": 42.996733419,
+        "previous_acceleration": [
+          -0.00015639669623188074,
+          -0.0008176850785061515,
+          0.05837764150556905,
+          -0.05756131368427897,
+          -2.7205103364587923e-06,
+          0.00028111880432587014
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 68.285897044
+      },
+      {
+        "point_index": 283,
+        "time_before_scaling": 48.180678466,
+        "previous_acceleration": [
+          -0.05714297828635446,
+          -0.05990989774629409,
+          0.059986605159601365,
+          -7.667794084542605e-05,
+          -6.915706231720295e-05,
+          -0.057119670483027664
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 76.518855913
+      },
+      {
+        "point_index": 330,
+        "time_before_scaling": 55.026703343,
+        "previous_acceleration": [
+          8.820649116217196e-05,
+          -0.03227333954327283,
+          -0.026068646208159792,
+          0.05834236877648856,
+          0.00022895076699624102,
+          -0.0002597458332870367
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 87.391471406
+      },
+      {
+        "point_index": 377,
+        "time_before_scaling": 61.820103805,
+        "previous_acceleration": [
+          -0.00011058802047787262,
+          0.0014047368207177793,
+          0.05841352289815981,
+          -0.0598197899626028,
+          -1.8497751933227007e-05,
+          0.0003425817949687574
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 98.180510657
+      },
+      {
+        "point_index": 425,
+        "time_before_scaling": 68.65733758,
+        "previous_acceleration": [
+          0.05314286695340015,
+          0.006509427706201714,
+          -0.05863838281594355,
+          0.05212955485192101,
+          0.00017533446552465013,
+          0.05278077635880692
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 109.039164431
+      },
+      {
+        "point_index": 433,
+        "time_before_scaling": 71.388786284,
+        "previous_acceleration": [
+          0.000128694074296891,
+          -0.028591690808684497,
+          -0.030331653393122177,
+          0.05892382139935223,
+          0.00020925887847165507,
+          -0.0002336404768452889
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 113.377155022
+      },
+      {
+        "point_index": 442,
+        "time_before_scaling": 74.127687912,
+        "previous_acceleration": [
+          -0.00014150525069026281,
+          0.023699863472645456,
+          0.03604829031856449,
+          -0.05974891755860832,
+          -0.00017428435715682476,
+          0.00025226197167898856
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 117.726982083
+      },
+      {
+        "point_index": 475,
+        "time_before_scaling": 79.786481598,
+        "previous_acceleration": [
+          -0.00015623099684848187,
+          -0.0008173045822799133,
+          0.05831632350534613,
+          -0.05750037474634767,
+          -2.7142749626091014e-06,
+          0.00028082166209383733
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 126.71407883
+      },
+      {
+        "point_index": 510,
+        "time_before_scaling": 85.910271969,
+        "previous_acceleration": [
+          0.058400889848948236,
+          0.004923651028459975,
+          -0.0027599211011912917,
+          -0.002163784431331368,
+          5.3523814137182585e-06,
+          0.05841330400266747
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 136.439666928
+      },
+      {
+        "point_index": 557,
+        "time_before_scaling": 93.101552696,
+        "previous_acceleration": [
+          0.0001435150723257704,
+          -0.03212150051058367,
+          -0.026569126345722963,
+          0.05869087377222421,
+          0.00023049483853547143,
+          -0.00019537387137714239
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 147.860605597
+      },
+      {
+        "point_index": 604,
+        "time_before_scaling": 100.291146912,
+        "previous_acceleration": [
+          -0.00018885236681787654,
+          -0.003838817348804493,
+          0.05973341958285556,
+          -0.05589586921630397,
+          1.4574602742447346e-05,
+          0.000238187866860294
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 159.278865808
+      },
+      {
+        "point_index": 649,
+        "time_before_scaling": 106.584464858,
+        "previous_acceleration": [
+          -0.05680612872310667,
+          -0.04723229509349597,
+          -0.011441526706264901,
+          0.058674774506413355,
+          0.00011305643323994415,
+          -0.057192158885474395
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 169.273691627
+      },
+      {
+        "point_index": 657,
+        "time_before_scaling": 109.265494184,
+        "previous_acceleration": [
+          0.00013640201453539192,
+          -0.024865018176147096,
+          -0.033969115230086847,
+          0.05883481023967494,
+          0.0001825103433606145,
+          -0.0002443342424972717
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 173.531607938
+      },
+      {
+        "point_index": 666,
+        "time_before_scaling": 111.956839577,
+        "previous_acceleration": [
+          -0.00014819725127607393,
+          0.01993114323521696,
+          0.039899000965792575,
+          -0.05983107751792927,
+          -0.0001475290232083756,
+          0.00026163179801679757
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 177.805907863
+      }
+    ],
+    "input_effort_removed": false,
+    "max_tcp_speed": 0.03333333341595478,
+    "max_tcp_step": 0.0016486569374197543,
+    "bounds_xyz": {
+      "min": [
+        0.3108945875928712,
+        -0.15000200450207735,
+        0.8729999926442538
+      ],
+      "max": [
+        0.5014886350356631,
+        0.15144521238272507,
+        1.1112628753300553
+      ]
+    },
+    "additional_tcp_time_scale": 1.1173757609882309
+  },
+  "validated_samples": 4593,
+  "path_kind": "empty_hand_stack_pattern",
+  "scan_min_gripper_z": null,
+  "scan_safe_after": null,
+  "scan_cells": [],
+  "segment_labels": [
+    "Prepare vertical working home",
+    "Source 13 approach",
+    "Source 13 descend",
+    "Lift block 13",
+    "Place block 13 layer 1 approach",
+    "Place block 13 layer 1 descend",
+    "Retreat from layer 1",
+    "Prepare next vertical pickup",
+    "Source 4 approach",
+    "Source 4 descend",
+    "Lift block 4",
+    "Place block 4 layer 2 approach",
+    "Place block 4 layer 2 descend",
+    "Retreat from layer 2",
+    "Prepare next vertical pickup",
+    "Source 21 approach",
+    "Source 21 descend",
+    "Lift block 21",
+    "Place block 21 layer 3 approach",
+    "Place block 21 layer 3 descend",
+    "Retreat from layer 3",
+    "Return to clear working pose"
+  ],
+  "plan_id": "3ddf620cb83d4b28"
+}

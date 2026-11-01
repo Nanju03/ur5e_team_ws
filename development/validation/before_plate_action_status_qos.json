@@ -1,0 +1,43 @@
+{
+  "read_only": true,
+  "physical_motion_sent": false,
+  "status_samples": {},
+  "publisher_qos": {
+    "/scaled_joint_trajectory_controller/follow_joint_trajectory/_action/status": [
+      {
+        "node": "/scaled_joint_trajectory_controller",
+        "reliability": "ReliabilityPolicy.RELIABLE",
+        "durability": "DurabilityPolicy.TRANSIENT_LOCAL",
+        "depth": 0
+      }
+    ],
+    "/gripper/dh_ag95_gripper_controller/gripper_cmd/_action/status": [
+      {
+        "node": "/gripper/dh_ag95_gripper_controller",
+        "reliability": "ReliabilityPolicy.RELIABLE",
+        "durability": "DurabilityPolicy.TRANSIENT_LOCAL",
+        "depth": 0
+      }
+    ],
+    "/execute_trajectory/_action/status": [
+      {
+        "node": "/move_group",
+        "reliability": "ReliabilityPolicy.RELIABLE",
+        "durability": "DurabilityPolicy.TRANSIENT_LOCAL",
+        "depth": 0
+      }
+    ],
+    "/move_action/_action/status": [
+      {
+        "node": "/move_group",
+        "reliability": "ReliabilityPolicy.RELIABLE",
+        "durability": "DurabilityPolicy.TRANSIENT_LOCAL",
+        "depth": 0
+      }
+    ]
+  },
+  "probe_qos": {
+    "reliability": "ReliabilityPolicy.RELIABLE",
+    "durability": "DurabilityPolicy.TRANSIENT_LOCAL"
+  }
+}

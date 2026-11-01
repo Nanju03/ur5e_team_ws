@@ -1,0 +1,53 @@
+{
+  "python_tests_passed": 404,
+  "driver_tests_passed": 70,
+  "fake_sensor_workflow": {
+    "fake_hardware": true,
+    "domain": 93,
+    "arm_goals": 0,
+    "recorded_trials": 3,
+    "recommendation": {
+      "commanded_q": 0.7198500000000001,
+      "measured_q": 0.71796,
+      "force_percent": 20,
+      "measured_min": 0.71796,
+      "measured_max": 0.71796,
+      "trials": 3,
+      "trial_ids": [
+        1,
+        2,
+        3
+      ]
+    },
+    "stale_sensor_stop_confirmed": true,
+    "mock_profile_application_rejected": true,
+    "csv_path": "/home/ksn/ur5e_ws/validation/fake_gripper_sessions/20261031_160827_domain93_31610.csv"
+  },
+  "mock_controller_routing": {
+    "hardware": "mock_components/GenericSystem",
+    "domain": 94,
+    "active_controllers": [
+      "dh_ag95_gripper_controller",
+      "force_forward_controller",
+      "joint_state_broadcaster"
+    ],
+    "dynamic_interfaces": [
+      "communication_age",
+      "force_percent",
+      "grip_state",
+      "position",
+      "raw_position",
+      "sample_sequence",
+      "velocity"
+    ],
+    "root_joint_states": true,
+    "gripper_action_succeeded": true,
+    "physical_motion_sent": false
+  },
+  "real_arm_motion_sent": false,
+  "real_gripper_motion_sent": false,
+  "real_profile_created_by_this_task": false,
+  "driver_legacy_lint": "12 unchanged source files; external package XML schema unavailable; see gripper_driver_lint_audit.txt",
+  "launch_script": "/home/ksn/ur5e_ws/start_gripper_calibration.sh",
+  "actual_profile_output": "/home/ksn/ur5e_ws/gripper_calibration.yaml"
+}

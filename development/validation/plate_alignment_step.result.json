@@ -1,0 +1,9 @@
+{
+  "mode": "step",
+  "preview_hash_checked": true,
+  "held_before_first_OK": true,
+  "held_before_second_OK": true,
+  "one_OK_one_segment": true,
+  "old_approval_service_removed": true,
+  "stop_while_waiting_confirmed": true
+}

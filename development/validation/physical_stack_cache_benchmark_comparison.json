@@ -1,0 +1,29 @@
+{
+  "result": "passed",
+  "domain": 103,
+  "mode": "physical_plan",
+  "hardware": "mock_components/GenericSystem",
+  "movement_goals_sent": 0,
+  "steps": 18,
+  "motion_steps": 12,
+  "validated_samples_each": 2170,
+  "identical_all_motion_trajectory_points": true,
+  "identical_all_step_joint_vectors": true,
+  "identical_initial_and_all_scene_hashes": true,
+  "all_adjacent_scene_hashes_continuous": true,
+  "every_motion_keeps_collision_geometry": true,
+  "gripper_targets": [
+    0.4,
+    0.73,
+    0.7,
+    0.6
+  ],
+  "approach_scaling": 0.05,
+  "other_arm_scaling": 0.2,
+  "old_seconds": 22.564534576998994,
+  "new_seconds": 20.705206693000946,
+  "measured_speedup": 1.089800015598326,
+  "old_collision_clients_created": 127,
+  "new_collision_clients_created": 3,
+  "note": "Isolated domain103 did not reproduce actual-domain cold discovery stalls; the measured timing is not a forecast of actual-domain planning time."
+}

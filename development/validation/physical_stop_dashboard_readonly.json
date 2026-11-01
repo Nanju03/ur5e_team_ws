@@ -1,0 +1,8 @@
+{
+  "greeting": "Connected: Universal Robots Dashboard Server",
+  "running": "Program running: true",
+  "programState": "STOPPED <unnamed>",
+  "robotmode": "Robotmode: RUNNING",
+  "safetystatus": "Safetystatus: NORMAL",
+  "is in remote control": "true"
+}

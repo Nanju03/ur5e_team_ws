@@ -1,0 +1,83 @@
+{
+  "domain": 103,
+  "hardware": "mock_components/GenericSystem",
+  "held_before_OK": true,
+  "preview_hash_verified": true,
+  "continuous_approvals": 1,
+  "result": "passed",
+  "gripper_sequence": [
+    0.73,
+    0.7,
+    0.6
+  ],
+  "maximum_release_arm_delta_rad": 0.0,
+  "release_clearance_before_retreat": true,
+  "final_gripper_q": 0.6,
+  "foundation_pose_preserved": true,
+  "block_centers_world_m": {
+    "ur5e_stack/block_11": [
+      0.4297,
+      0.03,
+      0.8175
+    ],
+    "ur5e_stack/block_4": [
+      0.42970000035591166,
+      0.030000000005805463,
+      0.8425000012673582
+    ]
+  },
+  "attached_objects": 0,
+  "feedback_samples": 10475,
+  "motion_labels": [
+    "Initial gripper open",
+    "Prepare vertical working home",
+    "Source 4 approach",
+    "Source 4 descend",
+    "Close on block 4",
+    "Lift block 4",
+    "Place block 4 layer 2 approach",
+    "Place block 4 layer 2 descend",
+    "Release block 4 first opening",
+    "Release block 4 clearance opening before retreat",
+    "Retreat from layer 2",
+    "Return to clear working pose"
+  ],
+  "monitor_warmups": 12,
+  "monitored_services_per_motion": 7,
+  "monitor_stop_reasons": [],
+  "holding_envelope_validations": [
+    {
+      "step": 8,
+      "lower": 0.727,
+      "upper": 0.733,
+      "finger_shapes": 3,
+      "arm_samples": 178,
+      "checked": 534
+    },
+    {
+      "step": 11,
+      "lower": 0.727,
+      "upper": 0.733,
+      "finger_shapes": 3,
+      "arm_samples": 187,
+      "checked": 561
+    },
+    {
+      "step": 12,
+      "lower": 0.727,
+      "upper": 0.733,
+      "finger_shapes": 3,
+      "arm_samples": 116,
+      "checked": 348
+    },
+    {
+      "step": 13,
+      "lower": 0.727,
+      "upper": 0.733,
+      "finger_shapes": 9,
+      "arm_samples": 1,
+      "checked": 9
+    }
+  ],
+  "actual_robot_goals_sent": false
+}

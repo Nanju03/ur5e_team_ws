@@ -7,12 +7,17 @@
       type: position_controllers/GripperActionController
     forward_position_controller:
       type: forward_command_controller/ForwardCommandController
+    force_forward_controller:
+      type: forward_command_controller/ForwardCommandController
 
 # gripper action controller for moveit
 /**/dh_ag95_gripper_controller:
   ros__parameters:
     default: true
     joint: left_outer_knuckle_joint
+    goal_tolerance: 0.001
+    stall_velocity_threshold: 0.002
+    stall_timeout: 1.0
 
 # forward command controller for easier operation
 /**/forward_position_controller:
@@ -20,3 +25,10 @@
     joints:
       - left_outer_knuckle_joint
     interface_name: position
+
+# Independent force setting, u=0..1 maps to 20..100 percent, not newtons.
+/**/force_forward_controller:
+  ros__parameters:
+    joints:
+      - left_outer_knuckle_joint
+    interface_name: set_gripper_max_effort

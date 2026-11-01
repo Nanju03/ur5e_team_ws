@@ -1,0 +1,22 @@
+{
+  "result": "passed",
+  "domain": 0,
+  "existing": [
+    {
+      "pid": 14935,
+      "kind": "AG95 gripper driver",
+      "executable": "/opt/ros/humble/lib/controller_manager/ros2_control_node",
+      "domain": "0"
+    },
+    {
+      "pid": 24105,
+      "kind": "UR arm driver",
+      "executable": "/home/ksn/ur5e_ws/install/ur_robot_driver/lib/ur_robot_driver/ur_ros2_control_node",
+      "domain": "0"
+    }
+  ],
+  "rejection": "Existing hardware connection in ROS domain 0: AG95 gripper driver PID 14935, UR arm driver PID 24105. A second launch could initialize the gripper or replace active controllers. Reuse the current connection; no additional nodes were started.",
+  "ROS_calls": 0,
+  "hardware_nodes_started": 0,
+  "movement_goals_sent": 0
+}

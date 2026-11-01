@@ -1,0 +1,43 @@
+{
+  "plan_id": "60e72ee19c8468c2",
+  "hardware_class": "mock_components/GenericSystem",
+  "path_kind": "plate_alignment",
+  "gripper_position": 0.7,
+  "validated_samples": 3844,
+  "segments": 13,
+  "scan_floor_world_z_m": 0.8200000000000001,
+  "scan_cells": [
+    {
+      "cell": 1,
+      "x": 0.3109,
+      "y": 0.15,
+      "z": 0.830633466,
+      "pocket_cell": 1
+    },
+    {
+      "cell": 2,
+      "x": 0.4891,
+      "y": 0.15,
+      "z": 0.830633466,
+      "pocket_cell": 4
+    },
+    {
+      "cell": 3,
+      "x": 0.4891,
+      "y": -0.15,
+      "z": 0.830633466,
+      "pocket_cell": 24
+    },
+    {
+      "cell": 4,
+      "x": 0.3109,
+      "y": -0.15,
+      "z": 0.830633466,
+      "pocket_cell": 21
+    }
+  ],
+  "minimum_required_tip_clearance_m": 0.01,
+  "numerical_target_reserve_m": 0.0001,
+  "arm_goals_sent": false,
+  "physical_goals_sent": false
+}

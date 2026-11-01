@@ -1,0 +1,76 @@
+{
+  "read_only": true,
+  "robot_motion_sent": false,
+  "scene_hashes_stable": true,
+  "records": [
+    {
+      "fingerprint": "9a2e3f2b932bde4a754271b2a060ffaea7671b758a3e58a2a3f8ec470e801230",
+      "transforms": [
+        {
+          "source": "tool0_controller",
+          "target": "world",
+          "translation": [
+            0.5146749259392337,
+            0.13937514328835166,
+            1.2954822845901308
+          ]
+        },
+        {
+          "source": "world",
+          "target": "world",
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "fingerprint": "9a2e3f2b932bde4a754271b2a060ffaea7671b758a3e58a2a3f8ec470e801230",
+      "transforms": [
+        {
+          "source": "tool0_controller",
+          "target": "world",
+          "translation": [
+            0.5146637692934221,
+            0.13939316518005587,
+            1.2954641446927777
+          ]
+        },
+        {
+          "source": "world",
+          "target": "world",
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    },
+    {
+      "fingerprint": "9a2e3f2b932bde4a754271b2a060ffaea7671b758a3e58a2a3f8ec470e801230",
+      "transforms": [
+        {
+          "source": "tool0_controller",
+          "target": "world",
+          "translation": [
+            0.5146570687171835,
+            0.13939546597716362,
+            1.2954946424101883
+          ]
+        },
+        {
+          "source": "world",
+          "target": "world",
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    }
+  ]
+}

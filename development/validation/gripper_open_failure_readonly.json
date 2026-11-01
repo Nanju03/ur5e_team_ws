@@ -1,0 +1,17 @@
+{
+  "actual_goals_sent": false,
+  "samples": 871,
+  "last": {
+    "position": 0.0,
+    "velocity": 0.0,
+    "raw_position": 1000.0,
+    "grip_state": 1.0,
+    "force_percent": 20.0,
+    "communication_age": 0.074940717,
+    "sample_sequence": 107187.0
+  },
+  "range_position": [
+    0.0,
+    0.0
+  ]
+}

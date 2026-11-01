@@ -1,10 +1,21 @@
+import math
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetLaunchConfiguration
+from launch.conditions import IfCondition, LaunchConfigurationEquals
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
+
+
+def configure_force(context):
+    value = float(LaunchConfiguration("force_percent").perform(context))
+    if not math.isfinite(value) or not value.is_integer() or not 20 <= value <= 100:
+        raise ValueError("force_percent must be an integer from 20 through 100")
+    return [SetLaunchConfiguration("gripper_force_multiplier", str((value - 20) / 80))]
+
 
 def generate_launch_description():
     # Declare arguments
@@ -21,6 +32,15 @@ def generate_launch_description():
             "com_port",
             default_value="/dev/robot/dh_ag95_gripper",
             description="COM port of the gripper.",
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "force_percent", default_value="20",
+            description=(
+                "Initial DH force setting, integer 20..100 percent; "
+                "not a measured force in newtons."
+            ),
         )
     )
     declared_arguments.append(
@@ -54,6 +74,34 @@ def generate_launch_description():
             description="Start RViz2 automatically with this launch file.",
         )
     )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "launch_robot_state_publisher",
+            default_value="true",
+            description=(
+                "Publish the standalone gripper model. "
+                "Disable when a combined robot model publishes TF."
+            ),
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "joint_states_topic",
+            default_value="joint_states",
+            description=(
+                "Joint feedback topic; use /joint_states to share feedback "
+                "with a combined arm model."
+            ),
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "controller_mode",
+            default_value="forward",
+            choices=["forward", "action"],
+            description="Use direct position commands or the MoveIt gripper action controller.",
+        )
+    )
 
     # Initialize Arguments
     namespace = LaunchConfiguration("namespace")
@@ -62,6 +110,8 @@ def generate_launch_description():
     use_mock_hardware = LaunchConfiguration("use_mock_hardware")
     mock_sensor_commands = LaunchConfiguration("mock_sensor_commands")
     gui = LaunchConfiguration("gui")
+    launch_robot_state_publisher = LaunchConfiguration("launch_robot_state_publisher")
+    joint_states_topic = LaunchConfiguration("joint_states_topic")
 
     # Get URDF via xacro
     robot_description_content = Command(
@@ -87,10 +137,15 @@ def generate_launch_description():
             " ",
             "mock_sensor_commands:=",
             mock_sensor_commands,
+            " ",
+            "gripper_force_multiplier:=",
+            LaunchConfiguration("gripper_force_multiplier"),
         ]
     )
-    robot_description = {"robot_description": robot_description_content}
-    
+    robot_description = {
+        "robot_description": ParameterValue(robot_description_content, value_type=str)
+    }
+
     # Load controllers configuration
     robot_controllers = PathJoinSubstitution(
         [
@@ -113,7 +168,11 @@ def generate_launch_description():
         output="both",
         remappings=[
             ("~/robot_description", "robot_description"),
-            ("/joint_states", "joint_states"),
+            # The broadcaster publishes a relative topic in its /gripper namespace.
+            # Match that name as well as versions using the absolute topic.
+            ("joint_states", joint_states_topic),
+            ("/joint_states", joint_states_topic),
+            ("dynamic_joint_states", "dynamic_joint_states"),
             ("/dynamic_joint_states", "dynamic_joint_states"),
         ],
     )
@@ -121,6 +180,7 @@ def generate_launch_description():
     robot_state_pub_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
+        condition=IfCondition(launch_robot_state_publisher),
         namespace=namespace,
         output="both",
         parameters=[robot_description],
@@ -145,26 +205,38 @@ def generate_launch_description():
     )
 
     # helper function to spawn controllers
-    def controller_spawner(name, *args):
+    def controller_spawner(name, *args, condition=None):
         return Node(
             package="controller_manager",
             executable="spawner",
             namespace=namespace,
+            condition=condition,
             output="screen",
             # A relative manager name resolves inside this spawner's namespace.
             arguments=[name, "--controller-manager", "controller_manager"] + list(args),
         )
 
-    # Active controllers
-    active_list = [
-        "joint_state_broadcaster",
-        "forward_position_controller",
+    # Keep the original forward controller behavior unless action mode is selected.
+    active_spawners = [
+        controller_spawner("joint_state_broadcaster"),
+        controller_spawner("force_forward_controller"),
+        controller_spawner(
+            "forward_position_controller",
+            condition=LaunchConfigurationEquals("controller_mode", "forward"),
+        ),
+        controller_spawner(
+            "dh_ag95_gripper_controller",
+            condition=LaunchConfigurationEquals("controller_mode", "action"),
+        ),
     ]
-    active_spawners = [controller_spawner(controller) for controller in active_list]
-
-    # Inactive controllers
-    inactive_list = []
-    inactive_spawners = [controller_spawner(controller, "--inactive") for controller in inactive_list]
+    # Both controllers command the same joint, so forward stays inactive in action mode.
+    inactive_spawners = [
+        controller_spawner(
+            "forward_position_controller",
+            "--inactive",
+            condition=LaunchConfigurationEquals("controller_mode", "action"),
+        ),
+    ]
 
     nodes = [
         control_node,
@@ -172,4 +244,6 @@ def generate_launch_description():
         rviz_node,
     ] + active_spawners + inactive_spawners
 
-    return LaunchDescription(declared_arguments + nodes)
+    return LaunchDescription(
+        declared_arguments + [OpaqueFunction(function=configure_force)] + nodes
+    )

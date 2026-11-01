@@ -1,0 +1,26 @@
+{
+  "actual_goals_sent": false,
+  "settings_changed": false,
+  "samples": 1074,
+  "age": 4.765899939229712e-05,
+  "states": {
+    "payload": {
+      "mass": 0.82,
+      "cog.z": 0.046,
+      "cog.x": 0.006,
+      "inertia.ixx": 0.001106,
+      "cog.y": 0.013,
+      "inertia.iyy": 0.001106,
+      "inertia.izz": 0.001106,
+      "inertia.ixy": 0.0,
+      "inertia.ixz": 0.0,
+      "inertia.iyz": 0.0
+    },
+    "speed_scaling": {
+      "speed_scaling_factor": 1.0
+    },
+    "system_interface": {
+      "initialized": 1.0
+    }
+  }
+}

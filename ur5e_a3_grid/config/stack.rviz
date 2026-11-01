@@ -1,0 +1,59 @@
+Panels:
+- Class: rviz_common/Displays
+  Name: Displays
+Visualization Manager:
+  Displays:
+  - Class: rviz_default_plugins/Grid
+    Name: Grid
+    Value: true
+  - Class: moveit_rviz_plugin/PlanningScene
+    Name: Robot and blocks
+    Planning Scene Topic: /monitored_planning_scene
+    Robot Description: robot_description
+    Scene Geometry:
+      Show Scene Geometry: true
+      Scene Alpha: 1.0
+    Scene Robot:
+      Robot Alpha: 1.0
+    Value: true
+  - Class: moveit_rviz_plugin/Trajectory
+    Name: Planned route
+    Robot Description: robot_description
+    Trajectory Topic: /display_planned_path
+    Loop Animation: false
+    State Display Time: 0.05 s
+    Robot Alpha: 0.35
+    Value: true
+  - Class: rviz_default_plugins/MarkerArray
+    Enabled: true
+    Name: A3 cell numbers
+    Namespaces: {}
+    Topic:
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /ur5e_a3_stack/markers
+    Value: true
+  Global Options:
+    Fixed Frame: world
+  Tools:
+  - Class: rviz_default_plugins/Interact
+  - Class: rviz_default_plugins/MoveCamera
+  - Class: rviz_default_plugins/Select
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 2.7
+      Focal Point:
+        X: 0.35
+        Y: 0.0
+        Z: 1.0
+      Name: Current View
+      Pitch: 0.5
+      Target Frame: world
+      Yaw: -0.623
+Window Geometry:
+  Width: 1100
+  Height: 850

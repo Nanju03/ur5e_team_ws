@@ -1,0 +1,293 @@
+{
+  "schema": 2,
+  "created_at": 1793442351.7542067,
+  "trajectory_sha256": "03489b6232814a63f4a8931417534cae1105ea1a84841d78b908bd5c32db0fef",
+  "input_sha256": {
+    "selection_file": "a024d84897d1a563d894c4745a674f377f934152bd2831d08ab211b6a9bc57c7",
+    "calibration_file": "9e6a22f33e0bda052b39040e92f8c45c7d7cb6f08b29aa05f7e70a0ad9754c5a",
+    "physical_profile": "9679ee91820252235ffb8dff3e7d76f4d8828696c052bfc4e745a28f8a145ee8",
+    "gripper_calibration": null,
+    "plate_mesh": "5621960c23a7f50757680df35345b0186e1fc1cd971f1f744734debe1f96c040"
+  },
+  "model_sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+  "semantic_sha256": "9b85ef545c255f1ec8f37362f201a559b9b9236550a4bf7d8321464f8085bfe3",
+  "scene_sha256": "7f282d7d970623b5e7f5ffb5f0109d41b8a7ebcfbde88f400eed4aaa054d632b",
+  "hardware_class": "mock_components/GenericSystem",
+  "gripper_position": 0.0,
+  "metrics": {
+    "joint_names": [
+      "shoulder_pan_joint",
+      "shoulder_lift_joint",
+      "elbow_joint",
+      "wrist_1_joint",
+      "wrist_2_joint",
+      "wrist_3_joint"
+    ],
+    "points": 317,
+    "duration": 96.374232122,
+    "max_velocity": 0.06584492491849604,
+    "max_acceleration": 0.035371858328529744,
+    "joint_velocity_maxima": [
+      0.061382980200042056,
+      0.05559316171519428,
+      0.062497748275042155,
+      0.06584492491849604,
+      0.020067418678021698,
+      0.06137889332232866
+    ],
+    "joint_acceleration_maxima": [
+      0.03469686712011471,
+      0.03448654423255863,
+      0.035371858328529744,
+      0.034950570266745806,
+      0.024518045687486913,
+      0.03465698620186343
+    ],
+    "time_scale": 1.5804552784793418,
+    "velocity_limit": 0.1,
+    "acceleration_limit": 0.1,
+    "segments": 7,
+    "segment_end_indices": [
+      1,
+      11,
+      63,
+      111,
+      171,
+      256,
+      316
+    ],
+    "normalized_acceleration_boundaries": 6,
+    "acceleration_boundary_changes": [
+      {
+        "point_index": 1,
+        "time_before_scaling": 0.662586021,
+        "previous_acceleration": [
+          -9.699628414532107e-05,
+          -0.0009217301433961178,
+          0.05909787691742314,
+          -0.058199597205328656,
+          2.2220465674319127e-05,
+          0.00034503865492474555
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 1.047187574
+      },
+      {
+        "point_index": 11,
+        "time_before_scaling": 2.955836747,
+        "previous_acceleration": [
+          -0.02628806351520351,
+          0.023987141878715083,
+          -0.03673300007770933,
+          0.05994429493963734,
+          0.04614702189447412,
+          -0.02848977752910659
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 4.671567789
+      },
+      {
+        "point_index": 63,
+        "time_before_scaling": 9.247069191,
+        "previous_acceleration": [
+          -0.05819604140654826,
+          0.05959298584021246,
+          -0.03083719466743958,
+          -0.02875647455375223,
+          7.540815198409677e-05,
+          -0.05803276385801115
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 14.614579313
+      },
+      {
+        "point_index": 111,
+        "time_before_scaling": 16.617834515,
+        "previous_acceleration": [
+          0.00015919309569364682,
+          -0.030737476163070456,
+          -0.02813359047125058,
+          0.05887141363184387,
+          0.00021769995633852838,
+          -0.0001910000590328704
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 26.263744276
+      },
+      {
+        "point_index": 171,
+        "time_before_scaling": 24.312781962,
+        "previous_acceleration": [
+          0.005118086818557414,
+          -0.042145181305568075,
+          0.05994200577832239,
+          -0.01779674903154658,
+          -0.0001261658361001831,
+          0.0052297631888032
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 38.425264586
+      },
+      {
+        "point_index": 256,
+        "time_before_scaling": 32.427691545,
+        "previous_acceleration": [
+          0.05798247354392038,
+          -0.029565168064966275,
+          0.04214763174619522,
+          -0.012582418748542365,
+          -8.871331795978551e-05,
+          0.05806134860998773
+        ],
+        "next_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "normalized_acceleration": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "time_after_scaling": 51.250516271
+      }
+    ],
+    "input_effort_removed": false,
+    "max_tcp_speed": 0.03343586693547346,
+    "max_tcp_step": 0.0016548787435365672,
+    "bounds_xyz": {
+      "min": [
+        0.2514940948128534,
+        -0.21000230406815643,
+        0.8794367805765086
+      ],
+      "max": [
+        0.5485012529711087,
+        0.2100007320419174,
+        1.116263985544635
+      ]
+    },
+    "additional_tcp_time_scale": 1.518718408924987
+  },
+  "validated_samples": 2114,
+  "path_kind": "plate_alignment",
+  "scan_min_gripper_z": 0.8600000000000001,
+  "scan_safe_after": 1.590383046741699,
+  "scan_cells": [
+    {
+      "cell": 1,
+      "x": 0.2515,
+      "y": 0.21,
+      "z": 0.879440562
+    },
+    {
+      "cell": 2,
+      "x": 0.5485,
+      "y": 0.21,
+      "z": 0.879440562
+    },
+    {
+      "cell": 3,
+      "x": 0.5485,
+      "y": -0.21,
+      "z": 0.879440562
+    },
+    {
+      "cell": 4,
+      "x": 0.2515,
+      "y": -0.21,
+      "z": 0.879440562
+    }
+  ],
+  "segment_labels": [
+    "Plate alignment initial vertical lift preserving current orientation",
+    "XY scan turn gripper down at fixed TCP",
+    "Plate corner A safe-height approach",
+    "Plate corner A alignment hover",
+    "Plate corner B alignment hover",
+    "Plate corner C alignment hover",
+    "Plate corner D alignment hover"
+  ],
+  "plan_id": "1f9fcf6250792b5d"
+}

@@ -1,0 +1,11 @@
+/**:
+  ros__parameters:
+    # Same choice as the GUI's "23층 예시 배치" button.
+    center_from_home: false
+    center_xyz: [0.501279384, 0.153785494, 1.091231957]
+    center_offset_xyz: [0.0, 0.0, 0.0]
+    target_cell: 24
+    obstacle_cells: [1]
+    empty_cells: []
+    placement_mode: side
+    robot_riser_height: 0.0  # Original robot mounting height, no riser.

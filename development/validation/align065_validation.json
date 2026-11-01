@@ -1,0 +1,57 @@
+{
+  "alignment_gripper_position_rad": 0.65,
+  "default_open_position_rad": 0.4,
+  "minimum_tip_clearance_m": 0.01,
+  "first_corner_operator_pause_preserved": true,
+  "target_foundation_block_preserved": true,
+  "old_point_seven_plans_require_replanning": true,
+  "unit_tests_passed": 754,
+  "runtime": {
+    "domain": 101,
+    "hardware": [
+      "mock_components/GenericSystem"
+    ],
+    "mode": "continuous",
+    "default_gripper_position": 0.4,
+    "alignment_target": 0.65,
+    "held_before_first_OK": true,
+    "first_pocket_cell": 1,
+    "first_pocket_tcp_world_m": [
+      0.31089999931001616,
+      0.14999999995650076,
+      0.8303157777166112
+    ],
+    "first_pocket_gripper_position": 0.65,
+    "first_pocket_min_gripper_z_m": 0.8200999920564116,
+    "held_at_A_for_seconds": 2.0,
+    "explicit_resume_required": true,
+    "no_automatic_B_motion": true,
+    "expired_first_approval_unavailable": true,
+    "resumed_with_fresh_OK": true,
+    "completed": "DONE",
+    "final_pocket_cell": 21,
+    "final_tcp_world_m": [
+      0.31089999954411635,
+      -0.149999999484391,
+      0.8303157777166112
+    ],
+    "final_gripper_position": 0.65,
+    "final_gripper_min_z_m": 0.8200999920563975,
+    "result": "passed",
+    "feedback_samples": 2536,
+    "real_robot_goals_sent": false,
+    "fixture_stopped": true,
+    "user_domain_42_touched": false,
+    "validation_velocity_scaling": 0.6,
+    "requested_minimum_tip_clearance_m": 0.01,
+    "numerical_target_reserve_m": 0.0001
+  },
+  "physical_robot_goals_sent": false,
+  "source_sha256": {
+    "ur5e_a3_grid/scripts/stack_gui.py": "5a686a5533ed1a40d964022595c35c1e8c15c42712b530edb8f989390103f56b",
+    "ur5e_a3_grid/src/stack_blocks.cpp": "1b14cfe664abebaba2b8d7b5c5b737ee8d0a43689fd3edb2ab972e134043e0f4",
+    "ur5e_block_bringup/ur5e_block_bringup/air_task.py": "dd403ed81b98eb7eab1a978ae6af2b816647f24b53a1dd75b2a2f4af32af9c2c",
+    "ur5e_block_bringup/ur5e_block_bringup/plate_geometry.py": "bb7afc150e7e55090f1dab12310350d798433a869e9d444fc0c6cf79568440b4",
+    "ur5e_a3_grid/config/a3_grid.yaml": "9381672b904a2b07b398dbb75606f8e05d95b300ce1ef9c21183c7c022450a15"
+  }
+}

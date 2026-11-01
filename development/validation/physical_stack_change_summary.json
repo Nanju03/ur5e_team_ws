@@ -1,0 +1,31 @@
+{
+  "requested_gripper_rad": {
+    "grasp": 0.73,
+    "release": [
+      0.7,
+      0.6
+    ]
+  },
+  "velocity_scaling": {
+    "pick_place_entry": 0.05,
+    "other_arm": 0.2
+  },
+  "acceleration_scaling": 0.05,
+  "tests_passed": 819,
+  "build": "2 packages passed",
+  "actual_robot_motion_sent": false,
+  "checks": {
+    "physical_stack_continuous_runtime.result.json": "passed",
+    "physical_stack_step_stop_runtime.result.json": "passed",
+    "physical_stack_final_actual_readonly.json": "passed"
+  },
+  "actual_preview": {
+    "target_cell": 1,
+    "moves": 5,
+    "layers": 6,
+    "steps": 82,
+    "validated_samples": 9960
+  },
+  "gui_pid": 20487,
+  "actual_driver_launch_pid": 14900
+}

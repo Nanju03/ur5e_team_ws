@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: ur5e_block_description
+    relative_path: urdf/ur5e_on_box.urdf
+  srdf:
+    relative_path: config/ur5e_on_box.srdf
+  package_settings:
+    author_name: ksn
+    author_email: kksomr2@gamil.com
+    generated_timestamp: 1792848700
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity

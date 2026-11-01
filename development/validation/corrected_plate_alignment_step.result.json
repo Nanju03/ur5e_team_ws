@@ -1,0 +1,15 @@
+{
+  "domain": 98,
+  "hardware": [
+    "mock_components/GenericSystem"
+  ],
+  "held_before_OK": true,
+  "first_OK_moves_only_gripper": true,
+  "gripper_position": 0.7,
+  "arm_unchanged": true,
+  "next_segment_waits_for_OK": true,
+  "old_approval_removed": true,
+  "stop_while_waiting_confirmed": true,
+  "segment_count": 14,
+  "result": "passed"
+}

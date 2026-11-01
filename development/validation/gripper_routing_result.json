@@ -1,0 +1,21 @@
+{
+  "hardware": "mock_components/GenericSystem",
+  "domain": 94,
+  "active_controllers": [
+    "dh_ag95_gripper_controller",
+    "force_forward_controller",
+    "joint_state_broadcaster"
+  ],
+  "dynamic_interfaces": [
+    "communication_age",
+    "force_percent",
+    "grip_state",
+    "position",
+    "raw_position",
+    "sample_sequence",
+    "velocity"
+  ],
+  "root_joint_states": true,
+  "gripper_action_succeeded": true,
+  "physical_motion_sent": false
+}

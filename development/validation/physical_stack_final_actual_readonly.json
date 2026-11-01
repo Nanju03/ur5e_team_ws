@@ -1,0 +1,133 @@
+{
+  "actual_robot_goals_sent": false,
+  "mode": "read_only",
+  "hardware": {
+    "/controller_manager": [
+      {
+        "name": "ur5e",
+        "type": "system",
+        "state": "active"
+      }
+    ],
+    "/gripper/controller_manager": [
+      {
+        "name": "dh_ag95_gripper",
+        "type": "system",
+        "state": "active"
+      }
+    ]
+  },
+  "controllers": {
+    "/controller_manager": [
+      {
+        "name": "joint_trajectory_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "forward_velocity_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "forward_position_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "forward_effort_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "force_mode_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "io_and_status_controller",
+        "state": "active"
+      },
+      {
+        "name": "passthrough_trajectory_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "freedrive_mode_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "speed_scaling_state_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "tool_contact_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "force_torque_sensor_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "tcp_pose_broadcaster",
+        "state": "active"
+      },
+      {
+        "name": "ur_configuration_controller",
+        "state": "active"
+      },
+      {
+        "name": "friction_model_controller",
+        "state": "active"
+      },
+      {
+        "name": "scaled_joint_trajectory_controller",
+        "state": "active"
+      }
+    ],
+    "/gripper/controller_manager": [
+      {
+        "name": "dh_ag95_gripper_controller",
+        "state": "active"
+      },
+      {
+        "name": "force_forward_controller",
+        "state": "active"
+      },
+      {
+        "name": "forward_position_controller",
+        "state": "inactive"
+      },
+      {
+        "name": "joint_state_broadcaster",
+        "state": "active"
+      }
+    ]
+  },
+  "result": "passed",
+  "joint_positions": {
+    "shoulder_pan_joint": -0.07380897203554326,
+    "shoulder_lift_joint": -1.9578877888121546,
+    "elbow_joint": 2.1148417631732386,
+    "wrist_1_joint": -1.726682802239889,
+    "wrist_2_joint": -1.5641315619098108,
+    "wrist_3_joint": -0.06743365923036748,
+    "left_outer_knuckle_joint": 0.65007
+  },
+  "sensor": {
+    "position": 0.65007,
+    "raw_position": 301.0,
+    "grip_state": 1.0,
+    "force_percent": 20.0,
+    "communication_age": 0.063101474,
+    "sample_sequence": 55636.0
+  },
+  "plan_id": "0324a9f4f1860113",
+  "scene_hash": "7d0c402f01f69f82b92fe4ba6d2e22de1380ce72f852205056d082aedd8c824d",
+  "scene_chain_valid": true,
+  "validated_samples": 9960,
+  "steps": 82,
+  "moves": 5,
+  "layers": 6,
+  "target_cell": 1,
+  "duration": 447.73247830800005
+}

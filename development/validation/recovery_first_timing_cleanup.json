@@ -1,0 +1,52 @@
+{
+  "domain": 104,
+  "owned_launches": [
+    {
+      "pid": 19594,
+      "ppid": 19567,
+      "start_ticks": 1075056,
+      "domain": "104",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch /home/ksn/ur5e_ws/validation/recovery_mock_system.launch.py "
+    },
+    {
+      "pid": 19682,
+      "ppid": 19567,
+      "start_ticks": 1075246,
+      "domain": "104",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup block_task.launch.py stack_mode:=scene selection_file:=/home/ksn/ur5e_ws/validation/recovery_selection.yaml trajectory_file:=/home/ksn/ur5e_ws/validation/recovery_unused.cdr allow_mock_hardware:=true "
+    },
+    {
+      "pid": 19708,
+      "ppid": 19567,
+      "start_ticks": 1075451,
+      "domain": "104",
+      "args": "/usr/bin/python3 /opt/ros/humble/bin/ros2 launch ur5e_block_bringup block_task.launch.py stack_mode:=physical_recover selection_file:=/home/ksn/ur5e_ws/validation/recovery_selection.yaml trajectory_file:=/home/ksn/ur5e_ws/validation/recovery_mock.recipe.json recipe_manifest_file:=/home/ksn/ur5e_ws/validation/recovery_mock.recipe.json allow_mock_hardware:=true workspace_clear:=true recovery_empty_confirmed:=true preparation_id:=recover_mock_unique execution_mode:=step "
+    }
+  ],
+  "children_before_stop": [
+    {
+      "pid": 19606,
+      "ppid": 19594,
+      "start_ticks": 1075150,
+      "domain": "104",
+      "args": "/opt/ros/humble/lib/controller_manager/ros2_control_node --ros-args --params-file /tmp/launch_params_w7a5j8l6 --params-file /home/ksn/ur5e_ws/validation/physical_stack_mock_controllers.yaml "
+    },
+    {
+      "pid": 19610,
+      "ppid": 19594,
+      "start_ticks": 1075150,
+      "domain": "104",
+      "args": "/opt/ros/humble/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_usxn0iqh "
+    },
+    {
+      "pid": 19709,
+      "ppid": 19708,
+      "start_ticks": 1075582,
+      "domain": "104",
+      "args": "/usr/bin/python3 /home/ksn/ur5e_ws/install/ur5e_block_bringup/lib/ur5e_block_bringup/physical_recovery --ros-args --params-file /tmp/launch_params_hyarnb4p "
+    }
+  ],
+  "all_exited": true,
+  "remaining": [],
+  "actual_domain_touched": false
+}

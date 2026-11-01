@@ -1,0 +1,768 @@
+{
+  "name": "(noname)+",
+  "robot_state": {
+    "joint_state": {
+      "header": {
+        "stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "frame_id": "world"
+      },
+      "name": [
+        "shoulder_pan_joint",
+        "shoulder_lift_joint",
+        "elbow_joint",
+        "wrist_1_joint",
+        "wrist_2_joint",
+        "wrist_3_joint",
+        "left_inner_knuckle_joint",
+        "left_outer_knuckle_joint",
+        "left_finger_joint",
+        "right_inner_knuckle_joint",
+        "right_outer_knuckle_joint",
+        "right_finger_joint"
+      ],
+      "position": [
+        0.00655495235696435,
+        -1.5031622436693688,
+        1.5068004767047327,
+        -1.4870270130089303,
+        -1.506683651600973,
+        0.00164267816580832,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "velocity": [],
+      "effort": []
+    },
+    "multi_dof_joint_state": {
+      "header": {
+        "stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "frame_id": "world"
+      },
+      "joint_names": [],
+      "transforms": [],
+      "twist": [],
+      "wrench": []
+    },
+    "attached_collision_objects": [],
+    "is_diff": false
+  },
+  "robot_model_name": "ur5e_on_box",
+  "fixed_frame_transforms": [
+    {
+      "header": {
+        "stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "frame_id": "tool0_controller"
+      },
+      "child_frame_id": "world",
+      "transform": {
+        "translation": {
+          "x": 0.510661391987434,
+          "y": 0.1420551212224765,
+          "z": 1.2925480349718619
+        },
+        "rotation": {
+          "x": 0.7066817892720334,
+          "y": -0.7056469840891852,
+          "z": -0.05051275730241484,
+          "w": 0.010566168029225791
+        }
+      }
+    },
+    {
+      "header": {
+        "stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "frame_id": "world"
+      },
+      "child_frame_id": "world",
+      "transform": {
+        "translation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rotation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      }
+    }
+  ],
+  "allowed_collision_matrix": {
+    "entry_names": [
+      "ag95_base_link",
+      "ag95_body",
+      "base_link_inertia",
+      "base_riser",
+      "forearm_link",
+      "left_finger",
+      "left_finger_pad",
+      "left_inner_knuckle",
+      "left_outer_knuckle",
+      "right_finger",
+      "right_finger_pad",
+      "right_inner_knuckle",
+      "right_outer_knuckle",
+      "shoulder_link",
+      "upper_arm_link",
+      "workbench",
+      "wrist_1_link",
+      "wrist_2_link",
+      "wrist_3_link"
+    ],
+    "entry_values": [
+      {
+        "enabled": [
+          false,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          false,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          false,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          false,
+          false,
+          true,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "enabled": [
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          false
+        ]
+      }
+    ],
+    "default_entry_names": [],
+    "default_entry_values": []
+  },
+  "link_padding": [
+    {
+      "link_name": "ag95_base_link",
+      "padding": 0.0
+    },
+    {
+      "link_name": "ag95_body",
+      "padding": 0.0
+    },
+    {
+      "link_name": "base_link_inertia",
+      "padding": 0.0
+    },
+    {
+      "link_name": "base_riser",
+      "padding": 0.0
+    },
+    {
+      "link_name": "forearm_link",
+      "padding": 0.0
+    },
+    {
+      "link_name": "left_finger",
+      "padding": 0.0
+    },
+    {
+      "link_name": "left_finger_pad",
+      "padding": 0.0
+    },
+    {
+      "link_name": "left_inner_knuckle",
+      "padding": 0.0
+    },
+    {
+      "link_name": "left_outer_knuckle",
+      "padding": 0.0
+    },
+    {
+      "link_name": "right_finger",
+      "padding": 0.0
+    },
+    {
+      "link_name": "right_finger_pad",
+      "padding": 0.0
+    },
+    {
+      "link_name": "right_inner_knuckle",
+      "padding": 0.0
+    },
+    {
+      "link_name": "right_outer_knuckle",
+      "padding": 0.0
+    },
+    {
+      "link_name": "shoulder_link",
+      "padding": 0.0
+    },
+    {
+      "link_name": "upper_arm_link",
+      "padding": 0.0
+    },
+    {
+      "link_name": "workbench",
+      "padding": 0.0
+    },
+    {
+      "link_name": "wrist_1_link",
+      "padding": 0.0
+    },
+    {
+      "link_name": "wrist_2_link",
+      "padding": 0.0
+    },
+    {
+      "link_name": "wrist_3_link",
+      "padding": 0.0
+    }
+  ],
+  "link_scale": [
+    {
+      "link_name": "ag95_base_link",
+      "scale": 1.0
+    },
+    {
+      "link_name": "ag95_body",
+      "scale": 1.0
+    },
+    {
+      "link_name": "base_link_inertia",
+      "scale": 1.0
+    },
+    {
+      "link_name": "base_riser",
+      "scale": 1.0
+    },
+    {
+      "link_name": "forearm_link",
+      "scale": 1.0
+    },
+    {
+      "link_name": "left_finger",
+      "scale": 1.0
+    },
+    {
+      "link_name": "left_finger_pad",
+      "scale": 1.0
+    },
+    {
+      "link_name": "left_inner_knuckle",
+      "scale": 1.0
+    },
+    {
+      "link_name": "left_outer_knuckle",
+      "scale": 1.0
+    },
+    {
+      "link_name": "right_finger",
+      "scale": 1.0
+    },
+    {
+      "link_name": "right_finger_pad",
+      "scale": 1.0
+    },
+    {
+      "link_name": "right_inner_knuckle",
+      "scale": 1.0
+    },
+    {
+      "link_name": "right_outer_knuckle",
+      "scale": 1.0
+    },
+    {
+      "link_name": "shoulder_link",
+      "scale": 1.0
+    },
+    {
+      "link_name": "upper_arm_link",
+      "scale": 1.0
+    },
+    {
+      "link_name": "workbench",
+      "scale": 1.0
+    },
+    {
+      "link_name": "wrist_1_link",
+      "scale": 1.0
+    },
+    {
+      "link_name": "wrist_2_link",
+      "scale": 1.0
+    },
+    {
+      "link_name": "wrist_3_link",
+      "scale": 1.0
+    }
+  ],
+  "object_colors": [],
+  "world": {
+    "collision_objects": [],
+    "octomap": {
+      "header": {
+        "stamp": {
+          "sec": 0,
+          "nanosec": 0
+        },
+        "frame_id": "world"
+      },
+      "origin": {
+        "position": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "orientation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        }
+      },
+      "octomap": {
+        "header": {
+          "stamp": {
+            "sec": 0,
+            "nanosec": 0
+          },
+          "frame_id": ""
+        },
+        "binary": false,
+        "id": "",
+        "resolution": 0.0,
+        "data": []
+      }
+    }
+  },
+  "is_diff": false
+}

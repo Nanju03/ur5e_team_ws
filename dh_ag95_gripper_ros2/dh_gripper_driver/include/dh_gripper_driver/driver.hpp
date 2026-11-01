@@ -38,6 +38,15 @@ namespace dh_gripper_driver
 class Driver
 {
 public:
+  virtual ~Driver() = default;
+
+  struct Feedback
+  {
+    uint16_t initialization = 0;
+    uint16_t grip_state = 1;  // DH: 0=moving, 1=empty target, 2=holding, 3=dropped.
+    uint16_t raw_position = 1000;
+    uint16_t force_percent = 20;  // Read-back command setting, not a force sensor.
+  };
   enum class ActivationStatus
   {
     RESET,
@@ -100,6 +109,9 @@ public:
    */
   virtual uint16_t get_gripper_position() = 0;
 
+  /** Read and validate one complete initialization/grip/position/force-setting sample. */
+  virtual Feedback get_feedback() = 0;
+
   /**
    * @brief Returns true if the gripper is currently moving, false otherwise.
    */
@@ -114,7 +126,7 @@ public:
 
   /**
    * @brief Set how forcefully the gripper opens or closes.
-   * @param force A value between 0x00 (no force) or 0xFF (maximum force).
+   * @param force DH force setting in percent, 20 through 100; not newtons.
    */
   virtual void set_force(uint8_t force) = 0;
 };

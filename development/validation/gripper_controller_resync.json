@@ -1,0 +1,33 @@
+{
+  "action_goals_sent": false,
+  "hardware_initialization": false,
+  "controller": "dh_ag95_gripper_controller",
+  "driver_pid": 14935,
+  "before": {
+    "shoulder_pan_joint": -0.30121022859682256,
+    "shoulder_lift_joint": -1.85095276455068,
+    "elbow_joint": 1.825921360646383,
+    "wrist_1_joint": -1.5447259222022076,
+    "wrist_2_joint": -1.5638869444476526,
+    "wrist_3_joint": -0.2961633841144007,
+    "left_outer_knuckle_joint": 0.0
+  },
+  "result": "passed",
+  "after": {
+    "shoulder_pan_joint": -0.3012798468219202,
+    "shoulder_lift_joint": -1.850924631158346,
+    "elbow_joint": 1.825958553944723,
+    "wrist_1_joint": -1.5447217387012024,
+    "wrist_2_joint": -1.56386644044985,
+    "wrist_3_joint": -0.29620296159853154,
+    "left_outer_knuckle_joint": 0.0
+  },
+  "sensor": {
+    "position": 0.0,
+    "raw_position": 1000.0,
+    "grip_state": 1.0,
+    "force_percent": 20.0,
+    "communication_age": 0.107136244,
+    "sample_sequence": 111764.0
+  }
+}

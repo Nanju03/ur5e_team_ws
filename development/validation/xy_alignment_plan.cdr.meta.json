@@ -1,0 +1,296 @@
+{
+  "schema": 2,
+  "created_at": 1793522392.7579587,
+  "trajectory_sha256": "c628399652d16ff9b60594768a6c824a678262fcfd9e56082333c4a59ea63aaa",
+  "input_sha256": {
+    "selection_file": "7d8975924a1716f1bc35f63e128d1aa079e9086b57607c8b40742736ed482f0f",
+    "calibration_file": "9e6a22f33e0bda052b39040e92f8c45c7d7cb6f08b29aa05f7e70a0ad9754c5a",
+    "physical_profile": "9679ee91820252235ffb8dff3e7d76f4d8828696c052bfc4e745a28f8a145ee8",
+    "gripper_calibration": null,
+    "plate_mesh": "5621960c23a7f50757680df35345b0186e1fc1cd971f1f744734debe1f96c040"
+  },
+  "model_sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+  "semantic_sha256": "9b85ef545c255f1ec8f37362f201a559b9b9236550a4bf7d8321464f8085bfe3",
+  "scene_sha256": "390a12919d284c0f7448ffae444b294b6788784afb6c24dd671feca2822bb970",
+  "hardware_class": "mock_components/GenericSystem",
+  "gripper_position": 0.65,
+  "metrics": {
+    "joint_names": [
+      "shoulder_pan_joint",
+      "shoulder_lift_joint",
+      "elbow_joint",
+      "wrist_1_joint",
+      "wrist_2_joint",
+      "wrist_3_joint"
+    ],
+    "points": 2144,
+    "duration": 507.214891087,
+    "max_velocity": 0.07438860225981829,
+    "max_acceleration": 0.045641345246340004,
+    "joint_velocity_maxima": [
+      0.06865998247022767,
+      0.06214185363839552,
+      0.057069823005083335,
+      0.07438860225981829,
+      0.022696475257064985,
+      0.07423747614646471
+    ],
+    "joint_acceleration_maxima": [
+      0.045265403374807084,
+      0.04485494250409277,
+      0.045641345246340004,
+      0.04532021080958226,
+      0.03129829256864024,
+      0.04525893332092446
+    ],
+    "time_scale": 1.5804791071681996,
+    "velocity_limit": 0.1,
+    "acceleration_limit": 0.1,
+    "segments": 28,
+    "segment_end_indices": [
+      1,
+      11,
+      50,
+      107,
+      164,
+      322,
+      379,
+      436,
+      594,
+      630,
+      687,
+      744,
+      902,
+      959,
+      1016,
+      1174,
+      1234,
+      1291,
+      1348,
+      1506,
+      1563,
+      1620,
+      1778,
+      1814,
+      1871,
+      1928,
+      2086,
+      2143
+    ],
+    "normalized_acceleration_boundaries": 0,
+    "acceleration_boundary_changes": [],
+    "input_effort_removed": false,
+    "max_tcp_speed": 0.03331309895912722,
+    "max_tcp_step": 0.0012678519988329933,
+    "bounds_xyz": {
+      "min": [
+        0.3108938801085813,
+        -0.15000216541267913,
+        0.8303157777885048
+      ],
+      "max": [
+        0.5014957305519427,
+        0.15144532762703128,
+        1.1112643970869225
+      ]
+    },
+    "additional_tcp_time_scale": 1.3442906116711657
+  },
+  "validated_samples": 11697,
+  "path_kind": "plate_alignment",
+  "scan_min_gripper_z": 0.8200000000000001,
+  "scan_safe_after": 1.405526595016872,
+  "scan_cells": [
+    {
+      "cell": 1,
+      "x": 0.3109,
+      "y": 0.15,
+      "z": 0.830315785,
+      "pocket_cell": 1
+    },
+    {
+      "cell": 2,
+      "x": 0.4891,
+      "y": 0.15,
+      "z": 0.830315785,
+      "pocket_cell": 4
+    },
+    {
+      "cell": 3,
+      "x": 0.4891,
+      "y": -0.15,
+      "z": 0.830315785,
+      "pocket_cell": 24
+    },
+    {
+      "cell": 4,
+      "x": 0.3109,
+      "y": -0.15,
+      "z": 0.830315785,
+      "pocket_cell": 21
+    }
+  ],
+  "segment_labels": [
+    "\ud604\uc7ac \ubc29\ud5a5\uc744 \uc720\uc9c0\ud558\uba70 \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ub192\uc774\ub97c \uc720\uc9c0\ud558\uba70 \uadf8\ub9ac\ud37c \ubc29\ud5a5 \ub9de\ucd94\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \u00b7 X\ubc29\ud5a5 \uc704 \uc548\uc804 \ub192\uc774\ub85c \uc811\uadfc",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \u00b7 X\ubc29\ud5a5 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \u00b7 X\ubc29\ud5a5\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \u00b7 \uc548\uc804 \ub192\uc774\uc5d0\uc11c Y\ubc29\ud5a5\uc73c\ub85c \ud68c\uc804",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \u00b7 Y\ubc29\ud5a5 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \u00b7 Y\ubc29\ud5a5\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 A \u00b7 1\ubc88 \u00b7 \uc548\uc804 \ub192\uc774\uc5d0\uc11c X\ubc29\ud5a5\uc73c\ub85c \ud68c\uc804",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \u00b7 X\ubc29\ud5a5 \uc704 \uc548\uc804 \ub192\uc774\ub85c \uc811\uadfc",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \u00b7 X\ubc29\ud5a5 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \u00b7 X\ubc29\ud5a5\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \u00b7 \uc548\uc804 \ub192\uc774\uc5d0\uc11c Y\ubc29\ud5a5\uc73c\ub85c \ud68c\uc804",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \u00b7 Y\ubc29\ud5a5 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \u00b7 Y\ubc29\ud5a5\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 B \u00b7 4\ubc88 \u00b7 \uc548\uc804 \ub192\uc774\uc5d0\uc11c X\ubc29\ud5a5\uc73c\ub85c \ud68c\uc804",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \u00b7 X\ubc29\ud5a5 \uc704 \uc548\uc804 \ub192\uc774\ub85c \uc811\uadfc",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \u00b7 X\ubc29\ud5a5 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \u00b7 X\ubc29\ud5a5\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \u00b7 \uc548\uc804 \ub192\uc774\uc5d0\uc11c Y\ubc29\ud5a5\uc73c\ub85c \ud68c\uc804",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \u00b7 Y\ubc29\ud5a5 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \u00b7 Y\ubc29\ud5a5\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 C \u00b7 24\ubc88 \u00b7 \uc548\uc804 \ub192\uc774\uc5d0\uc11c X\ubc29\ud5a5\uc73c\ub85c \ud68c\uc804",
+    "\ubaa8\uc11c\ub9ac \ud648 D \u00b7 21\ubc88 \u00b7 X\ubc29\ud5a5 \uc704 \uc548\uc804 \ub192\uc774\ub85c \uc811\uadfc",
+    "\ubaa8\uc11c\ub9ac \ud648 D \u00b7 21\ubc88 \u00b7 X\ubc29\ud5a5 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30",
+    "\ubaa8\uc11c\ub9ac \ud648 D \u00b7 21\ubc88 \u00b7 X\ubc29\ud5a5\uc5d0\uc11c \uc218\uc9c1 \uc0c1\uc2b9",
+    "\ubaa8\uc11c\ub9ac \ud648 D \u00b7 21\ubc88 \u00b7 \uc548\uc804 \ub192\uc774\uc5d0\uc11c Y\ubc29\ud5a5\uc73c\ub85c \ud68c\uc804",
+    "\ubaa8\uc11c\ub9ac \ud648 D \u00b7 21\ubc88 \u00b7 Y\ubc29\ud5a5 \ub9de\ucda4 \uc704\uce58\uc5d0\uc11c \ub300\uae30"
+  ],
+  "alignment_policy": "plate_corner_xy_v1",
+  "alignment_stops": [
+    {
+      "after_segment": 4,
+      "corner": "A",
+      "axis": "X",
+      "pocket_cell": 1,
+      "yaw_deg": 0,
+      "x": 0.3109,
+      "y": 0.15,
+      "z": 0.830315784656884,
+      "orientation_xyzw": [
+        0.0018787427335934849,
+        0.7071042853255392,
+        -0.0018787427335936605,
+        0.7071042853255388
+      ]
+    },
+    {
+      "after_segment": 7,
+      "corner": "A",
+      "axis": "Y",
+      "pocket_cell": 1,
+      "yaw_deg": 90,
+      "x": 0.3109,
+      "y": 0.15,
+      "z": 0.830315784656884,
+      "orientation_xyzw": [
+        -0.49866976343272734,
+        0.5013267068867849,
+        0.49866976343272706,
+        0.5013267068867848
+      ]
+    },
+    {
+      "after_segment": 11,
+      "corner": "B",
+      "axis": "X",
+      "pocket_cell": 4,
+      "yaw_deg": 0,
+      "x": 0.4891,
+      "y": 0.15,
+      "z": 0.830315784656884,
+      "orientation_xyzw": [
+        0.0018787427335934849,
+        0.7071042853255392,
+        -0.0018787427335936605,
+        0.7071042853255388
+      ]
+    },
+    {
+      "after_segment": 14,
+      "corner": "B",
+      "axis": "Y",
+      "pocket_cell": 4,
+      "yaw_deg": 90,
+      "x": 0.4891,
+      "y": 0.15,
+      "z": 0.830315784656884,
+      "orientation_xyzw": [
+        -0.49866976343272734,
+        0.5013267068867849,
+        0.49866976343272706,
+        0.5013267068867848
+      ]
+    },
+    {
+      "after_segment": 18,
+      "corner": "C",
+      "axis": "X",
+      "pocket_cell": 24,
+      "yaw_deg": 0,
+      "x": 0.4891,
+      "y": -0.15,
+      "z": 0.830315784656884,
+      "orientation_xyzw": [
+        0.0018787427335934849,
+        0.7071042853255392,
+        -0.0018787427335936605,
+        0.7071042853255388
+      ]
+    },
+    {
+      "after_segment": 21,
+      "corner": "C",
+      "axis": "Y",
+      "pocket_cell": 24,
+      "yaw_deg": 90,
+      "x": 0.4891,
+      "y": -0.15,
+      "z": 0.830315784656884,
+      "orientation_xyzw": [
+        -0.49866976343272734,
+        0.5013267068867849,
+        0.49866976343272706,
+        0.5013267068867848
+      ]
+    },
+    {
+      "after_segment": 25,
+      "corner": "D",
+      "axis": "X",
+      "pocket_cell": 21,
+      "yaw_deg": 0,
+      "x": 0.3109,
+      "y": -0.15,
+      "z": 0.830315784656884,
+      "orientation_xyzw": [
+        0.0018787427335934849,
+        0.7071042853255392,
+        -0.0018787427335936605,
+        0.7071042853255388
+      ]
+    },
+    {
+      "after_segment": 28,
+      "corner": "D",
+      "axis": "Y",
+      "pocket_cell": 21,
+      "yaw_deg": 90,
+      "x": 0.3109,
+      "y": -0.15,
+      "z": 0.830315784656884,
+      "orientation_xyzw": [
+        -0.49866976343272734,
+        0.5013267068867849,
+        0.49866976343272706,
+        0.5013267068867848
+      ]
+    }
+  ],
+  "alignment_rotation_clearance": 0.05,
+  "plan_id": "b6cc837218c982a9"
+}

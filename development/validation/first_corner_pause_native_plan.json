@@ -1,0 +1,35 @@
+{
+  "domain": 97,
+  "hardware_class": "mock_components/GenericSystem",
+  "path_kind": "plate_alignment",
+  "plan_id": "74fe23c85abf2357",
+  "alignment_pause_after_segment": 4,
+  "arm_segments": 13,
+  "validated_samples": 3844,
+  "continuous_groups": 2,
+  "group_durations_s": [
+    36.337796126,
+    138.847998121
+  ],
+  "group_waypoints": [
+    108,
+    475
+  ],
+  "original_waypoints": 582,
+  "exact_source_positions_derivatives_and_timing_retained": true,
+  "first_corner_endpoint_world_m": [
+    0.31089999930722734,
+    0.1499999999858947,
+    0.8306334595396263
+  ],
+  "first_corner_reference_error_m": 6.497427262120089e-09,
+  "gripper_position": 0.7,
+  "first_corner_gripper_min_z_m": 0.8200999921688602,
+  "mandatory_pause_zero_velocity": true,
+  "old_alignment_metadata_rejected": true,
+  "arm_goals_sent": false,
+  "gripper_goals_sent": false,
+  "physical_goals_sent": false,
+  "fixture_stopped": true,
+  "result": "passed"
+}

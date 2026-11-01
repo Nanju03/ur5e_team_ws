@@ -48,6 +48,7 @@ namespace dh_gripper_driver
 class DriverFactory
 {
 public:
-  virtual std::unique_ptr<Driver> create(const hardware_interface::HardwareInfo& info) const = 0;
+  virtual ~DriverFactory() = default;
+  virtual std::unique_ptr<Driver> create(const hardware_interface::HardwareInfo & info) const = 0;
 };
 }  // namespace dh_gripper_driver

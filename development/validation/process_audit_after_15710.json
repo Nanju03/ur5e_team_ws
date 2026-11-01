@@ -1,0 +1,132 @@
+{
+  "processes": [
+    {
+      "pid": 15323,
+      "ppid": 2156,
+      "domain": "0",
+      "args": [
+        "/usr/bin/python3",
+        "/opt/ros/humble/bin/ros2",
+        "launch",
+        "ur5e_block_bringup",
+        "real_robot.launch.py",
+        "allow_execution:=true",
+        "use_rviz:=false"
+      ]
+    },
+    {
+      "pid": 15339,
+      "ppid": 15323,
+      "domain": "0",
+      "args": [
+        "/home/ksn/ur5e_ws/install/ur_robot_driver/lib/ur_robot_driver/ur_ros2_control_node",
+        "--ros-args",
+        "--params-file",
+        "/tmp/launch_params_ksj_5_pp",
+        "--params-file",
+        "/home/ksn/ur5e_ws/install/ur_robot_driver/share/ur_robot_driver/config/ur5e_update_rate.yaml",
+        "--params-file",
+        "/tmp/launch_params_47vj34jj"
+      ]
+    },
+    {
+      "pid": 15355,
+      "ppid": 15323,
+      "domain": "0",
+      "args": [
+        "/opt/ros/humble/lib/controller_manager/ros2_control_node",
+        "--ros-args",
+        "-r",
+        "__ns:=/gripper",
+        "--params-file",
+        "/tmp/launch_params_of_8ujo5",
+        "--params-file",
+        "/home/ksn/ur5e_ws/install/dh_gripper_driver/share/dh_gripper_driver/config/dh_ag95_controllers.yaml"
+      ]
+    },
+    {
+      "pid": 15403,
+      "ppid": 15323,
+      "domain": "0",
+      "args": [
+        "/opt/ros/humble/lib/robot_state_publisher/robot_state_publisher",
+        "--ros-args",
+        "-r",
+        "__node:=robot_state_publisher",
+        "--params-file",
+        "/tmp/launch_params_1l_6bzy_"
+      ]
+    },
+    {
+      "pid": 15425,
+      "ppid": 15323,
+      "domain": "0",
+      "args": [
+        "/home/ksn/ws_moveit2/install/moveit_ros_move_group/lib/moveit_ros_move_group/move_group",
+        "--ros-args",
+        "-r",
+        "__node:=move_group",
+        "--params-file",
+        "/tmp/launch_params_f9e5mzms"
+      ]
+    },
+    {
+      "pid": 15615,
+      "ppid": 4415,
+      "domain": "0",
+      "args": [
+        "/usr/bin/python3",
+        "/opt/ros/humble/bin/ros2",
+        "launch",
+        "ur5e_block_bringup",
+        "view_only.launch.py"
+      ]
+    },
+    {
+      "pid": 15630,
+      "ppid": 15615,
+      "domain": "0",
+      "args": [
+        "/opt/ros/humble/lib/rviz2/rviz2",
+        "-d",
+        "/home/ksn/ur5e_ws/install/ur5e_block_bringup/share/ur5e_block_bringup/config/plate_view.rviz",
+        "--ros-args",
+        "-r",
+        "__node:=rviz2",
+        "--params-file",
+        "/tmp/launch_params_qg45rvja"
+      ]
+    },
+    {
+      "pid": 15678,
+      "ppid": 12543,
+      "domain": "0",
+      "args": [
+        "/usr/bin/python3",
+        "/opt/ros/humble/bin/ros2",
+        "launch",
+        "ur5e_a3_grid",
+        "stack_gui.launch.py",
+        "backend:=real"
+      ]
+    },
+    {
+      "pid": 15692,
+      "ppid": 15678,
+      "domain": "0",
+      "args": [
+        "python3",
+        "/home/ksn/ur5e_ws/install/ur5e_a3_grid/lib/ur5e_a3_grid/stack_gui",
+        "--ros-args",
+        "-r",
+        "__node:=ur5e_a3_stack_gui",
+        "--params-file",
+        "/tmp/launch_params_y26c9kuf"
+      ]
+    }
+  ],
+  "verification_process_alive": false,
+  "mock_or_fixture_processes": [],
+  "terminated_processes": [],
+  "reason": "No agent-owned test processes remained; current real robot launch and UI originate from user terminal shells."
+}

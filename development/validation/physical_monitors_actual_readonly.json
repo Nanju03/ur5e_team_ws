@@ -1,0 +1,30 @@
+{
+  "actual_goals_sent": false,
+  "rounds": [
+    {
+      "index": 1,
+      "warmup_seconds": 2.770371309999973,
+      "client_count": 7,
+      "responses": 32,
+      "max_response_seconds": 0.25012836399946536
+    },
+    {
+      "index": 2,
+      "warmup_seconds": 0.1769620959985332,
+      "client_count": 7,
+      "responses": 32,
+      "max_response_seconds": 0.11692806800056132
+    },
+    {
+      "index": 3,
+      "warmup_seconds": 0.15314096200017957,
+      "client_count": 7,
+      "responses": 32,
+      "max_response_seconds": 0.2335840370014921
+    }
+  ],
+  "result": "passed",
+  "model_sha256": "9fe6311f80e9b0c452266b06df828d15f6b7b359b2e804432a69c186be32f7fb",
+  "scene_hash": "371bb7ec31fd1aced43ed28a6653ecfd7c3db00cd7ea0d02de7b306ea8802018",
+  "stop_reason": null
+}

@@ -56,36 +56,55 @@ constexpr int kWriteResponseSize = 8;
 constexpr auto kMaxRetries = 5;
 
 DefaultDriver::DefaultDriver(std::unique_ptr<Serial> serial)
-  : serial_{ std::move(serial) }, commanded_gripper_speed_(0x80), commanded_gripper_force_(0x80)
+: serial_{std::move(serial)}
 {
 }
 
-std::vector<uint8_t> DefaultDriver::send(const std::vector<uint8_t>& request, size_t response_size) const
+std::vector<uint8_t> DefaultDriver::send(
+  const std::vector<uint8_t> & request,
+  size_t response_size) const
 {
   std::vector<uint8_t> response;
   response.reserve(response_size);
 
   int retry_count = 0;
-  while (retry_count < kMaxRetries)
-  {
-    try
-    {
+  while (retry_count < kMaxRetries) {
+    try {
       serial_->write(request);
       response = serial_->read(response_size);
-      break;
-    }
-    catch (const serial::IOException& e)
-    {
-      RCLCPP_WARN(kLogger, "Resending the command because the previous attempt (%d of %d) failed: %s", retry_count + 1,
-                  kMaxRetries, e.what());
+      if (response.size() != response_size) {
+        throw DriverException("Modbus response has an unexpected length");
+      }
+      if (response[0] != request[0] || response[1] != request[1]) {
+        throw DriverException("Modbus response has an unexpected slave/function");
+      }
+      const std::vector<uint8_t> payload(response.begin(), response.end() - 2);
+      const auto crc = crc_utils::compute_crc(payload);
+      if (response[response.size() - 2] != data_utils::get_msb(crc) ||
+        response.back() != data_utils::get_lsb(crc))
+      {
+        throw DriverException("Modbus response CRC mismatch");
+      }
+      if (request[1] == kReadFunctionCode && response[2] != 2) {
+        throw DriverException("Modbus register response must contain two data bytes");
+      }
+      if (request[1] == kWriteFunctionCode && response != request) {
+        throw DriverException("Modbus write response does not echo the request");
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      return response;
+    } catch (const serial::IOException & e) {
+      RCLCPP_WARN(
+        kLogger, "Resending the command because the previous attempt (%d of %d) failed: %s",
+        retry_count + 1,
+        kMaxRetries, e.what());
       retry_count++;
     }
   }
 
-  if (retry_count == kMaxRetries)
-  {
+  if (retry_count == kMaxRetries) {
     RCLCPP_ERROR(kLogger, "Reached maximum retries. Operation failed.");
-    return {};
+    throw DriverException("Serial retry limit reached");
   }
 
   return response;
@@ -104,6 +123,9 @@ void DefaultDriver::disconnect()
 
 void DefaultDriver::set_slave_address(uint8_t slave_address)
 {
+  if (slave_address < 1 || slave_address > 247) {
+    throw DriverException("Modbus slave address must be in 1..247");
+  }
   slave_address_ = slave_address;
 }
 
@@ -112,22 +134,21 @@ void DefaultDriver::activate()
   RCLCPP_INFO(kLogger, "Activate...");
 
   // set rACT to 1, clear all other registers.
-  const auto request = create_write_command(kActionRequestRegister, { 0x0001});
+  const auto request = create_write_command(kActionRequestRegister, {0x0001});
   auto response = send(request, kWriteResponseSize);
-  if (response.empty())
-  {
-    throw DriverException{ "Failed to activate the gripper." };
+  if (response.empty()) {
+    throw DriverException("Failed to activate the gripper.");
   }
 
-  update_status();
-  if (activation_status_ == ActivationStatus::ACTIVE)
-  {
-    return;
-  }
-  while (activation_status_ != ActivationStatus::ACTIVE)
-  {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    update_status();
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+  while (true) {
+    const auto initialization = read_register(kFirstOutputRegister);
+    if (initialization > 2) {throw DriverException("Invalid initialization state");}
+    if (initialization == 1) {activation_status_ = ActivationStatus::ACTIVE; return;}
+    if (std::chrono::steady_clock::now() >= deadline) {
+      throw DriverException("Gripper initialization did not finish within ten seconds");
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
 
@@ -145,65 +166,51 @@ void DefaultDriver::deactivate()
 
 void DefaultDriver::set_gripper_position(uint16_t pos)
 {
-  const auto request1 =
-      create_write_command(kActionRequestRegister+1, {uint16_t(100)}); // force
-
-  auto response1 = send(request1, kWriteResponseSize);
-  if (response1.empty())
-  {
-    throw DriverException{ "Failed to set gripper force." };
-  }
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-  const auto request2 =
-      create_write_command(kActionRequestRegister+3, {pos});
-
-  auto response2 = send(request2, kWriteResponseSize);
-  if (response2.empty())
-  {
-    throw DriverException{ "Failed to set gripper position." };
-  }
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-
-  
+  if (pos > 1000) {throw DriverException("Gripper position must be in 0..1000");}
+  send(create_write_command(kActionRequestRegister + 3, {pos}), kWriteResponseSize);
 }
 
 uint16_t DefaultDriver::get_gripper_position()
 {
+  return get_feedback().raw_position;
+}
+
+Driver::Feedback DefaultDriver::get_feedback()
+{
   update_status();
-  // std::cout  << "grip pos driver = " << std::dec << unsigned(gripper_position_) << std::endl;
-  return gripper_position_;
+  return feedback_;
 }
 
 bool DefaultDriver::gripper_is_moving()
 {
-  update_status();
-  return object_detection_status_ == ObjectDetectionStatus::MOVING;
+  return get_feedback().grip_state == 0;
 }
 
 void DefaultDriver::set_speed(uint8_t speed)
 {
+  // The published AG Modbus manual documents no independent speed register.
+  // Retain this legacy setting without inventing a write to another model's register.
   commanded_gripper_speed_ = speed;
 }
 
 void DefaultDriver::set_force(uint8_t force)
 {
+  if (force < 20 || force > 100) {
+    throw DriverException("Gripper force setting must be in 20..100 percent");
+  }
+  send(create_write_command(kActionRequestRegister + 1, {force}), kWriteResponseSize);
   commanded_gripper_force_ = force;
 }
 
 std::vector<uint8_t> DefaultDriver::create_read_command(uint16_t address, uint8_t num_registers)
 {
-
-
-  std::vector<uint8_t> request = { slave_address_,
-                                   kReadFunctionCode,
-                                   data_utils::get_msb(address),
-                                   data_utils::get_lsb(address),
-                                   0x00,
-                                   0x01};
+  (void)num_registers;  // This driver reads exactly one documented register per request.
+  std::vector<uint8_t> request = {slave_address_,
+    kReadFunctionCode,
+    data_utils::get_msb(address),
+    data_utils::get_lsb(address),
+    0x00,
+    0x01};
   auto crc = crc_utils::compute_crc(request);
   request.push_back(data_utils::get_msb(crc));
   request.push_back(data_utils::get_lsb(crc));
@@ -211,17 +218,18 @@ std::vector<uint8_t> DefaultDriver::create_read_command(uint16_t address, uint8_
   return request;
 }
 
-std::vector<uint8_t> DefaultDriver::create_write_command(uint16_t address, const std::vector<uint16_t>& data)
+std::vector<uint8_t> DefaultDriver::create_write_command(
+  uint16_t address,
+  const std::vector<uint16_t> & data)
 {
-  uint16_t num_registers = data.size();
-  uint8_t num_bytes = 2 * num_registers;
+  if (data.size() != 1) {throw DriverException("Function 06 writes exactly one register");}
 
-  std::vector<uint8_t> request = { slave_address_,
-                                   kWriteFunctionCode,
-                                   data_utils::get_msb(address),
-                                   data_utils::get_lsb(address),
-                                   data_utils::get_msb(data[0]),
-                                   data_utils::get_lsb(data[0])};
+  std::vector<uint8_t> request = {slave_address_,
+    kWriteFunctionCode,
+    data_utils::get_msb(address),
+    data_utils::get_lsb(address),
+    data_utils::get_msb(data[0]),
+    data_utils::get_lsb(data[0])};
 
   auto crc = crc_utils::compute_crc(request);
   request.push_back(data_utils::get_msb(crc));
@@ -229,47 +237,32 @@ std::vector<uint8_t> DefaultDriver::create_write_command(uint16_t address, const
 
 
   return request;
+}
+
+uint16_t DefaultDriver::read_register(uint16_t address)
+{
+  const auto response = send(create_read_command(address, 1), kReadResponseSize);
+  const uint16_t value = (static_cast<uint16_t>(response[3]) << 8) | response[4];
+  return value;
 }
 
 void DefaultDriver::update_status()
 {
-
-  const auto request1 =
-      create_read_command(kFirstOutputRegister, 0); // position
-
-  auto response1 = send(request1, kReadResponseSize);
-  if (response1.empty())
+  // AG Modbus manual V2.5, pp.14-16. A force setting is not a force sensor.
+  // Commit the sample only when every response and register value is valid.
+  Feedback sample;
+  sample.initialization = read_register(kFirstOutputRegister);
+  sample.grip_state = read_register(kFirstOutputRegister + 1);
+  sample.raw_position = read_register(kFirstOutputRegister + 2);
+  sample.force_percent = read_register(kActionRequestRegister + 1);
+  if (sample.initialization > 2 || sample.grip_state > 3 || sample.raw_position > 1000 ||
+    sample.force_percent < 20 || sample.force_percent > 100)
   {
-    throw DriverException{ "Failed to read gripper position." };
+    throw DriverException("Gripper feedback register value is outside its documented range");
   }
-  if ( response1[4] == 1)
-  {
-    activation_status_ = ActivationStatus::ACTIVE;
-  }
-  else
-  {
-    activation_status_ = ActivationStatus::RESET;
-  }
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-  const auto request2 =
-      create_read_command(kFirstOutputRegister+2, 0); // position
-
-  auto response2 = send(request2, kReadResponseSize);
-  if (response2.empty())
-  {
-    throw DriverException{ "Failed to read gripper position." };
-  }
-
-
-  gripper_position_ = (response2[3] << 8) | response2[4];
-
-  // log gripper position
-  // RCLCPP_INFO(kLogger, "Response2: %s", data_utils::to_hex(response2).c_str());
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-
+  feedback_ = sample;
+  gripper_position_ = sample.raw_position;
+  activation_status_ = sample.initialization ==
+    1 ? ActivationStatus::ACTIVE : ActivationStatus::RESET;
 }
 }  // namespace dh_gripper_driver

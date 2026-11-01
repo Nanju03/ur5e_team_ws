@@ -75,6 +75,7 @@ def launch_setup(context, *args, **kwargs):
     initial_joint_controller = LaunchConfiguration("initial_joint_controller")
     activate_joint_controller = LaunchConfiguration("activate_joint_controller")
     launch_rviz = LaunchConfiguration("launch_rviz")
+    launch_robot_state_publisher = LaunchConfiguration("launch_robot_state_publisher")
     headless_mode = LaunchConfiguration("headless_mode")
     launch_dashboard_client = LaunchConfiguration("launch_dashboard_client")
     use_tool_communication = LaunchConfiguration("use_tool_communication")
@@ -356,6 +357,7 @@ def launch_setup(context, *args, **kwargs):
     robot_state_publisher_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
+        condition=IfCondition(launch_robot_state_publisher),
         output="both",
         parameters=[robot_description],
     )
@@ -604,6 +606,13 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument("launch_rviz", default_value="true", description="Launch RViz?")
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            "launch_robot_state_publisher",
+            default_value="true",
+            description="Publish the standalone arm model. Disable when a combined robot model publishes TF.",
+        )
     )
     declared_arguments.append(
         DeclareLaunchArgument(

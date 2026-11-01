@@ -1,0 +1,65 @@
+{
+  "vertical_placement_layers": 10,
+  "foundation_counts_as_layer": 1,
+  "block_height_mm": 25,
+  "vertical_section_height_mm": 250,
+  "obstacle_height_mm": 150,
+  "placements": [
+    {
+      "layer": 2,
+      "mode": "vertical",
+      "tower_top_mm": 50
+    },
+    {
+      "layer": 3,
+      "mode": "vertical",
+      "tower_top_mm": 75
+    },
+    {
+      "layer": 4,
+      "mode": "vertical",
+      "tower_top_mm": 100
+    },
+    {
+      "layer": 5,
+      "mode": "vertical",
+      "tower_top_mm": 125
+    },
+    {
+      "layer": 6,
+      "mode": "vertical",
+      "tower_top_mm": 150
+    },
+    {
+      "layer": 7,
+      "mode": "vertical",
+      "tower_top_mm": 175
+    },
+    {
+      "layer": 8,
+      "mode": "vertical",
+      "tower_top_mm": 200
+    },
+    {
+      "layer": 9,
+      "mode": "vertical",
+      "tower_top_mm": 225
+    },
+    {
+      "layer": 10,
+      "mode": "vertical",
+      "tower_top_mm": 250
+    },
+    {
+      "layer": 11,
+      "mode": "side",
+      "tower_top_mm": 275
+    }
+  ],
+  "preflight": "10 moved blocks, 11 total layers, 152 trajectory/event segments",
+  "hardware": "GenericSystem; isolated ROS domain 92",
+  "mode": "plan only",
+  "physical_motion_sent": false,
+  "physical_pick_place_verified": false,
+  "simulation_profile": "zero-riser workbench fixture; actual 16mm physical_setup.yaml unchanged"
+}

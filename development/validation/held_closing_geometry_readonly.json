@@ -1,0 +1,56 @@
+{
+  "actual_goals_sent": false,
+  "scene_writes_sent": false,
+  "scope": "current stationary ARM pose only",
+  "closing_range": [
+    0.70287,
+    0.733
+  ],
+  "results": [
+    {
+      "hand_q": 0.70287,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand_q": 0.7071742857142858,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand_q": 0.7105199999999999,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand_q": 0.7114785714285714,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand_q": 0.7157828571428572,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand_q": 0.7200871428571428,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand_q": 0.7243914285714286,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand_q": 0.7286957142857142,
+      "valid": true,
+      "contacts": []
+    },
+    {
+      "hand_q": 0.733,
+      "valid": true,
+      "contacts": []
+    }
+  ]
+}

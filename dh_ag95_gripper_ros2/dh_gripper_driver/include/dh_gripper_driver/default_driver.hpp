@@ -60,16 +60,17 @@ public:
 
   /**
    * @brief Commands the gripper to move to the desired position.
-   * @param pos A value between 0x00 (fully open) and 0xFF (fully closed).
+   * @param pos DH position in thousandths, 0=closed and 1000=open.
    */
   void set_gripper_position(uint16_t pos) override;
 
   /**
    * @brief Return the current position of the gripper.
    * @throw serial::IOException on failure to successfully communicate with gripper port
-   * @return uint8_t A value between 0x00 (fully open) and 0xFF (fully closed).
+   * @return uint16_t The measured DH position, 0=closed and 1000=open.
    */
   uint16_t get_gripper_position() override;
+  Feedback get_feedback() override;
 
   /**
    * @brief Returns true if the gripper is currently moving, false otherwise.
@@ -85,7 +86,7 @@ public:
 
   /**
    * @brief Set how forcefully the gripper opens or closes.
-   * @param force A value between 0x00 (no force) or 0xFF (maximum force).
+   * @param force Force setting in percent, 20 through 100; not a measured force.
    */
   void set_force(uint8_t force) override;
 
@@ -98,10 +99,13 @@ private:
    * @param response_size The response expected size.
    * @return The response or an empty vector if an en error occurred.
    */
-  std::vector<uint8_t> send(const std::vector<uint8_t>& request, size_t response_size) const;
+  std::vector<uint8_t> send(const std::vector<uint8_t> & request, size_t response_size) const;
 
   std::vector<uint8_t> create_read_command(uint16_t first_register, uint8_t num_registers);
-  std::vector<uint8_t> create_write_command(uint16_t first_register, const std::vector<uint16_t>& data);
+  std::vector<uint8_t> create_write_command(
+    uint16_t first_register,
+    const std::vector<uint16_t> & data);
+  uint16_t read_register(uint16_t address);
 
   /**
    * @brief Read the current status of the gripper, and update member variables as appropriate.
@@ -111,15 +115,16 @@ private:
   void update_status();
 
   std::unique_ptr<Serial> serial_ = nullptr;
-  uint8_t slave_address_;
+  uint8_t slave_address_ = 1;
 
-  ActivationStatus activation_status_;
-  ActionStatus action_status_;
-  GripperStatus gripper_status_;
-  ObjectDetectionStatus object_detection_status_;
+  ActivationStatus activation_status_ = ActivationStatus::RESET;
+  ActionStatus action_status_ = ActionStatus::STOPPED;
+  GripperStatus gripper_status_ = GripperStatus::RESET;
+  ObjectDetectionStatus object_detection_status_ = ObjectDetectionStatus::AT_REQUESTED_POSITION;
 
-  uint16_t gripper_position_;
-  uint8_t commanded_gripper_speed_;
-  uint8_t commanded_gripper_force_;
+  Feedback feedback_;
+  uint16_t gripper_position_ = 1000;
+  uint8_t commanded_gripper_speed_ = 0;
+  uint8_t commanded_gripper_force_ = 20;
 };
 }  // namespace dh_gripper_driver

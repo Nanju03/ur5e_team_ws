@@ -1,0 +1,51 @@
+{
+  "domain": 100,
+  "hardware": [
+    "mock_components/GenericSystem"
+  ],
+  "target_cell": 11,
+  "foundation_block_initial_xyz_m": [
+    0.4297,
+    0.03,
+    0.8175
+  ],
+  "foundation_present_before_motion": true,
+  "foundation_pose_unchanged": true,
+  "old_empty_target_layout_migrated_to_foundation": true,
+  "source_cells": [
+    4,
+    13
+  ],
+  "carried_layers": [
+    2,
+    3
+  ],
+  "final_layers": 3,
+  "final_top_world_z_m": 0.88,
+  "final_cube_positions_m": {
+    "ur5e_stack/block_11": [
+      0.4297,
+      0.03,
+      0.8175
+    ],
+    "ur5e_stack/block_13": [
+      0.42970000062890074,
+      0.029999999785336965,
+      0.8425000111508744
+    ],
+    "ur5e_stack/block_4": [
+      0.429699999989544,
+      0.030000000392845887,
+      0.8675000012834675
+    ]
+  },
+  "no_attached_objects": true,
+  "held_before_OK": true,
+  "continuous_OK_count": 1,
+  "feedback_samples": 2651,
+  "real_robot_goals_sent": false,
+  "result": "passed",
+  "fixture_stopped": true,
+  "user_domain_42_touched": false,
+  "foundation_never_used_as_source": true
+}
