@@ -25,10 +25,13 @@ def recipe():
                   initial_scene_file='initial.cdr', initial_state_file='state.cdr',
                   approach_acceleration_scaling=.05, transfer_acceleration_scaling=1.,
                   physical_contact_clearance=.04,
-                  placement_policy='raised_tower_clearance_v1', placement_mode='side',
+                  physical_approach_clearance=.04, side_entry_clearance=.010,
+                  descent_velocity_scaling=.20, descent_acceleration_scaling=.20,
+                  placement_policy='raised_tower_hover_setdown_v2', placement_mode='side',
                   vertical_placement_layers=19, placement_approach_clearance=.12,
                   target_cell=11, foundation_layers=1, moves=1, layers=2, steps=[],
                   routing_policy='open_gripper_buffer_v1', source_cells=[10], transport_moves=1, buffer_moves=0)
+    result['buffer_selection_policy'] = physical.BUFFER_SELECTION_POLICY
     previous = list(result['initial_joints'])
     def add(kind, phase, target=None):
         nonlocal previous
@@ -1293,7 +1296,7 @@ def test_all_physical_phases_use_requested_point_one_with_precise_stationary_bou
     assert profile['goal_velocity'] == .01 and profile['goal_time_seconds'] == 5
     for phase, tolerances in profile['phase_path_position'].items():
         assert tolerances == [.1]*6
-    assert set(profile['phase_path_position']) == {'approach', 'contact', 'lift', 'retreat', 'transfer'}
+    assert set(profile['phase_path_position']) == {'approach', 'contact', 'descent_fast', 'lift', 'retreat', 'transfer'}
     assert profile['transfer_sweep_limit'] == .010
     assert profile['transfer_sweep_step'] == .005
     assert physical.HAND_HOLD_TOLERANCE == .005

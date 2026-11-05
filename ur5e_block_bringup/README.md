@@ -164,7 +164,7 @@ ros2 launch ur5e_block_bringup gripper_calibration.launch.py \
   받침 블록은 위의 블록을 회수한 뒤 집습니다. 11번 장애물·14번 목표에서는
   10번을 다른 블록 위에 보관 → 15번을 14번에 적재 → 10번을 임시 위치에서 회수합니다.
   임시 운반은 목표 진행 수와 따로 검증합니다. 전체 경로와 회수 가능성을 확인한 뒤 실행하며,
-  v13 실물 경로는 `physical_prepare`로 한 번 변환할 수 있으며 이전 정책은 다시 계획합니다.
+  현재 v15는 진입 높이·하강 속도가 달라 v13/v14 경로를 다시 계획합니다. 기존 자료는 보존합니다.
 - 집기·놓기의 마지막 하강 또는 수평 진입과 처음 40mm 이탈은 **속도·가속도 비율 0.05**입니다.
   이후 상승·후퇴·운반은 설정된 관절 한도의 **속도·가속도 비율 1.00**입니다.
   UR의 속도 슬라이더와 로봇 측 제한도 적용되며 실물 파지·적층 안정성은 별도 검증 대상입니다.
@@ -384,3 +384,5 @@ ros2 launch ur5e_block_bringup block_task.launch.py stack_mode:=scene
 결과: `~/ur5e_ws/validation/native_connection_result.json`.
 
 실물 저장 경로의 장기 보관·기존 파일 변환·중복 검사 생략은 [빠른 실행 안내](../docs/saved_physical_replay.md)를 참고하세요.
+
+실물 v15는 받침면보다 10mm 높게 수평 정렬한 뒤 수직으로 내려놓으며, 마지막 40mm 밖의 하강은 0.20으로 처리합니다. [높이·속도 안내](../docs/side_hover_and_descent.md)를 확인하세요.

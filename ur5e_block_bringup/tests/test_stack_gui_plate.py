@@ -115,6 +115,9 @@ def test_save_keeps_a_foundation_block_in_the_selected_stack_pocket(tmp_path):
     assert value['grasp_height_above_table'] == .018
     assert value['vertical_placement_layers'] == 19
     assert value['placement_approach_clearance'] == .12
+    assert value['side_entry_clearance'] == .010
+    assert value['physical_approach_clearance'] == .04
+    assert value['descent_velocity_scaling'] == value['descent_acceleration_scaling'] == .20
 
 
 def test_live_translation_moves_pockets_corners_and_stack_together(tmp_path):

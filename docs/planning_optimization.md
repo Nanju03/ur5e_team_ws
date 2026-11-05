@@ -1,6 +1,6 @@
 # 실물 경로 계획·이동 최적화 (2026-11-05)
 
-[실물 사용법](real_robot.md) · [기존 시간 분석](speed_and_timing.md) · [저장 경로 빠른 실행](saved_physical_replay.md)
+[실물 사용법](real_robot.md) · [기존 시간 분석](speed_and_timing.md) · [저장 경로 빠른 실행](saved_physical_replay.md) · [v15 높이·하강 속도](side_hover_and_descent.md)
 
 적용 대상은 실물 집기·쌓기의 `physical_plan/physical_run`이다.
 Gazebo 물성·속도와 블록 없는 팔 시운전·초기 자세 복구의 저속 설정은 별도다.
@@ -50,11 +50,12 @@ OMPL/IK 재시도에는 `STACK_APPROACH_RETRY`, `STACK_REARRANGEMENT_RETRY`를 �
 
 | 구간 | phase | 속도 배율 | 가속도 배율 |
 | --- | --- | --- | --- |
-| 집기·놓기 최종 진입 | `approach` | 0.05 | 0.05 |
+| 최종 접촉 구간 밖 수직 하강 | `descent_fast` | 0.20 | 0.20 |
+| 집기·놓기 마지막 40mm 이상, 수평 삽입·짧은 내려놓기 | `approach` | 0.05 | 0.05 |
 | 집은 직후·놓은 직후 처음 40mm 이탈 | `contact` | 0.05 | 0.05 |
 | 이후 상승·후퇴, 운반·재정렬 | `lift` / `retreat` / `transfer` | 1.00 | 1.00 |
 
-이탈 거리가 40mm 이하면 해당 구간 전체를 저속으로 처리한다.
+하강·이탈 거리가 40mm 이하면 해당 구간 전체를 저속으로 처리한다. 20층부터는 받침보다 10mm 높게 수평 정렬한 뒤 수직으로 내려놓는다.
 그리퍼 0.40 → 잡기 0.73, 놓기 0.70 → 0.60은 기존 값이다.
 손가락 동작 중 팔 정지와 각 명령 시작·끝 정지 조건도 유지한다.
 
@@ -92,7 +93,7 @@ cd ~/ur5e_team_ws
 ./start_block_real_gui.sh
 ```
 
-새 정책은 `physical_prevalidated_replay_v14`이다. v13 저장 경로는 한 번의 오프라인 준비로 변환하며, 이전 속도·배치 정책의 경로는 다시 만든다.
+현재 정책은 `physical_nearest_target_buffer_v16`이다. 목표 가까운 임시 받침을 우선 선택하며 v15의 높이·속도는 유지한다. 기존 v13/v14/v15 자료는 보존하고 새 기준은 ④에서 다시 계획한다. [임시 적재 기준](near_target_buffer.md)을 확인한다.
 드라이버를 고속 코드 적용만을 위해 재연결할 필요는 없다.
 
 `GRIPPER_SENSOR_STALE`로 중단된 경우에는 [센서 지연 중단 안내](gripper_feedback_stop.md)를 먼저 따른다.
@@ -111,4 +112,4 @@ cd ~/ur5e_team_ws
 구간 사이 클라이언트 연결, 최근 감시 결과와 정지 이력을 재사용해 중복 대기를 줄인다.
 시작 자세가 다르면 자동 연결하지 않는다. Gazebo 성공 ZIP의 실물 재생은 지원하지 않는다.
 
-사용 절차, 이전 v13 파일 변환과 저장 위치는 [저장 경로 빠른 실행](saved_physical_replay.md)에 있다.
+사용 절차, 이전 형식의 처리과 저장 위치는 [저장 경로 빠른 실행](saved_physical_replay.md)에 있다.

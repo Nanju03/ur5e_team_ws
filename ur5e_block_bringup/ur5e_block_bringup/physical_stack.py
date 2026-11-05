@@ -49,13 +49,16 @@ from rosidl_runtime_py.convert import message_to_ordereddict
 
 JOINTS = ARM+[HAND]
 HAND_TARGETS = {'open': .4, 'grasp': .73, 'release_first': .70, 'release_clearance': .60}
-ARM_SPEEDS = {'approach': .05, 'contact': .05, 'lift': 1., 'retreat': 1., 'transfer': 1.}
+ARM_SPEEDS = {'approach': .05, 'contact': .05, 'descent_fast': .20, 'lift': 1., 'retreat': 1., 'transfer': 1.}
 CONTACT_CLEARANCE = .04
+APPROACH_CLEARANCE = .04
+SIDE_ENTRY_CLEARANCE = .010
 REVIEW_TTL = 3600.
 HAND_START_TOLERANCE = .015
 SCENE_HASH_POLICY = 'physical_mesh_digest_pose_round12_v2'
-RECIPE_POLICY = 'physical_prevalidated_replay_v14'
-PREPARABLE_POLICIES = ('physical_fast_transfer_local_validation_v13', RECIPE_POLICY)
+RECIPE_POLICY = 'physical_nearest_target_buffer_v16'
+BUFFER_SELECTION_POLICY = 'nearest_target_feasible_v1'
+PREPARABLE_POLICIES = (RECIPE_POLICY,)
 GRASP_POLICY = 'command_completion'
 HAND_HOLD_TOLERANCE = .005
 HAND_COMMAND_TOLERANCE = .003
@@ -271,13 +274,19 @@ def validate_recipe(recipe):
     if 'grasp_policy' in recipe and recipe['grasp_policy'] != GRASP_POLICY:
         raise ValueError('Physical recipe grasp command policy differs from the reviewed policy')
     clearance = recipe.get('placement_approach_clearance')
-    if (recipe.get('placement_policy') != 'raised_tower_clearance_v1'
+    if (recipe.get('placement_policy') != 'raised_tower_hover_setdown_v2'
             or recipe.get('placement_mode') not in ('side', 'vertical')
             or type(recipe.get('vertical_placement_layers')) is not int
             or not 0 <= recipe['vertical_placement_layers'] <= 100
             or isinstance(clearance, bool) or not isinstance(clearance, (int, float))
             or not math.isfinite(clearance) or not .08 <= clearance <= .20):
         raise ValueError('Physical recipe requires the raised tower placement policy and 80..200mm clearance')
+    if recipe.get('side_entry_clearance') != SIDE_ENTRY_CLEARANCE:
+        raise ValueError('Physical side placement requires the reviewed 10mm hover and vertical setdown')
+    if recipe.get('physical_approach_clearance') != APPROACH_CLEARANCE:
+        raise ValueError('Physical descent requires the reviewed final 40mm slow approach')
+    if any(recipe.get(key) != ARM_SPEEDS['descent_fast'] for key in ('descent_velocity_scaling', 'descent_acceleration_scaling')):
+        raise ValueError('Physical fast descent requires reviewed 0.20 velocity and acceleration')
     if recipe.get('physical_contact_clearance') != CONTACT_CLEARANCE:
         raise ValueError('Physical recipe needs the reviewed 40mm contact clearance')
     for key, expected_scaling in [('approach_acceleration_scaling', .05), ('transfer_acceleration_scaling', 1.)]:
@@ -291,6 +300,8 @@ def validate_recipe(recipe):
             or type(recipe.get('layers')) is not int):
         raise ValueError('Physical stacking requires one existing foundation block and integer counts')
     sources = recipe.get('source_cells')
+    if recipe.get('buffer_selection_policy') != BUFFER_SELECTION_POLICY:
+        raise ValueError('Physical recipe requires nearest-target feasible temporary supports')
     if (recipe.get('routing_policy') != 'open_gripper_buffer_v1'
             or not isinstance(sources, list) or len(sources) != recipe['moves']
             or any(type(cell) is not int or not 1 <= cell <= 100 or cell == recipe['target_cell'] for cell in sources)
@@ -1124,7 +1135,7 @@ class PhysicalStackTask(AirTask):
         return False
 
     def prepare_saved_plan(self):
-        """Convert the previous sealed v13 path offline; never contact hardware."""
+        """Prepare a current-policy path offline; never contact hardware."""
         metadata, recipe = self.load_recipe(preparing=True)
         initial_hash = metadata['scene_sha256']
         payloads = {name: artifact_path(self.path.parent, name).read_bytes()
@@ -1305,7 +1316,7 @@ class PhysicalStackTask(AirTask):
             raise RuntimeError('충돌 장면 검증 형식이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
         accepted = PREPARABLE_POLICIES if preparing else (RECIPE_POLICY,)
         if metadata.get('recipe_policy') not in accepted:
-            raise RuntimeError('저장 경로의 실행 검증 형식이 다릅니다. v13 경로는 physical_prepare로 한 번 변환하고, 이전 경로는 다시 계획하세요.')
+            raise RuntimeError('임시 적재 우선순위·진입 높이·속도 정책이 바뀌었습니다. 이전 저장 경로는 보존하고 ④에서 다시 계획하세요.')
         if metadata.get('grasp_policy') != GRASP_POLICY:
             raise RuntimeError('잡기 명령 완료 기준이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
         if metadata.get('arm_execution_profile') != arm_execution_profile():

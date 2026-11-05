@@ -361,7 +361,7 @@ class StackGui:
         actions = [("③ Gazebo 배치 초기화 / RViz에 표시" if getattr(self, "simulation_backend", "mock") == "gazebo" else "③ 선택 배치를 RViz에 표시", "scene")]
         if self.real_backend:
             actions.append(("④ 저장 경로 불러오기 / 새 경로 계획", "physical_plan"))
-            actions.append(("기존 저장 경로 빠른 실행 준비 (1회)", "physical_prepare"))
+            actions.append(("저장 경로 사전 검사 (현재 정책)", "physical_prepare"))
             actions.append(("블록 없이 팔 경로 계획 · 시운전", "plan"))
         else:
             actions.append(("④ 전체 경로 / 높이 확인", "plan"))
@@ -621,6 +621,7 @@ class StackGui:
             "placement_mode": placement,
             "vertical_placement_layers": 19,
             "placement_approach_clearance": .12,
+            "side_entry_clearance": .010,
             "gripper_open_position": .4, "gripper_grasp_position": .73,
             "staged_release_enabled": True, "release_first_position": .70,
             "release_clearance_position": .60, "approach_velocity_scaling": .05,
@@ -632,6 +633,8 @@ class StackGui:
             data["/**"]["ros__parameters"]["plate_alignment_test"] = getattr(self, "plate_alignment", False)
         if self.real_backend:
             data["/**"]["ros__parameters"]["physical_stack_task"] = getattr(self, "plan_kind", "air") == "physical"
+            data["/**"]["ros__parameters"].update(
+                physical_approach_clearance=.04, descent_velocity_scaling=.20, descent_acceleration_scaling=.20)
             try:
                 clearance = float(self.empty_hand_clearance.get()) / 1000.0
             except (ValueError, TypeError) as error:
@@ -989,7 +992,7 @@ class StackGui:
     def air_path_note(self):
         if getattr(self, "plan_kind", "air") == "physical":
             return (f"ROS domain {self.domain} · 실물 집기·쌓기 · 0.73 잡기 명령 완료 후 상승 / 놓기 0.70→0.60 · "
-                    "접촉·40mm 이탈 0.05 / 이동 1.00 · 저장 경로 재검사 생략 · 표시 경로를 OK로 승인")
+                    "최종 40mm·접촉 0.05 / 하강 0.20 / 이동 1.00 · 측면 10mm 높게 진입 후 내려놓기")
         if getattr(self, "plate_alignment", False):
             return (f"ROS domain {self.domain} · 모서리 X/Y 두 방향 8회 맞춤 · 그리퍼 {self.ALIGNMENT_HAND:g}rad / 끝은 상판 위 10mm · "
                     "상승 후 90° 회전 · 정지 후 판을 맞추고 손을 뺀 뒤 다음 OK")
@@ -1168,7 +1171,8 @@ class StackGui:
             path_description = ((f"선택한 공급 블록을 {self.target}번 홈의 바닥 블록 위 2층부터 쌓습니다. "
                                  "잡기 0.73rad 명령이 완료되면 잡힌 것으로 간주하고, 잡힘·이탈 센서 상태로 진행을 막지 않습니다. "
                                  "놓기 0.70rad→0.60rad 순서이며, 손가락을 연 뒤 팔이 후퇴합니다. "
-                                 "집기·놓기 진입과 처음 40mm 이탈은 0.05, 나머지 이동은 설정 한계 1.00입니다.")
+                                 "마지막 40mm 하강·처음 40mm 이탈은 0.05, 그 위 하강은 0.20, 나머지 이동은 설정 한계 1.00입니다. "
+                                 "20층부터는 받침면보다 10mm 높게 수평 진입한 뒤 수직으로 내려놓습니다.")
                                 if physical else
                                 (f"빈 플레이트의 모서리 홈 A→B→C→D에서 X/Y 두 방향으로 각각 정지합니다. 그리퍼는 {self.ALIGNMENT_HAND:g}rad, 끝은 상판보다 10mm 높게 유지합니다. "
                                  "X 맞춤 후 위로 올라가 90° 회전하고 Y를 맞춥니다. 팔이 정지한 뒤에만 판을 조정하고 손을 뺀 다음 경로를 승인하세요.")
@@ -1269,7 +1273,7 @@ class StackGui:
                          "plate_align": f"모서리 X/Y 두 방향 맞춤 경로 계획 중 · 그리퍼 {self.ALIGNMENT_HAND:g}rad / 끝은 상판 위 10mm · 계획만으로 움직이지 않습니다.",
                          "alignment_gripper": f"그리퍼 {self.ALIGNMENT_HAND:g}rad 준비 경로 확인 중 · 상단 OK를 눌러야 움직입니다.",
                          "physical_plan": "일치하는 저장 경로를 찾는 중 · 없으면 새로 계획·사전 검사합니다. 로봇은 움직이지 않습니다.",
-                         "physical_prepare": "기존 경로를 다시 계산하지 않고 실행 검사 결과를 저장 중 · 로봇은 움직이지 않습니다.",
+                         "physical_prepare": "현재 정책 경로의 사전 검사 결과를 저장 중 · 로봇은 움직이지 않습니다.",
                          "recovery": "빈 그리퍼·정지 확인 및 초기 자세 복구 경로 계획 중 · 상단 OK로 승인해야 움직입니다.",
                          "scan": (("장애물 선택이 없어 7번을 장애물로 가정했습니다. " if assumed_obstacle else "") +
                                   f"장애물 상단보다 {self.empty_hand_clearance.get()}mm 이상 여유로 24칸 XY 경로 계획 중 · 로봇은 움직이지 않습니다.")
@@ -1527,7 +1531,7 @@ class StackGui:
                                 "plate_align": "모서리 X/Y 두 방향 맞춤 경로를 준비했습니다. 각 맞춤 위치에서 정지한 뒤 판을 조정하고 OK로 재개하세요.",
                                 "alignment_gripper": f"그리퍼 {self.ALIGNMENT_HAND:g}rad 준비 완료 · 현재 자세로 모서리 홈 경로를 계획합니다.",
                                 "physical_plan": "실물 저장 경로를 준비했습니다. RViz 확인 후 ⑤와 OK로 실행하세요. 실행 중 경로 충돌 재검사는 생략합니다.",
-                                "physical_prepare": "기존 경로의 사전 검사 결과를 별도 보관했습니다. 초기 배치를 맞추고 ④로 불러오세요.",
+                                "physical_prepare": "현재 정책 경로의 사전 검사 결과를 별도 보관했습니다. 초기 배치를 맞추고 ④로 불러오세요.",
                                 "recovery": "초기 자세·그리퍼 0.4rad 복귀 완료 · 이전 계획을 폐기하고 저장한 배치를 다시 표시합니다.",
                                 "scan": "24칸 XY 순회 경로를 저장했습니다. 장애물 위 전체 저장 경로를 RViz에서 확인한 뒤 실행하세요.",
                                 "plan": f"{self.empty_hand_clearance.get()}mm 위 공중 경로를 저장했습니다. RViz에서 전체 저장 경로를 확인한 뒤 실행하세요." if self.real_backend else

@@ -151,6 +151,10 @@ public:
     physical_contact_clearance_=parameter<double>(node_,"physical_contact_clearance",.04);
     if(physical_stack_&&(!std::isfinite(physical_contact_clearance_)||std::abs(physical_contact_clearance_-.04)>1e-9))
       throw std::runtime_error("Physical fast transport requires the reviewed 40mm contact clearance");
+    physical_approach_clearance_=parameter<double>(node_,"physical_approach_clearance",.04);
+    if(!std::isfinite(physical_approach_clearance_)||physical_approach_clearance_<.02||physical_approach_clearance_>.08||
+       (physical_stack_&&std::abs(physical_approach_clearance_-.04)>1e-9))
+      throw std::runtime_error("Physical descent requires the reviewed final 40mm contact zone");
     simulation_backend_=parameter<std::string>(node_,"simulation_backend","mock");
     if(simulation_backend_!="mock"&&simulation_backend_!="gazebo")throw std::runtime_error("Invalid simulation_backend");
     release_lift_=parameter<double>(node_,"placement_release_lift",0.);
@@ -227,6 +231,7 @@ public:
     vertical_placement_layers_=parameter<int>(node_,"vertical_placement_layers",19);
     placement_clearance_=parameter<double>(node_,"placement_approach_clearance",.12);
     side_clearance_=parameter<double>(node_,"side_clearance",.06);
+    side_entry_clearance_=parameter<double>(node_,"side_entry_clearance",.010);
     vertical_fallback_=parameter<int>(node_,"vertical_fallback_layers",4);
     if(placement_mode_!="side"&&placement_mode_!="vertical")throw std::runtime_error("placement_mode must be side or vertical");
     if(vertical_placement_layers_<0)
@@ -234,6 +239,8 @@ public:
     if(!std::isfinite(placement_clearance_)||placement_clearance_<.08||placement_clearance_>.20)
       throw std::runtime_error("placement_approach_clearance must be 80..200 mm");
     if(side_clearance_<=0||vertical_fallback_<0)throw std::runtime_error("Invalid side placement settings");
+    if(!std::isfinite(side_entry_clearance_)||side_entry_clearance_<.005||side_entry_clearance_>.03)
+      throw std::runtime_error("side_entry_clearance must be 5..30mm");
     if(placement_mode_=="side"&&(block_.array()-block_.x()).abs().maxCoeff()>1e-8)
       throw std::runtime_error("Side placement currently requires cubic blocks");
     vel_=parameter<double>(node_,"velocity_scaling",.25);
@@ -244,6 +251,8 @@ public:
     stack_acc_=parameter<double>(node_,"stack_acceleration_scaling",.05);
     approach_acc_=parameter<double>(node_,"approach_acceleration_scaling",stack_acc_);
     transfer_acc_=parameter<double>(node_,"transfer_acceleration_scaling",.20);
+    descent_vel_=parameter<double>(node_,"descent_velocity_scaling",.20);
+    descent_acc_=parameter<double>(node_,"descent_acceleration_scaling",.20);
     staged_release_=parameter<bool>(node_,"staged_release_enabled",true);
     release_first_=parameter<double>(node_,"release_first_position",.70);
     release_clearance_=parameter<double>(node_,"release_clearance_position",.60);
@@ -251,8 +260,10 @@ public:
     close_=parameter<double>(node_,"gripper_grasp_position",.73);
     if(!std::isfinite(approach_vel_)||!std::isfinite(transfer_vel_)||!std::isfinite(stack_acc_)||
        !std::isfinite(approach_acc_)||!std::isfinite(transfer_acc_)||
+       !std::isfinite(descent_vel_)||!std::isfinite(descent_acc_)||
        approach_vel_<=0.||approach_vel_>1.||transfer_vel_<=0.||transfer_vel_>1.||stack_acc_<=0.||stack_acc_>1.||
        approach_acc_<=0.||approach_acc_>1.||transfer_acc_<=0.||transfer_acc_>1.||
+       descent_vel_<=0.||descent_vel_>1.||descent_acc_<=0.||descent_acc_>1.||
        !std::isfinite(release_first_)||!std::isfinite(release_clearance_)||
        release_clearance_<0.||release_first_>0.93||release_clearance_>=release_first_||
        (staged_release_&&!empty_hand_test_&&!plate_alignment_&&release_first_>=close_))
@@ -450,6 +461,15 @@ private:
   planning_scene::PlanningScenePtr layoutScene(const Layout& layout) {
     auto preview=planning_scene::PlanningScene::clone(rearrangement_scene_);
     auto update=diff();auto acm=preview->getAllowedCollisionMatrix();
+    std::set<std::string> present;
+    for(const auto& [cell,tower]:layout.towers)for(int block:tower)present.insert(blockId(block));
+    // Optimistic recovery probes deliberately omit other source columns. Do
+    // not leave their initial cubes behind in the cloned collision world.
+    for(const auto& id:preview->getWorld()->getObjectIds())
+      if(id.rfind("ur5e_stack/block_",0)==0&&!present.count(id)) {
+        moveit_msgs::msg::CollisionObject remove;remove.id=id;remove.operation=remove.REMOVE;
+        update.world.collision_objects.push_back(remove);
+      }
     for(const auto& [cell,tower]:layout.towers)for(std::size_t tier=0;tier<tower.size();++tier) {
       const auto id=blockId(tower[tier]);
       update.world.collision_objects.push_back(box(id,block_,layoutCube(layout,tower[tier])));
@@ -464,7 +484,9 @@ private:
     return preview;
   }
   bool accessible(const Layout& layout,int id) {
-    checkStop();const std::string key=layout.key()+"/"+std::to_string(id);
+    // All target cubes have identical collision geometry. Their ID order does
+    // not affect access to a remaining source; retain order elsewhere.
+    checkStop();const std::string key=layout.key(true)+"/"+std::to_string(id);
     const auto cached=access_cache_.find(key);if(cached!=access_cache_.end())return cached->second;
     const auto [cell,tier]=layout.locate(id);
     if(layout.towers.at(cell).back()!=id)return access_cache_[key]=false;
@@ -512,6 +534,24 @@ private:
     }catch(...){scene_=saved;throw;}
     scene_=saved;access_cache_[key]=found;return found;
   }
+  bool bufferRecoveryPossible(const Layout& layout,const Move& move) {
+    const auto next=layout.moved(move);
+    auto optimistic=[](Layout probe,int support) {
+      for(auto& [cell,tower]:probe.towers)if(cell!=probe.target&&cell!=support)tower.clear();
+      return probe;
+    };
+    // Once a buffered top is retrieved, its underlying support must still be
+    // pickable. Remove other source columns for this *optimistic* test: if
+    // target + static obstacles alone block it, no later pickup order can fix it.
+    const auto& from=layout.towers.at(move.from);
+    if(!move.temporary&&from.size()>1&&
+       !accessible(optimistic(next,move.from),from[from.size()-2]))return false;
+    for(const auto& [cell,tower]:next.towers)if(cell!=next.target&&tower.size()>1) {
+      const Move retrieve{tower.back(),cell,next.target,false};
+      if(!accessible(optimistic(next.moved(retrieve),cell),tower[tower.size()-2]))return false;
+    }
+    return true;
+  }
   void planRearranged(const std::vector<int>& sources) {
     Layout initial;initial.target=independent_target_?0:target_;initial.towers[initial.target]={};
     if(target_has_foundation_)initial.towers[initial.target].push_back(target_);
@@ -525,17 +565,23 @@ private:
         [this](const Layout& layout,int id){return accessible(layout,id);},
         [this,&rejected](const Layout& layout,const Move& move){
           if(rejected.count(layout.key()+"/"+std::to_string(move.block)+">"+std::to_string(move.to)))return false;
-          return !move.temporary||accessible(layout.moved(move),move.block);
+          if(move.temporary&&!accessible(layout.moved(move),move.block))return false;
+          return bufferRecoveryPossible(layout,move);
         },[this](int cell){
-          double clearance=(cells_[cell-1]-targetXY()).norm();
-          for(int obstacle:obstacles_)clearance=std::min(clearance,(cells_[cell-1]-cells_[obstacle-1]).norm());
-          return clearance;
+          return (cells_[cell-1]-targetXY()).norm();
+        },[&rejected](const Layout& layout){
+          // On the initial geometry-only search, collapse permutations of
+          // completed target cubes. Route-specific rejections on later passes
+          // still use the exact ordered layout, so no blacklist is bypassed.
+          return layout.key(rejected.empty());
         });
       const auto moves=search.plan(initial);transport_total_=moves.size();
       RCLCPP_INFO(logger_,"STACK_REARRANGEMENT transports=%zu blocks=%zu buffers=%zu states=%zu open=%.3f",moves.size(),total_,moves.size()-total_,search.expanded(),open_);
       Layout layout=initial;int completed=0;bool retry=false;
       for(std::size_t index=0;index<moves.size();++index) {
         const auto& move=moves[index];
+        if(move.temporary)RCLCPP_INFO(logger_,"STACK_BUFFER_SELECTED policy=%s block=%d support=%d target=%d target_distance=%.4f",
+          rearrangement::BUFFER_SELECTION_POLICY,move.block,move.to,target_,(cells_[move.to-1]-targetXY()).norm());
         try {planTransfer(layout,move,completed,index+1);layout=layout.moved(move);}
         catch(const std::exception& error) {
           checkStop();last_failure=error.what();
@@ -549,6 +595,7 @@ private:
     throw std::runtime_error("No fully validated rearrangement after bounded route retries: "+last_failure+"; NOTHING executed");
   }
   void planTransfer(const Layout& layout,const Move& move,int& completed,std::size_t transport) {
+    placement_retreat_.clear();
     checkStop();const auto object=blockId(move.block);const auto& from=layout.towers.at(move.from);
     const auto& destination=layout.towers.at(move.to);const int layer=destination.size()+1;
     RCLCPP_INFO(logger_,"STACK_PLANNING source=%d target=%d layer=%d/%zu",move.block,move.to,layer,move.temporary?std::size_t(2):total_+foundationLayers());
@@ -591,7 +638,11 @@ private:
     steps_.back().completed=completed;steps_.back().block=move.block;
     steps_.back().destination=move.to;steps_.back().temporary=move.temporary;
     if(staged_release_)planHand(release_clearance_,"Release block "+std::to_string(move.block)+" clearance opening before retreat");
-    planContactDeparture(placement.second,"Retreat from layer "+std::to_string(layer));
+    if(placement_retreat_.empty())planContactDeparture(placement.second,"Retreat from layer "+std::to_string(layer));
+    else {
+      planContactDeparture(placement_retreat_.front(),"Retreat from layer "+std::to_string(layer)+" vertical clearance");
+      planContactDeparture(placement_retreat_.back(),"Retreat from layer "+std::to_string(layer)+" horizontal withdrawal");
+    }
     contacts(object,false);
     if(!physical_stack_)planNeutral("Prepare next vertical pickup");
   }
@@ -1116,6 +1167,7 @@ private:
       return "open";
     }
     if(label.find(" contact clearance")!=std::string::npos)return "contact";
+    if(label.find(" fast descent")!=std::string::npos)return "descent_fast";
     if(label.rfind("Lift block ",0)==0)return "lift";
     if(label.rfind("Retreat from layer ",0)==0)return "retreat";
     if(label.find(" descend")!=std::string::npos||label.find("horizontal insert")!=std::string::npos)return "approach";
@@ -1177,6 +1229,12 @@ private:
     }
     if(!state.satisfiesBounds(arm_group_)||scene_->isStateColliding(state,"",false))return false;
     if(placement_transit_check_&&!placementTransitClear(state))return false;
+    if(side_hover_check_) {
+      const T cube=world_frame_.inverse()*state.getGlobalLinkTransform(tcp_)*carry_fixed_;
+      for(int x:{-1,1})for(int y:{-1,1})for(int z:{-1,1})
+        if((cube*Eigen::Vector3d(x*block_.x()/2.,y*block_.y()/2.,z*block_.z()/2.)).z()<side_hover_floor_-.0001)
+          return false;
+    }
     return !(empty_xy_scan_||plate_alignment_)||!scan_floor_check_||minimumGripperZ(state)>=scan_floor_-1e-9;
   }
   bool solve(const T& target,State& state) {
@@ -1214,7 +1272,7 @@ private:
       T pre=low;pre.translation().z()=approach_z;
       try {
         State grasp(original);if(!solve(low,grasp))continue;
-        if(!reverse){planFree(pre,label+" approach");planStraight(low,label+" descend");}
+        if(!reverse){planFree(pre,label+" approach");planDescent(low,label);}
         else {
           // Solve the approach backwards from a valid grasp, then ask OMPL for
           // that exact pre-grasp posture instead of changing IK branches.
@@ -1222,7 +1280,7 @@ private:
           if(!cartesian({pre},up))continue;
           State ready(up.getLastWayPoint());ready.update();scene_->setCurrentState(original);
           planJoint(ready,pre,label+" approach (reverse IK)");
-          up.reverse();save(up,label+" descend");
+          up.reverse();saveDescent(up,label);
         }
         RCLCPP_INFO(logger_,"STACK_YAW degrees=%d reverse_ik=%d pre_z=%.4f label=%s",turn*90,reverse,approach_z,label.c_str());
         return {low,pre};
@@ -1372,24 +1430,37 @@ private:
     throw std::runtime_error("Cannot clear the tower before placement: "+label);
   }
   std::pair<T,T> planPlacement(const std::string& object,const std::string& support,int layer,const std::string& label) {
+    placement_retreat_.clear();
     State original(scene_->getCurrentState());auto acm=scene_->getAllowedCollisionMatrix();const auto count=steps_.size();
     const bool vertical=usesVerticalPlacement(layer);
     if(!vertical)for(const auto& candidate:sideCandidates(layer,carry_fixed_)) {
       checkStop();scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
       try {
-        State probe(original);if(!solve(candidate.second,probe))continue;
-        const T high=raisedPlacement(candidate.second,layer,carry_fixed_);
+        const double lift=(empty_hand_test_||plate_alignment_)?0.:side_entry_clearance_;
+        T entry=candidate.first,pre=candidate.second;
+        entry.translation().z()+=lift;pre.translation().z()+=lift;
+        State probe(original);if(!solve(pre,probe))continue;
+        T high=raisedPlacement(candidate.second,layer,carry_fixed_);
+        high.translation().z()=std::max(high.translation().z(),pre.translation().z());
         planPlacementTransit(high,layer,label);
-        planStraight(candidate.second,label+" side descend outside tower");
-        supportContact(object,support); // Only the final insertion may touch its support.
-        planStraight(candidate.first,label+" horizontal insert");
+        planDescent(pre,label+" side outside tower");
+        side_hover_floor_=stack_surface_z_+block_.z()*(layer-1)+lift+release_lift_;
+        side_hover_check_=lift>0.;
+        planStraight(entry,label+" horizontal insert above support");
+        side_hover_check_=false;
+        // The carried cube may touch its support only after XY alignment.
+        supportContact(object,support);
+        if(lift>0.)planDescent(candidate.first,label+" side setdown");
         placed_cube_=candidate.first*carry_fixed_;
+        if(lift>0.)placement_retreat_={entry,pre};
+        RCLCPP_INFO(logger_,"STACK_SIDE_HOVER layer=%d lift=%.4f support_top_z=%.4f cube_bottom_z=%.4f",layer,
+          lift,stack_surface_z_+block_.z()*(layer-1),side_hover_floor_);
         RCLCPP_INFO(logger_,"STACK_PLACEMENT layer=%d mode=side approach_xyz=%.3f,%.3f,%.3f",layer,
           (candidate.first.linear()*tcp_approach_.linear())(0,2),
           (candidate.first.linear()*tcp_approach_.linear())(1,2),
           (candidate.first.linear()*tcp_approach_.linear())(2,2));
-        return candidate;
-      }catch(const std::exception& error){checkStop();RCLCPP_WARN(logger_,"STACK_SIDE_RETRY layer=%d reason=%s",layer,error.what());}
+        return {candidate.first,pre};
+      }catch(const std::exception& error){side_hover_check_=false;placement_retreat_.clear();checkStop();RCLCPP_WARN(logger_,"STACK_SIDE_RETRY layer=%d reason=%s",layer,error.what());}
     }
     scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
     if(!vertical&&layer>vertical_fallback_)throw std::runtime_error("No collision-free side placement: "+label);
@@ -1402,7 +1473,7 @@ private:
         planPlacementTransit(high,layer,label);
         // Only the final straight descent may touch the intended support.
         supportContact(object,support);
-        planStraight(low,label+" descend");
+        planDescent(low,label);
         placed_cube_=low*carry_fixed_;
         RCLCPP_INFO(logger_,"STACK_PLACEMENT layer=%d mode=vertical pre_z=%.4f",layer,high.translation().z());
         return {low,high};
@@ -1425,8 +1496,12 @@ private:
       bool reached=false;
       const bool vertical=usesVerticalPlacement(layer);
       if(!vertical)for(const auto& candidate:sideCandidates(layer,carry)) {
-        State probe(seed);if(solve(raisedPlacement(candidate.second,layer,carry),probe)&&
-          solve(candidate.second,probe)&&solve(candidate.first,probe)){seed=probe;reached=true;break;}
+        const double lift=(empty_hand_test_||plate_alignment_)?0.:side_entry_clearance_;
+        T entry=candidate.first,pre=candidate.second;entry.translation().z()+=lift;pre.translation().z()+=lift;
+        T high=raisedPlacement(candidate.second,layer,carry);
+        high.translation().z()=std::max(high.translation().z(),pre.translation().z());
+        State probe(seed);if(solve(high,probe)&&
+          solve(pre,probe)&&solve(entry,probe)&&solve(candidate.first,probe)){seed=probe;reached=true;break;}
       }
       if(!reached&&(vertical||layer<=vertical_fallback_))for(int turn=0;turn<4;++turn) {
         T candidate=target;candidate.linear()=Eigen::AngleAxisd(turn*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*target.linear();
@@ -1513,8 +1588,8 @@ private:
     // Only final grasp/place entry uses the lower velocity and acceleration.
     // Lifting, retreating, reorientation and transport use the faster profile.
     const bool near_contact=phase=="approach"||phase=="contact";
-    const double velocity=hand?.4:(split?(near_contact?approach_vel_:transfer_vel_):vel_);
-    const double acceleration=hand?.4:(split?(near_contact?approach_acc_:transfer_acc_):acc_);
+    const double velocity=hand?.4:(split?(phase=="descent_fast"?descent_vel_:near_contact?approach_vel_:transfer_vel_):vel_);
+    const double acceleration=hand?.4:(split?(phase=="descent_fast"?descent_acc_:near_contact?approach_acc_:transfer_acc_):acc_);
     trajectory_processing::IterativeParabolicTimeParameterization time;
     if(!time.computeTimeStamps(trajectory,velocity,acceleration))throw std::runtime_error("Timing failed: "+label);
     for(std::size_t i=1;i<trajectory.getWayPointCount();++i)
@@ -1562,6 +1637,36 @@ private:
     robot_trajectory::RobotTrajectory path(model_,group_);
     if(!cartesian({target},path))throw std::runtime_error("Straight approach/retreat blocked: "+label);
     save(path,label);
+  }
+  void saveDescent(robot_trajectory::RobotTrajectory& path,const std::string& label) {
+    // Keep the reverse-IK branch and all its exact geometric waypoints. Split
+    // only the timing, leaving at least 40mm (plus one Cartesian step) slow.
+    const T first=world_frame_.inverse()*path.getFirstWayPoint().getGlobalLinkTransform(tcp_);
+    const T last=world_frame_.inverse()*path.getLastWayPoint().getGlobalLinkTransform(tcp_);
+    std::size_t split=0;
+    if(physical_stack_&&(first.translation().head<2>()-last.translation().head<2>()).norm()<1e-5&&
+       Eigen::Quaterniond(first.linear()).angularDistance(Eigen::Quaterniond(last.linear()))<1e-5) {
+      double previous=first.translation().z();
+      for(std::size_t i=1;i+1<path.getWayPointCount();++i) {
+        const T pose=world_frame_.inverse()*path.getWayPoint(i).getGlobalLinkTransform(tcp_);
+        const double z=pose.translation().z();
+        if(z>previous+1e-5||z-last.translation().z()<physical_approach_clearance_+step_)break;
+        split=i;previous=z;
+      }
+    }
+    if(!split){save(path,label+" descend");return;}
+    robot_trajectory::RobotTrajectory fast(model_,group_),slow(model_,group_);
+    for(std::size_t i=0;i<path.getWayPointCount();++i) {
+      if(i<=split)fast.addSuffixWayPoint(path.getWayPoint(i),0.);
+      if(i>=split)slow.addSuffixWayPoint(path.getWayPoint(i),0.);
+    }
+    save(fast,label+" fast descent above contact zone");
+    save(slow,label+" descend final contact zone");
+  }
+  void planDescent(const T& target,const std::string& label) {
+    robot_trajectory::RobotTrajectory path(model_,group_);
+    if(!cartesian({target},path))throw std::runtime_error("Straight descent blocked: "+label);
+    saveDescent(path,label);
   }
   void planContactDeparture(const T& target,const std::string& label) {
     if(!physical_stack_){planStraight(target,label);return;}
@@ -1817,6 +1922,7 @@ private:
     out<<",\"target_cell\":"<<target_<<",\"foundation_layers\":"<<foundationLayers()
        <<",\"moves\":"<<total_<<",\"layers\":"<<total_+foundationLayers()
        <<",\"routing_policy\":\"open_gripper_buffer_v1\",\"transport_moves\":"<<transport_total_
+       <<",\"buffer_selection_policy\":"<<jsonString(rearrangement::BUFFER_SELECTION_POLICY)
        <<",\"buffer_moves\":"<<transport_total_-total_
        <<",\"source_cells\":[";
     bool separator=false;
@@ -1824,9 +1930,10 @@ private:
       if(separator)out<<',';out<<id;separator=true;
     }
     out<<']'
-       <<",\"placement_policy\":\"raised_tower_clearance_v1\",\"placement_mode\":"<<jsonString(placement_mode_)
+       <<",\"placement_policy\":\"raised_tower_hover_setdown_v2\",\"placement_mode\":"<<jsonString(placement_mode_)
        <<",\"vertical_placement_layers\":"<<vertical_placement_layers_
        <<",\"placement_approach_clearance\":"<<placement_clearance_
+       <<",\"side_entry_clearance\":"<<side_entry_clearance_
        <<",\"gripper_open_position\":"<<open_<<",\"gripper_grasp_position\":"<<close_
        <<",\"release_first_position\":"<<release_first_<<",\"release_clearance_position\":"<<release_clearance_
        <<",\"staged_release_enabled\":"<<(staged_release_?"true":"false")
@@ -1834,6 +1941,8 @@ private:
        <<",\"stack_acceleration_scaling\":"<<stack_acc_
        <<",\"approach_acceleration_scaling\":"<<approach_acc_
        <<",\"transfer_acceleration_scaling\":"<<transfer_acc_
+       <<",\"descent_velocity_scaling\":"<<descent_vel_<<",\"descent_acceleration_scaling\":"<<descent_acc_
+       <<",\"physical_approach_clearance\":"<<physical_approach_clearance_
        <<",\"physical_contact_clearance\":"<<physical_contact_clearance_<<",\"steps\":[";
     for(std::size_t index=0;index<steps_.size();++index) {
       const auto& step=steps_[index];
@@ -2313,11 +2422,14 @@ private:
   std::vector<AlignmentStop> alignment_stops_;
   int target_,columns_,rows_,vertical_fallback_,vertical_placement_layers_;std::set<int> obstacles_,empty_;std::size_t total_=0;
   double width_,height_,table_z_,grip_height_,clearance_,side_clearance_,vel_,acc_,open_,close_,step_,travel_z_,release_lift_;
-  double placement_clearance_=.12,placement_tower_top_=0.;
+  double placement_clearance_=.12,placement_tower_top_=0.,side_entry_clearance_=.01,side_hover_floor_=0.;
+  bool side_hover_check_=false;
+  std::vector<T> placement_retreat_;
   bool placement_transit_check_=false,placement_crossing_=false;
   bool split_speeds_=true,staged_release_=true,physical_stack_=false;
   double approach_vel_=.05,transfer_vel_=.20,stack_acc_=.05,approach_acc_=.05,transfer_acc_=.20;
   double physical_contact_clearance_=.04;
+  double physical_approach_clearance_=.04,descent_vel_=.20,descent_acc_=.20;
   double release_first_=.70,release_clearance_=.60;
   bool empty_hand_test_=false,empty_xy_scan_=false,scan_floor_check_=false;
   bool plate_enabled_=false,independent_target_=false,target_has_foundation_=false,plate_alignment_=false;

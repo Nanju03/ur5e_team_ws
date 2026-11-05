@@ -11,6 +11,7 @@
 #include <vector>
 
 namespace rearrangement {
+inline constexpr const char* BUFFER_SELECTION_POLICY="nearest_target_feasible_v1";
 struct Move {int block,from,to;bool temporary;};
 struct Layout {
   int target=0;
@@ -22,9 +23,16 @@ struct Layout {
         if(tower[tier]==block)return {cell,static_cast<int>(tier)};
     throw std::runtime_error("Unknown rearrangement block");
   }
-  std::string key()const {
+  std::string key(bool unordered_target=false)const {
     std::ostringstream out;
-    for(const auto& [cell,tower]:towers){out<<cell<<':';for(int block:tower)out<<block<<',';out<<';';}
+    for(const auto& [cell,tower]:towers) {
+      out<<cell<<':';
+      if(unordered_target&&cell==target) {
+        auto contents=tower;std::sort(contents.begin(),contents.end());
+        for(int block:contents)out<<block<<',';
+      }else for(int block:tower)out<<block<<',';
+      out<<';';
+    }
     out<<'|';for(int block:parked_once)out<<block<<',';return out.str();
   }
   Layout moved(const Move& move)const {
@@ -43,19 +51,31 @@ class Search {
 public:
   using Pick=std::function<bool(const Layout&,int)>;
   using Place=std::function<bool(const Layout&,const Move&)>;
-  using Rank=std::function<double(int)>;
-  Search(std::vector<int> priority,Pick pick,Place place,Rank buffer_rank)
-    :priority_(std::move(priority)),pick_(std::move(pick)),place_(std::move(place)),buffer_rank_(std::move(buffer_rank)){}
+  using BufferDistance=std::function<double(int)>;
+  using StateKey=std::function<std::string(const Layout&)>;
+  Search(std::vector<int> priority,Pick pick,Place place,BufferDistance buffer_distance,
+         StateKey key=[](const Layout& layout){return layout.key();})
+    :priority_(std::move(priority)),pick_(std::move(pick)),place_(std::move(place)),
+     buffer_distance_(std::move(buffer_distance)),state_key_(std::move(key)){}
   std::vector<Move> plan(const Layout& layout) {
-    route_.clear();failed_.clear();expanded_=0;
-    if(!visit(layout))throw std::runtime_error(
+    expanded_=0;
+    std::size_t remaining=0;
+    for(const auto& [cell,tower]:layout.towers)if(cell!=layout.target)
+      for(int block:tower)if(!layout.parked_once.count(block))++remaining;
+    // First allow at most one new temporary move. Otherwise a near-target
+    // support can spawn a long cascade before the next feasible support is
+    // considered. Direct target moves still take priority in every pass.
+    for(std::size_t extra=1;extra<=std::max(std::size_t(1),remaining);++extra) {
+      route_.clear();failed_.clear();buffer_limit_=layout.parked_once.size()+extra;
+      if(visit(layout))return route_;
+    }
+    throw std::runtime_error(
       "No collision-free rearrangement with the open gripper and recoverable two-layer buffers; NOTHING executed");
-    return route_;
   }
   std::size_t expanded()const{return expanded_;}
 private:
   bool visit(const Layout& layout) {
-    const auto key=layout.key();if(failed_.count(key))return false;
+    const auto key=state_key_(layout);if(failed_.count(key))return false;
     if(++expanded_>5000)throw std::runtime_error("Rearrangement search limit reached; NOTHING executed");
     std::vector<int> tops;
     for(const auto& [cell,tower]:layout.towers)if(cell!=layout.target&&!tower.empty())tops.push_back(tower.back());
@@ -78,13 +98,16 @@ private:
       }
       if(safe&&place_(layout,move)&&descend(next,move))return true;
     }
+    if(layout.parked_once.size()>=buffer_limit_){failed_.insert(key);return false;}
     // Park endangered ground blocks first, on an existing single block. A
     // support cannot be picked until its parked top has been retrieved.
     std::vector<int> candidates=threatened;
     for(int id:accessible)if(std::find(candidates.begin(),candidates.end(),id)==candidates.end())candidates.push_back(id);
     std::vector<int> supports;
     for(const auto& [cell,tower]:layout.towers)if(cell!=layout.target&&tower.size()==1)supports.push_back(cell);
-    std::stable_sort(supports.begin(),supports.end(),[&](int a,int b){return buffer_rank_(a)>buffer_rank_(b);});
+    // Prefer the support nearest the final target. Feasibility checks below
+    // still reject covered/blocked/unrecoverable candidates before use.
+    std::stable_sort(supports.begin(),supports.end(),[&](int a,int b){return buffer_distance_(a)<buffer_distance_(b);});
     for(int id:candidates) {
       if(layout.locate(id).second!=0||layout.parked_once.count(id)||
          std::find(accessible.begin(),accessible.end(),id)==accessible.end())continue;
@@ -103,7 +126,8 @@ private:
   bool descend(const Layout& next,const Move& move) {
     route_.push_back(move);if(visit(next))return true;route_.pop_back();return false;
   }
-  std::vector<int> priority_;Pick pick_;Place place_;Rank buffer_rank_;
-  std::vector<Move> route_;std::set<std::string> failed_;std::size_t expanded_=0;
+  std::vector<int> priority_;Pick pick_;Place place_;BufferDistance buffer_distance_;
+  StateKey state_key_;
+  std::vector<Move> route_;std::set<std::string> failed_;std::size_t expanded_=0,buffer_limit_=0;
 };
 } // namespace rearrangement

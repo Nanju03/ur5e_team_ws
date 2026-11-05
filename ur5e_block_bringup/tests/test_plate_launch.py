@@ -135,6 +135,9 @@ def test_physical_stack_routes_to_reviewed_executor_and_preserves_support_height
     assert p['split_stack_speeds'] is True
     assert p['velocity_scaling'] == 1. and p['acceleration_scaling'] == .05
     assert p['physical_contact_clearance'] == .04
+    assert p['physical_approach_clearance'] == .04
+    assert p['side_entry_clearance'] == .010
+    assert p['descent_velocity_scaling'] == p['descent_acceleration_scaling'] == .20
     assert p['vertical_placement_layers'] == 19
     assert p['placement_approach_clearance'] == .12
 
@@ -161,9 +164,13 @@ def test_saved_uniform_speed_profile_cannot_override_physical_phase_acceleration
 
 @pytest.mark.parametrize('mode', ['physical_plan', 'physical_run'])
 def test_saved_old_transition_and_low_approach_cannot_override_physical_placement(prepare, mode):
-    p = prepare(mode, vertical_placement_layers=10, placement_approach_clearance=.04)
+    p = prepare(mode, vertical_placement_layers=10, placement_approach_clearance=.04,
+                side_entry_clearance=0., physical_approach_clearance=.001,
+                descent_velocity_scaling=1., descent_acceleration_scaling=1.)
     assert p['vertical_placement_layers'] == 19
     assert p['placement_approach_clearance'] == .12
+    assert p['side_entry_clearance'] == .010 and p['physical_approach_clearance'] == .04
+    assert p['descent_velocity_scaling'] == p['descent_acceleration_scaling'] == .20
 
 
 @pytest.mark.parametrize('mode', ['scene', 'plan', 'reach', 'reset', 'dry_plan', 'dry_run', 'alignment_prepare'])

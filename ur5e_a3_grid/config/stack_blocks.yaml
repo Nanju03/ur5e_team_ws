@@ -9,6 +9,7 @@
     vertical_placement_layers: 19  # Physical layers, including the foundation block.
     placement_approach_clearance: 0.120  # Lowest gripper/carried-block point above the existing tower during crossing.
     side_clearance: 0.060
+    side_entry_clearance: 0.010  # Hover above the support, then lower vertically before release.
     vertical_fallback_layers: 4  # Legacy side-failure fallback; the forced vertical section takes precedence.
     place_clearance: 0.040
     velocity_scaling: 0.25
@@ -20,6 +21,9 @@
     release_clearance_position: 0.60
     split_stack_speeds: true
     approach_velocity_scaling: 0.05
+    physical_approach_clearance: 0.040  # Last 40mm remain slow in physical pickup/place descents.
+    descent_velocity_scaling: 0.20  # Physical descent above the final contact zone.
+    descent_acceleration_scaling: 0.20
     transfer_velocity_scaling: 0.20
     stack_acceleration_scaling: 0.05  # Legacy approach fallback; explicit phase values below take precedence.
     approach_acceleration_scaling: 0.05
