@@ -13,6 +13,7 @@
 #include <future>
 #include <functional>
 #include <iomanip>
+#include <iostream>
 #include <limits>
 #include <map>
 #include <memory>
@@ -108,8 +109,12 @@ struct Lock {
   Lock() {
     const char* domain=std::getenv("ROS_DOMAIN_ID");
     std::string file="/tmp/ur5e_stack_"+std::string(domain?domain:"0")+".lock";
-    fd=open(file.c_str(),O_CREAT|O_RDWR,0600);
-    if(fd<0 || flock(fd,LOCK_EX|LOCK_NB)!=0) throw std::runtime_error("Another stacking task is running in this ROS domain");
+    fd=open(file.c_str(),O_CREAT|O_RDWR|O_NOFOLLOW|O_CLOEXEC,0600);
+    if(fd<0) throw std::runtime_error("Unable to open the stacking task lock for this ROS domain");
+    if(flock(fd,LOCK_EX|LOCK_NB)!=0) {
+      close(fd);fd=-1;
+      throw std::runtime_error("Another stacking task is running in this ROS domain");
+    }
   }
   ~Lock(){if(fd>=0)close(fd);}
 };
@@ -143,6 +148,9 @@ public:
   explicit StackTask(rclcpp::Node::SharedPtr node):node_(std::move(node)),logger_(node_->get_logger()) {
     mode_=parameter<std::string>(node_,"stack_mode","scene");
     physical_stack_=parameter<bool>(node_,"physical_stack_task",false);
+    physical_contact_clearance_=parameter<double>(node_,"physical_contact_clearance",.04);
+    if(physical_stack_&&(!std::isfinite(physical_contact_clearance_)||std::abs(physical_contact_clearance_-.04)>1e-9))
+      throw std::runtime_error("Physical fast transport requires the reviewed 40mm contact clearance");
     simulation_backend_=parameter<std::string>(node_,"simulation_backend","mock");
     if(simulation_backend_!="mock"&&simulation_backend_!="gazebo")throw std::runtime_error("Invalid simulation_backend");
     release_lift_=parameter<double>(node_,"placement_release_lift",0.);
@@ -550,11 +558,21 @@ private:
     if(!cube||cube->global_shape_poses_.size()!=1)throw std::runtime_error("Missing current pickup object pose");
     const T current=world_frame_.inverse()*cube->global_shape_poses_.front();
     contacts(object,true);
-    auto grasp=planApproach(at(current.translation().head<2>(),current.translation().z()-block_.z()/2+grip_height_),
-      std::max(travel_z_,current.translation().z()+.08),"Source "+std::to_string(move.block));
+    const auto pickup=at(current.translation().head<2>(),current.translation().z()-block_.z()/2+grip_height_);
+    const auto pickup_z=std::max(travel_z_,current.translation().z()+.08);
+    const auto pickup_scene=planning_scene::PlanningScene::clone(scene_);const auto pickup_steps=steps_.size();
+    std::pair<T,T> grasp;
+    try {grasp=planApproach(pickup,pickup_z,"Source "+std::to_string(move.block));}
+    catch(const std::exception&) {
+      checkStop();if(!physical_stack_)throw;
+      scene_=planning_scene::PlanningScene::clone(pickup_scene);steps_.resize(pickup_steps);
+      RCLCPP_INFO(logger_,"STACK_PICKUP_STAGING fallback=neutral block=%d",move.block);
+      planNeutral("Prepare pickup staging fallback");
+      grasp=planApproach(pickup,pickup_z,"Source "+std::to_string(move.block));
+    }
     planHand(close_,"Close on block "+std::to_string(move.block));
     attach(object,move.block);
-    planStraight(grasp.second,"Lift block "+std::to_string(move.block));
+    planContactDeparture(grasp.second,"Lift block "+std::to_string(move.block));
     tableContact(object,false);
     if(from.size()>1)supportContact(object,blockId(from[from.size()-2]),false);
     const std::string support=destination.empty()?plateId():blockId(destination.back());
@@ -573,9 +591,9 @@ private:
     steps_.back().completed=completed;steps_.back().block=move.block;
     steps_.back().destination=move.to;steps_.back().temporary=move.temporary;
     if(staged_release_)planHand(release_clearance_,"Release block "+std::to_string(move.block)+" clearance opening before retreat");
-    planStraight(placement.second,"Retreat from layer "+std::to_string(layer));
+    planContactDeparture(placement.second,"Retreat from layer "+std::to_string(layer));
     contacts(object,false);
-    planNeutral("Prepare next vertical pickup");
+    if(!physical_stack_)planNeutral("Prepare next vertical pickup");
   }
   moveit::core::RobotStatePtr measuredState(double timeout) {
     // Arm and gripper publish separate partial messages. MoveIt's aggregate
@@ -1097,6 +1115,7 @@ private:
       if(label.rfind("Release block ",0)==0)return "release";
       return "open";
     }
+    if(label.find(" contact clearance")!=std::string::npos)return "contact";
     if(label.rfind("Lift block ",0)==0)return "lift";
     if(label.rfind("Retreat from layer ",0)==0)return "retreat";
     if(label.find(" descend")!=std::string::npos||label.find("horizontal insert")!=std::string::npos)return "approach";
@@ -1181,7 +1200,15 @@ private:
       double z=base.translation().z()+clearance;
       if(z<pre_z-1e-6)heights.push_back(z);
     }
-    for(double approach_z:heights)for(int reverse=0;reverse<2;++reverse)for(int turn=0;turn<4;++turn) {
+    std::vector<int> turns{0,1,2,3};
+    if(physical_stack_) {
+      const Eigen::Quaterniond orientation((world_frame_.inverse()*original.getGlobalLinkTransform(tcp_)).linear());
+      std::stable_sort(turns.begin(),turns.end(),[&](int a,int b) {
+        return orientation.angularDistance(Eigen::Quaterniond(Eigen::AngleAxisd(a*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*base.linear()))<
+               orientation.angularDistance(Eigen::Quaterniond(Eigen::AngleAxisd(b*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*base.linear()));
+      });
+    }
+    for(double approach_z:heights)for(int reverse=0;reverse<2;++reverse)for(int turn:turns) {
       checkStop();scene_->setCurrentState(original);steps_.resize(count);
       T low=base;low.linear()=Eigen::AngleAxisd(turn*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*base.linear();
       T pre=low;pre.translation().z()=approach_z;
@@ -1485,7 +1512,7 @@ private:
     const bool split=split_speeds_&&!empty_hand_test_&&!plate_alignment_;
     // Only final grasp/place entry uses the lower velocity and acceleration.
     // Lifting, retreating, reorientation and transport use the faster profile.
-    const bool near_contact=phase=="approach";
+    const bool near_contact=phase=="approach"||phase=="contact";
     const double velocity=hand?.4:(split?(near_contact?approach_vel_:transfer_vel_):vel_);
     const double acceleration=hand?.4:(split?(near_contact?approach_acc_:transfer_acc_):acc_);
     trajectory_processing::IterativeParabolicTimeParameterization time;
@@ -1536,6 +1563,21 @@ private:
     if(!cartesian({target},path))throw std::runtime_error("Straight approach/retreat blocked: "+label);
     save(path,label);
   }
+  void planContactDeparture(const T& target,const std::string& label) {
+    if(!physical_stack_){planStraight(target,label);return;}
+    const T start=world_frame_.inverse()*scene_->getCurrentState().getGlobalLinkTransform(tcp_);
+    const double distance=(target.translation()-start.translation()).norm();
+    if(distance<1e-8)return;
+    // First clear the grasp/support at contact speed. Only the remaining free
+    // travel uses full configured limits; jaw commands and placement entry stay slow.
+    if(Eigen::Quaterniond(start.linear()).angularDistance(Eigen::Quaterniond(target.linear()))>1e-6) {
+      planStraight(target,label+" contact clearance");return;
+    }
+    T clear=start;clear.translation()+=(target.translation()-start.translation())*
+      std::min(1.,physical_contact_clearance_/distance);
+    planStraight(clear,label+" contact clearance");
+    if(distance>physical_contact_clearance_+1e-6)planStraight(target,label);
+  }
   void planFree(const T& target,const std::string& label) {
     State current(scene_->getCurrentState());current.update();T start=world_frame_.inverse()*current.getGlobalLinkTransform(tcp_);
     std::vector<std::vector<T>> routes{{target}};
@@ -1550,6 +1592,10 @@ private:
       routes.push_back({at(side,start.translation().z()),at(side,target.translation().z()),target});
     }
     for(std::size_t index=0;index<routes.size();++index) {
+      if(physical_stack_&&index==1) {
+        State goal(current);
+        if(solve(target,goal)&&tryJointShortcut(goal,target,label))return;
+      }
       robot_trajectory::RobotTrajectory path(model_,group_);
       if(cartesian(routes[index],path)) {
         try {
@@ -1585,12 +1631,8 @@ private:
     scene_->setCurrentState(original);steps_.resize(count);
     throw std::runtime_error("No clear upright staging pose after placement: "+label);
   }
-  void planJoint(const State& goal,const T& target,const std::string& label) {
-    State current(scene_->getCurrentState());current.update();T start=world_frame_.inverse()*current.getGlobalLinkTransform(tcp_);
-    planning_interface::MotionPlanRequest request;request.group_name=group_;
-    request.allowed_planning_time=5.;request.num_planning_attempts=2;
-    moveit::core::robotStateToRobotStateMsg(current,request.start_state);
-    request.goal_constraints.push_back(kinematic_constraints::constructGoalConstraints(goal,arm_group_,.0001));
+  moveit_msgs::msg::Constraints transitConstraints(const State& current,const T& target)const {
+    moveit_msgs::msg::Constraints constraints;
     if(physical_stack_) {
       const auto& wrist=arm_group_->getActiveJointModelNames().back();
       const auto& bounds=model_->getVariableBounds(wrist);
@@ -1598,7 +1640,7 @@ private:
         moveit_msgs::msg::JointConstraint margin;margin.joint_name=wrist;
         margin.position=(bounds.min_position_+bounds.max_position_)/2.;
         margin.tolerance_above=margin.tolerance_below=(bounds.max_position_-bounds.min_position_)/2.-PHYSICAL_WRIST_MARGIN;
-        margin.weight=1.;request.path_constraints.joint_constraints.push_back(margin);
+        margin.weight=1.;constraints.joint_constraints.push_back(margin);
       }
     }
     moveit_msgs::msg::OrientationConstraint orientation;orientation.header.frame_id=frame_;orientation.link_name=approach_;
@@ -1615,7 +1657,35 @@ private:
     // still has a fixed vertical orientation in either case.
     if(carrying&&start_approach.col(2).dot(-Eigen::Vector3d::UnitZ())>std::cos(.005)&&
        start_approach.col(2).dot(goal_approach.col(2))>std::cos(.005))
-      request.path_constraints.orientation_constraints.push_back(orientation);
+      constraints.orientation_constraints.push_back(orientation);
+    return constraints;
+  }
+  bool tryJointShortcut(const State& goal,const T& target,const std::string& label) {
+    State current(scene_->getCurrentState());current.update();
+    const auto constraints=transitConstraints(current,target);
+    kinematic_constraints::KinematicConstraintSet checks(model_);
+    checks.add(constraints,scene_->getTransforms());
+    double largest=0.;for(const auto& name:arm_group_->getVariableNames())
+      largest=std::max(largest,std::abs(goal.getVariablePosition(name)-current.getVariablePosition(name)));
+    const int count=std::max(1,static_cast<int>(std::ceil(largest/.01)));
+    robot_trajectory::RobotTrajectory path(model_,group_);path.addSuffixWayPoint(current,0.);
+    for(int index=0;index<=count;++index) {
+      checkStop();State sample(current);current.interpolate(goal,static_cast<double>(index)/count,sample);
+      if(!valid(sample)||!checks.decide(sample).satisfied)return false;
+      if(index)path.addSuffixWayPoint(sample,0.);
+    }
+    try {save(path,label);}
+    catch(const std::exception&){checkStop();scene_->setCurrentState(current);return false;}
+    RCLCPP_INFO(logger_,"STACK_ROUTE strategy=JOINT_DIRECT label=%s",label.c_str());return true;
+  }
+  void planJoint(const State& goal,const T& target,const std::string& label) {
+    if(physical_stack_&&tryJointShortcut(goal,target,label))return;
+    State current(scene_->getCurrentState());current.update();
+    planning_interface::MotionPlanRequest request;request.group_name=group_;
+    request.allowed_planning_time=5.;request.num_planning_attempts=2;
+    moveit::core::robotStateToRobotStateMsg(current,request.start_state);
+    request.goal_constraints.push_back(kinematic_constraints::constructGoalConstraints(goal,arm_group_,.0001));
+    request.path_constraints=transitConstraints(current,target);
     planning_interface::MotionPlanResponse response;
     if(!pipeline_->generatePlan(scene_,request,response)||response.error_code_.val!=moveit_msgs::msg::MoveItErrorCodes::SUCCESS||!response.trajectory_)
       throw std::runtime_error("Collision-free transfer planning failed: "+label);
@@ -1763,7 +1833,8 @@ private:
        <<",\"approach_velocity_scaling\":"<<approach_vel_<<",\"transfer_velocity_scaling\":"<<transfer_vel_
        <<",\"stack_acceleration_scaling\":"<<stack_acc_
        <<",\"approach_acceleration_scaling\":"<<approach_acc_
-       <<",\"transfer_acceleration_scaling\":"<<transfer_acc_<<",\"steps\":[";
+       <<",\"transfer_acceleration_scaling\":"<<transfer_acc_
+       <<",\"physical_contact_clearance\":"<<physical_contact_clearance_<<",\"steps\":[";
     for(std::size_t index=0;index<steps_.size();++index) {
       const auto& step=steps_[index];
       if(step.start_joints.size()!=7||step.end_joints.size()!=7)
@@ -2246,6 +2317,7 @@ private:
   bool placement_transit_check_=false,placement_crossing_=false;
   bool split_speeds_=true,staged_release_=true,physical_stack_=false;
   double approach_vel_=.05,transfer_vel_=.20,stack_acc_=.05,approach_acc_=.05,transfer_acc_=.20;
+  double physical_contact_clearance_=.04;
   double release_first_=.70,release_clearance_=.60;
   bool empty_hand_test_=false,empty_xy_scan_=false,scan_floor_check_=false;
   bool plate_enabled_=false,independent_target_=false,target_has_foundation_=false,plate_alignment_=false;
@@ -2279,10 +2351,19 @@ private:
 };
 } // namespace
 int main(int argc,char** argv) {
+  // Refuse duplicate work before creating a ROS executor thread. A fast lock
+  // failure used to race executor.cancel() against the spinner entering spin(),
+  // leaving a failed scene/planner process alive while its caller waited.
+  std::unique_ptr<Lock> lock;
+  try{lock=std::make_unique<Lock>();}
+  catch(const std::exception& error){std::cerr<<"STACK_ERROR "<<error.what()<<std::endl;return 1;}
   rclcpp::init(argc,argv);auto node=rclcpp::Node::make_shared("ur5e_a3_stack",rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true));
   rclcpp::executors::SingleThreadedExecutor executor;executor.add_node(node);std::thread spinner([&]{executor.spin();});
   int result=1;std::unique_ptr<StackTask> task;
-  try{Lock lock;task=std::make_unique<StackTask>(node);result=task->run()?0:1;}
+  try{task=std::make_unique<StackTask>(node);result=task->run()?0:1;}
   catch(const std::exception& error){RCLCPP_ERROR(node->get_logger(),"STACK_ERROR %s",error.what());if(task)task->stop();}
+  // Constructor failure can be just as fast. With no task/goal to preserve,
+  // shut down the context so a not-yet-started spin() cannot outlive cancel().
+  if(!task)rclcpp::shutdown();
   executor.cancel();spinner.join();task.reset();rclcpp::shutdown();return result;
 }

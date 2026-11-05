@@ -130,10 +130,11 @@ def test_physical_stack_routes_to_reviewed_executor_and_preserves_support_height
     assert p['gripper_open_position'] == .4 and p['gripper_grasp_position'] == .73
     assert 'gripper_pregrasp_position' not in p
     assert p['release_first_position'] == .70 and p['release_clearance_position'] == .60
-    assert p['approach_velocity_scaling'] == .05 and p['transfer_velocity_scaling'] == .20
-    assert p['approach_acceleration_scaling'] == .05 and p['transfer_acceleration_scaling'] == .20
+    assert p['approach_velocity_scaling'] == .05 and p['transfer_velocity_scaling'] == 1.
+    assert p['approach_acceleration_scaling'] == .05 and p['transfer_acceleration_scaling'] == 1.
     assert p['split_stack_speeds'] is True
-    assert p['velocity_scaling'] == .20 and p['acceleration_scaling'] == .05
+    assert p['velocity_scaling'] == 1. and p['acceleration_scaling'] == .05
+    assert p['physical_contact_clearance'] == .04
     assert p['vertical_placement_layers'] == 19
     assert p['placement_approach_clearance'] == .12
 
@@ -154,7 +155,7 @@ def test_saved_uniform_speed_profile_cannot_override_physical_phase_acceleration
                 approach_acceleration_scaling=.8, transfer_acceleration_scaling=.9)
     assert p['split_stack_speeds'] is True
     assert p['approach_velocity_scaling'] == p['approach_acceleration_scaling'] == .05
-    assert p['transfer_velocity_scaling'] == p['transfer_acceleration_scaling'] == .20
+    assert p['transfer_velocity_scaling'] == p['transfer_acceleration_scaling'] == 1.
     assert p['stack_acceleration_scaling'] == .05
 
 

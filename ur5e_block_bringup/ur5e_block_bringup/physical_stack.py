@@ -5,7 +5,9 @@ the complete recipe, restores the initial scene, seals the reviewed files, and
 dispatches only operator-approved goals to the existing hardware controllers.
 """
 import copy
+from array import array
 import fcntl
+from functools import lru_cache
 import json
 import math
 import os
@@ -32,6 +34,7 @@ from moveit_msgs.msg import CollisionObject, DisplayTrajectory, PlanningScene, R
 from moveit_msgs.srv import ApplyPlanningScene, GetPlanningScene, GetStateValidity
 from rcl_interfaces.srv import GetParameters
 from trajectory_msgs.msg import JointTrajectoryPoint
+from shape_msgs.msg import Mesh
 from unique_identifier_msgs.msg import UUID as GoalUUID
 import yaml
 
@@ -40,15 +43,19 @@ from .air_task import (AirTask, ARM, HAND, CONTROLLER, MAX_FILE_BYTES,
 from .air_scene import scene_fingerprint as strict_scene_fingerprint
 from .air_trajectory import sample_trajectory, trajectory_metrics
 from .physical_held import clear_held_fault, read_held_fault, write_held_fault
+from .collision_worker import CollisionWorker
+from . import physical_replay as replay
 from rosidl_runtime_py.convert import message_to_ordereddict
 
 JOINTS = ARM+[HAND]
 HAND_TARGETS = {'open': .4, 'grasp': .73, 'release_first': .70, 'release_clearance': .60}
-ARM_SPEEDS = {'approach': .05, 'lift': .20, 'retreat': .20, 'transfer': .20}
+ARM_SPEEDS = {'approach': .05, 'contact': .05, 'lift': 1., 'retreat': 1., 'transfer': 1.}
+CONTACT_CLEARANCE = .04
 REVIEW_TTL = 3600.
 HAND_START_TOLERANCE = .015
-SCENE_HASH_POLICY = 'physical_normalized_pose_round12_v1'
-RECIPE_POLICY = 'physical_phase_acceleration_contact_tracking_raised_buffer_v12'
+SCENE_HASH_POLICY = 'physical_mesh_digest_pose_round12_v2'
+RECIPE_POLICY = 'physical_prevalidated_replay_v14'
+PREPARABLE_POLICIES = ('physical_fast_transfer_local_validation_v13', RECIPE_POLICY)
 GRASP_POLICY = 'command_completion'
 HAND_HOLD_TOLERANCE = .005
 HAND_COMMAND_TOLERANCE = .003
@@ -59,6 +66,9 @@ ARM_GOAL_POSITION_TOLERANCE = START_TOLERANCE
 ARM_GOAL_VELOCITY_TOLERANCE = .01
 ARM_GOAL_TIME_TOLERANCE = 5
 ARM_TRACKING_SWEEP_STEP = .005
+PLANNER_INTERRUPT_GRACE = 2.
+PLANNER_TERMINATE_GRACE = 2.
+PLANNER_KILL_GRACE = 1.
 
 
 def arm_execution_profile(path_tolerance=None):
@@ -120,6 +130,19 @@ def stop_with_reason(task, code, **details):
     task.stopped = True
 
 
+@lru_cache(maxsize=16)
+def normalized_mesh_digest(encoded):
+    """Cache work, never geometry: every call keys the current full mesh bytes.
+
+    Unchanged plate vertices/triangles used to traverse Python canonicalization
+    repeatedly in every scene monitor, starving fresh sensor callbacks. A byte
+    change always misses; the digest retains the existing round12 equivalence.
+    """
+    mesh = deserialize_message(encoded, Mesh)
+    canonical = normalized_collision_data(message_to_ordereddict(mesh))
+    return digest(json.dumps(canonical, sort_keys=True, allow_nan=False).encode())
+
+
 def normalized_collision_data(value):
     """Normalize Eigen/ROS pose round trips to sub-nanometre precision.
 
@@ -127,8 +150,10 @@ def normalized_collision_data(value):
     samples are sent unchanged to MoveIt. No millimetre-scale scene difference
     is ignored, and q/-q quaternion representations describe the same rotation.
     """
+    if isinstance(value, Mesh):
+        return dict(normalized_mesh_sha256=normalized_mesh_digest(serialize_message(value)))
     if hasattr(value, 'get_fields_and_field_types'):
-        value = message_to_ordereddict(value)
+        value = {name: getattr(value, name) for name in value.get_fields_and_field_types()}
     if isinstance(value, dict):
         if set(value) == {'x', 'y', 'z', 'w'} and all(isinstance(v, (int, float)) for v in value.values()):
             q = [float(value[k]) for k in ('x', 'y', 'z', 'w')]
@@ -139,11 +164,26 @@ def normalized_collision_data(value):
                 if significant < 0.:
                     q = [-v for v in q]
                 return dict(zip(('x', 'y', 'z', 'w'), q))
-        return {key: normalized_collision_data({k: v for k, v in item.items() if k != 'stamp'}
-                                               if key == 'header' and isinstance(item, dict) else item)
-                for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
+        result = {}
+        for key, item in value.items():
+            if key == 'meshes' and isinstance(item, (list, tuple)):
+                result[key] = [normalized_collision_data(mesh) if isinstance(mesh, Mesh) else
+                               dict(normalized_mesh_sha256=digest(json.dumps(
+                                   normalized_collision_data(mesh), sort_keys=True, allow_nan=False).encode()))
+                               for mesh in item]
+            else:
+                result[key] = normalized_collision_data(
+                    {k: v for k, v in item.items() if k != 'stamp'}
+                    if key == 'header' and isinstance(item, dict) else item)
+                if key == 'header' and isinstance(result[key], dict):
+                    result[key].pop('stamp', None)
+        return result
+    if isinstance(value, bytes):
+        return ''.join(chr(item) for item in value)
+    if isinstance(value, (list, tuple, array)):
         return [normalized_collision_data(item) for item in value]
+    if hasattr(value, 'tolist'):
+        return normalized_collision_data(value.tolist())
     if isinstance(value, float):
         return round(value, 12)
     return value
@@ -238,11 +278,13 @@ def validate_recipe(recipe):
             or isinstance(clearance, bool) or not isinstance(clearance, (int, float))
             or not math.isfinite(clearance) or not .08 <= clearance <= .20):
         raise ValueError('Physical recipe requires the raised tower placement policy and 80..200mm clearance')
-    for key, expected_scaling in [('approach_acceleration_scaling', .05), ('transfer_acceleration_scaling', .20)]:
+    if recipe.get('physical_contact_clearance') != CONTACT_CLEARANCE:
+        raise ValueError('Physical recipe needs the reviewed 40mm contact clearance')
+    for key, expected_scaling in [('approach_acceleration_scaling', .05), ('transfer_acceleration_scaling', 1.)]:
         scaling = recipe.get(key)
         if (isinstance(scaling, bool) or not isinstance(scaling, (int, float))
                 or not math.isfinite(scaling) or abs(scaling-expected_scaling) > 1e-9):
-            raise ValueError('Physical recipe needs reviewed phase acceleration scaling 0.05/0.20')
+            raise ValueError('Physical recipe needs reviewed phase acceleration scaling 0.05/1.00')
     if (type(recipe.get('target_cell')) is not int or not 1 <= recipe['target_cell'] <= 100
             or type(recipe.get('moves')) is not int or recipe['moves'] < 1
             or type(recipe.get('foundation_layers')) is not int or recipe['foundation_layers'] != 1
@@ -280,10 +322,10 @@ def validate_recipe(recipe):
             velocity, acceleration = step.get('velocity_scaling'), step.get('acceleration_scaling')
             if (phase not in ARM_SPEEDS or isinstance(velocity, bool) or not isinstance(velocity, (int, float))
                     or not math.isfinite(velocity) or abs(velocity-ARM_SPEEDS[phase]) > 1e-9):
-                raise ValueError('Arm phase does not use the reviewed 0.05/0.20 speed scaling')
+                raise ValueError('Arm phase does not use the reviewed contact/transfer speed scaling')
             if (isinstance(acceleration, bool) or not isinstance(acceleration, (int, float))
                     or not math.isfinite(acceleration) or abs(acceleration-ARM_SPEEDS[phase]) > 1e-9):
-                raise ValueError('Physical arm acceleration must match its reviewed phase speed 0.05/0.20')
+                raise ValueError('Physical arm acceleration must match its reviewed contact/transfer phase speed')
             if release_stage or (carrying and not attached):
                 raise ValueError('Arm motion precedes attachment or the completed 0.70 -> 0.60 release')
             if abs(start[-1]-end[-1]) > 1e-9:
@@ -381,8 +423,12 @@ class PhysicalStackTask(AirTask):
         self.stack_lock = None
         self.pending_identity = None
         self.sensor, self.sensor_sequence, self.sensor_received = {}, -1, -math.inf
+        self.sensor_observed, self.sensor_observed_received = {}, -math.inf
+        self.sensor_rejection = None
+        sensor_qos = copy.copy(qos_profile_sensor_data)
+        sensor_qos.depth = 1  # Only the newest feedback can satisfy freshness.
         self.sensor_subscription = self.create_subscription(
-            DynamicJointState, '/gripper/dynamic_joint_states', self.sensor_feedback, qos_profile_sensor_data)
+            DynamicJointState, '/gripper/dynamic_joint_states', self.sensor_feedback, sensor_qos)
         self.carrying = False
         self.holding_reference = None
         self.verified_holding_context = None
@@ -393,6 +439,13 @@ class PhysicalStackTask(AirTask):
         self.scene_request_pending = False
         self.stop_reason = None
         self.monitor_clients = {}
+        self.motion_clients = {}
+        self.replay_queries = None
+        self.prevalidated_replay = False
+        self.execution_artifacts = None
+        self.stationary_since = None
+        self.stationary_observed = -math.inf
+        self.library = self.path.parent/'physical_path_library'
         self.joint_velocity_limits = {}
         tree = ET.fromstring(self.model)
         self.joint_acceleration_limits = {}
@@ -406,6 +459,21 @@ class PhysicalStackTask(AirTask):
                 # acceleration bound is supplied. Retain that conservative base.
                 self.joint_acceleration_limits[name] = 1.
 
+    def joints(self, message):
+        super().joints(message)
+        now = time.monotonic()
+        quiet = self.quiet_feedback(now)
+        previous = getattr(self, 'stationary_observed', -math.inf)
+        since = getattr(self, 'stationary_since', None)
+        self.stationary_since = (now if since is None or now-previous >= .5 else since) if quiet else None
+        self.stationary_observed = now
+
+    def quiet_feedback(self, now=None):
+        now = time.monotonic() if now is None else now
+        return (self.fresh() and self.sensor_fresh()
+                and all(name in self.velocities and now-self.velocities[name][1] < .5
+                        and abs(self.velocities[name][0]) < .01 for name in JOINTS))
+
     def sensor_feedback(self, message):
         if len(message.joint_names) != len(message.interface_values) or HAND not in message.joint_names:
             return
@@ -413,17 +481,38 @@ class PhysicalStackTask(AirTask):
         if len(item.interface_names) != len(item.values) or len(set(item.interface_names)) != len(item.interface_names):
             return
         record = dict(zip(item.interface_names, item.values))
+        self.sensor_observed, self.sensor_observed_received = record, time.monotonic()
         required = ('position', 'raw_position', 'grip_state', 'force_percent', 'communication_age', 'sample_sequence')
         if any(name not in record or not math.isfinite(record[name]) for name in required):
+            self.sensor_rejection = 'missing_or_nonfinite_fields'
             return
         q, raw, grip, force, age, sequence = [record[name] for name in required]
         if (not 0 <= q <= .93 or not 0 <= raw <= 1000 or raw != int(raw)
                 or grip not in (0, 1, 2, 3) or not 20 <= force <= 100 or not 0 <= age <= .5
-                or sequence != int(sequence) or sequence <= self.sensor_sequence
+                or sequence != int(sequence)
                 or abs(q-.93*(1000-raw)/1000) > .0015):
+            self.sensor_rejection = 'invalid_fields_or_reported_age'
+            return
+        if sequence <= self.sensor_sequence:
+            self.sensor_rejection = 'sequence_not_advanced'
             return
         self.sensor, self.sensor_sequence = record, int(sequence)
         self.sensor_received = time.monotonic()-age
+        self.sensor_rejection = None
+
+    def sensor_stale_details(self):
+        """Record both device age and callback gaps without changing the limit."""
+        now = time.monotonic()
+        def age(stamp):
+            value = now-stamp
+            return round(value, 6) if math.isfinite(value) else None
+        observed = getattr(self, 'sensor_observed', {})
+        return dict(sample_sequence=getattr(self, 'sensor_sequence', -1), limit_seconds=.5,
+                    accepted_sample_age_seconds=age(getattr(self, 'sensor_received', -math.inf)),
+                    callback_gap_seconds=age(getattr(self, 'sensor_observed_received', -math.inf)),
+                    reported_communication_age=observed.get('communication_age'),
+                    observed_sample_sequence=observed.get('sample_sequence'),
+                    last_rejection=getattr(self, 'sensor_rejection', None))
 
     def sensor_fresh(self, after=None):
         return self.mock or (time.monotonic()-self.sensor_received < .5 and
@@ -511,11 +600,25 @@ class PhysicalStackTask(AirTask):
                 self.check_stop()
 
     def measured_stop(self, seconds=4.):
+        if getattr(self, 'prevalidated_replay', False):
+            now = time.monotonic()
+            since = getattr(self, 'stationary_since', None)
+            if (since is not None and now-since >= .3
+                    and now-self.stationary_observed < .5 and self.quiet_feedback(now)):
+                return True
         began = None
         deadline = time.monotonic()+seconds
         while time.monotonic() < deadline:
             rclpy.spin_once(self, timeout_sec=.02)
             now = time.monotonic()
+            if getattr(self, 'prevalidated_replay', False):
+                queries = getattr(self, 'replay_queries', None)
+                if queries:
+                    self.poll_flight_queries(queries)
+                since = getattr(self, 'stationary_since', None)
+                if (since is not None and now-since >= .3
+                        and now-self.stationary_observed < .5 and self.quiet_feedback(now)):
+                    return True
             quiet = self.fresh() and self.sensor_fresh() and all(name in self.velocities and now-self.velocities[name][1] < .5
                         and abs(self.velocities[name][0]) < .01 for name in JOINTS)
             began = now if quiet and began is None else began if quiet else None
@@ -526,8 +629,18 @@ class PhysicalStackTask(AirTask):
     def acquire_stack_lock(self):
         if self.stack_lock is None:
             domain = os.environ.get('ROS_DOMAIN_ID', '0')
-            self.stack_lock = os.open(f'/tmp/ur5e_stack_{domain}.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
-            fcntl.flock(self.stack_lock, fcntl.LOCK_EX|fcntl.LOCK_NB)
+            descriptor = os.open(f'/tmp/ur5e_stack_{domain}.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX|fcntl.LOCK_NB)
+            except BaseException:
+                os.close(descriptor)
+                raise
+            self.stack_lock = descriptor
+
+    def release_stack_lock(self):
+        if self.stack_lock is not None:
+            descriptor, self.stack_lock = self.stack_lock, None
+            os.close(descriptor)
 
     def check_stop(self):
         if self.stopped:
@@ -701,7 +814,35 @@ class PhysicalStackTask(AirTask):
                 client.remove_pending_request(future)
 
     def read_message(self, name, kind):
+        pinned = getattr(self, 'execution_artifacts', None)
+        if pinned is not None:
+            if name not in pinned:
+                raise RuntimeError('Physical replay references an unsealed artifact')
+            return deserialize_message(pinned[name], kind)
         return deserialize_message(artifact_path(self.path.parent, name).read_bytes(), kind)
+
+    @staticmethod
+    def signal_planner(process, signum):
+        """Signal only the session created by planner(start_new_session=True)."""
+        try:
+            os.killpg(process.pid, signum)
+        except ProcessLookupError:
+            pass
+
+    def finish_planner(self, process):
+        """Bound exceptional cleanup; no robot-facing action clients are used."""
+        for signum, seconds in ((signal.SIGINT, PLANNER_INTERRUPT_GRACE),
+                                (signal.SIGTERM, PLANNER_TERMINATE_GRACE),
+                                (signal.SIGKILL, PLANNER_KILL_GRACE)):
+            if process.poll() is not None:
+                return
+            self.signal_planner(process, signum)
+            try:
+                process.wait(timeout=seconds)
+                return
+            except subprocess.TimeoutExpired:
+                continue
+        raise RuntimeError('Failed planner process did not exit after SIGKILL')
 
     def planner(self, output):
         output.unlink(missing_ok=True)
@@ -715,37 +856,54 @@ class PhysicalStackTask(AirTask):
         params = {name: value for name, value in params.items() if value != []}
         params_file = output.with_name(output.name+'.planner.yaml')
         params_file.write_text(yaml.safe_dump({'/**': {'ros__parameters': params}}))
-        self.child = subprocess.Popen(
+        process = self.child = subprocess.Popen(
             ['ros2', 'run', 'ur5e_a3_grid', 'stack_blocks', '--ros-args', '--params-file', str(params_file),
              '-r', '/ur5e_a3_stack/stop:=/ur5e_physical_stack/planner_stop'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
         lines = queue.Queue()
         def read():
-            for line in self.child.stdout:
+            for line in process.stdout:
                 lines.put(line)
         reader = threading.Thread(target=read, daemon=True)
         reader.start()
-        interrupted, problem = False, ''
+        stopping_at, signal_stage, problem = None, 0, ''
         try:
-            while self.child.poll() is None or reader.is_alive() or not lines.empty():
+            while process.poll() is None or reader.is_alive() or not lines.empty():
                 rclpy.spin_once(self, timeout_sec=.02)
-                if self.stopped and self.child.poll() is None and not interrupted:
-                    self.child.send_signal(signal.SIGINT)
-                    interrupted = True
                 while not lines.empty():
                     line = lines.get_nowait()
                     if 'STACK_ERROR ' in line:
                         problem = line.split('STACK_ERROR ', 1)[1].strip()
                     print(line, end='', flush=True)
+                now = time.monotonic()
+                if stopping_at is None and (self.stopped or problem):
+                    stopping_at = now
+                if stopping_at is not None:
+                    elapsed = now-stopping_at
+                    stages = ((signal.SIGINT, 0.),
+                              (signal.SIGTERM, PLANNER_INTERRUPT_GRACE),
+                              (signal.SIGKILL, PLANNER_INTERRUPT_GRACE+PLANNER_TERMINATE_GRACE))
+                    while signal_stage < len(stages) and elapsed >= stages[signal_stage][1]:
+                        signum = stages[signal_stage][0]
+                        self.signal_planner(process, signum)
+                        print('STACK_PLANNER_STOPPING '+json.dumps(dict(
+                            signal=signum.name, reason='operator_stop' if self.stopped else 'planner_error',
+                            elapsed=round(elapsed, 3))), flush=True)
+                        signal_stage += 1
+                    if elapsed > PLANNER_INTERRUPT_GRACE+PLANNER_TERMINATE_GRACE+PLANNER_KILL_GRACE:
+                        raise RuntimeError(problem or 'Stopped planner did not finish within its shutdown deadline')
             self.check_stop()
-            if self.child.returncode or not output.is_file():
+            if problem or process.returncode or not output.is_file():
                 raise RuntimeError(problem or 'The complete physical recipe could not be planned')
         finally:
-            if self.child.poll() is None:
-                self.child.send_signal(signal.SIGINT)
-                self.child.wait(timeout=15.)
-            self.child = None
-            params_file.unlink(missing_ok=True)
+            try:
+                self.finish_planner(process)
+            finally:
+                reader.join(timeout=.25)
+                if not reader.is_alive():
+                    process.stdout.close()
+                self.child = None
+                params_file.unlink(missing_ok=True)
 
     def normalize_arm(self, trajectory, step):
         """Bound the exact quintic by each joint's requested phase scaling."""
@@ -855,7 +1013,149 @@ class PhysicalStackTask(AirTask):
                 client.remove_pending_request(future)
         return checked
 
+    def certify_motion(self, worker, scene, step, trajectory, holding):
+        """Validate the complete accepted finger range once, before playback."""
+        fingers = replay.finger_shapes(step, holding, self.bounds[HAND])
+        if step['kind'] == 'arm':
+            path = self.tracking_motion_samples(step, trajectory)
+        else:
+            # Validate the source finger trajectory/endpoints as before; the
+            # certificate expands its sweep to all accepted measured starts.
+            self.motion_samples(step, trajectory)
+            path = [(0., step['start_joints'])]
+        if len(path)*len(fingers) > 1_000_000:
+            raise RuntimeError('Prevalidated physical finger grid exceeds the bounded workload')
+        samples = [(stamp, values[:6]+[hand]) for stamp, values in path for hand in fingers]
+        checked = worker.validate(scene, samples)
+        if checked != len(samples):
+            raise RuntimeError('Offline checker did not acknowledge the complete finger grid')
+        step['collision_certificate'] = dict(
+            policy=replay.POLICY, scene_sha256=step['scene_before_sha256'],
+            trajectory_sha256=file_digest(artifact_path(self.path.parent, step['file'])),
+            trajectory_content_sha256=self.trajectory_fingerprint(trajectory),
+            context_sha256=replay.motion_context(step), holding=holding,
+            finger_range=list(replay.finger_range(step, holding, self.bounds[HAND])), finger_step=replay.FINGER_STEP,
+            checked_samples=checked)
+        return checked
+
+    @staticmethod
+    def trajectory_fingerprint(trajectory):
+        # CDR padding is not a canonical encoding; hashing a reserialization can
+        # differ even for an unchanged message. Bind both sealed file bytes and
+        # deterministic message content instead.
+        return digest(json.dumps(message_to_ordereddict(trajectory), sort_keys=True, allow_nan=False).encode())
+
+    def package_context(self, inputs, hardware):
+        return dict(input_sha256=inputs, hardware_class=hardware,
+                    model_sha256=digest(self.model.encode()), semantic_sha256=digest(self.semantic.encode()),
+                    scene_hash_policy=SCENE_HASH_POLICY, recipe_policy=RECIPE_POLICY,
+                    replay_policy=replay.POLICY, grasp_policy=GRASP_POLICY,
+                    arm_execution_profile=arm_execution_profile(), finger_joint_bounds=list(self.bounds[HAND]))
+
+    def seal_recipe(self, recipe, payloads, context, scene_hash, **extra):
+        recipe['path_kind'] = 'physical_stack'
+        recipe['replay_policy'] = replay.POLICY
+        encoded = (json.dumps(recipe, sort_keys=True, allow_nan=False)+'\n').encode()
+        metadata = dict(context, schema=1, path_kind='physical_stack', created_at=time.time(),
+                        valid_for_seconds=REVIEW_TTL, recipe_sha256=digest(encoded),
+                        artifact_sha256={name: digest(payload) for name, payload in payloads.items()},
+                        scene_sha256=scene_hash, validated_samples=recipe['validated_samples'],
+                        duration=recipe['duration'],
+                        motion_steps=sum(s['kind'] != 'scene' for s in recipe['steps']), **extra)
+        metadata['plan_id'] = digest(json.dumps(metadata, sort_keys=True).encode())[:16]
+        replay.check_certificates(recipe, metadata)
+        return metadata, encoded
+
+    def install_session(self, recipe, payloads, context, scene_hash, **extra):
+        recipe, payloads = replay.rename_artifacts(recipe, payloads, 'replay_'+uuid.uuid4().hex[:12]+'_')
+        metadata, encoded = self.seal_recipe(recipe, payloads, context, scene_hash, **extra)
+        # Publish manifests last. A partially copied package is never executable.
+        self.meta_path.unlink(missing_ok=True)
+        for name, payload in payloads.items():
+            destination = self.path.parent/name
+            if destination.exists() or destination.is_symlink() or destination.parent != self.path.parent:
+                raise RuntimeError('Restored artifact destination already exists or escapes its directory')
+            atomic_write(destination, payload)
+        atomic_write(self.path, encoded)
+        atomic_write(self.meta_path, (json.dumps(metadata, indent=2)+'\n').encode())
+        return metadata, recipe
+
+    def announce_plan(self, metadata, recipe):
+        self.display.publish(self.recipe_display(recipe, recipe['steps']))
+        print('STACK_PHYSICAL_PLAN '+json.dumps(metadata, sort_keys=True), flush=True)
+        print('STACK_STATUS phase=PLAN_READY moved=0 total='+str(recipe['moves'])+' target='+str(recipe['target_cell'])+' layers='+str(recipe['foundation_layers']), flush=True)
+
+    def restore_saved_plan(self, inputs, hardware):
+        context = self.package_context(inputs, hardware)
+        folder = self.library/replay.context_key(context)
+        if not folder.is_dir():
+            print('STACK_REPLAY_CACHE_MISS reason=no_prepared_path', flush=True)
+            return False
+        live_hash = scene_fingerprint(self.scene())
+        candidates = sorted((p for p in folder.iterdir() if not p.name.startswith('.') and p.is_dir()),
+                            key=lambda p: p.stat().st_mtime, reverse=True)
+        for candidate in candidates[:32]:
+            self.check_stop()
+            try:
+                metadata, recipe, payloads = replay.read_package(candidate)
+                validate_recipe(recipe)
+                replay.check_certificates(recipe, metadata)
+                if any(metadata.get(key) != value for key, value in context.items()):
+                    raise ValueError('Prepared path configuration differs')
+                if metadata['scene_sha256'] != live_hash:
+                    raise ValueError('Initial collision scene differs')
+                if (not self.fresh() or not self.sensor_fresh()
+                        or any(abs(self.values[name]-q) > START_TOLERANCE
+                               for name, q in zip(ARM, recipe['initial_joints']))
+                        or not replay.initial_hand_matches(recipe, self.values[HAND], self.bounds[HAND])):
+                    raise ValueError('Initial measured robot state differs')
+            except (ValueError, KeyError, TypeError, OSError) as error:
+                print('STACK_REPLAY_CACHE_SKIPPED '+json.dumps(dict(path=str(candidate), reason=str(error))), flush=True)
+                continue
+            # The archive may be old. Renew only the review session after its
+            # exact context/scene/start match; no trajectory/geometry is changed.
+            fresh_meta, fresh_recipe = self.install_session(recipe, payloads, context, live_hash,
+                source_plan_id=metadata['plan_id'], source_package=str(candidate), collision_rechecks=0)
+            print('STACK_REPLAY_CACHE_HIT '+json.dumps(dict(path=str(candidate),
+                  source_plan_id=metadata['plan_id'], collision_rechecks=0)), flush=True)
+            self.announce_plan(fresh_meta, fresh_recipe)
+            return True
+        print('STACK_REPLAY_CACHE_MISS reason=no_matching_scene_or_start', flush=True)
+        return False
+
+    def prepare_saved_plan(self):
+        """Convert the previous sealed v13 path offline; never contact hardware."""
+        metadata, recipe = self.load_recipe(preparing=True)
+        initial_hash = metadata['scene_sha256']
+        payloads = {name: artifact_path(self.path.parent, name).read_bytes()
+                    for name in metadata['artifact_sha256']}
+        began, samples = time.monotonic(), 0
+        with CollisionWorker({'robot_description': self.model, 'robot_description_semantic': self.semantic},
+                             self.path.parent,
+                             lambda: (self.check_stop(), rclpy.spin_once(self, timeout_sec=0.))) as worker:
+            for step, holding in replay.holding_steps(recipe['steps']):
+                self.check_stop()
+                if step['kind'] == 'scene':
+                    continue
+                scene = deserialize_message(payloads[step['scene_before_file']], PlanningScene)
+                if scene_fingerprint(scene) != step['scene_before_sha256']:
+                    raise RuntimeError('Saved scene snapshot differs; generate a new physical plan')
+                trajectory = deserialize_message(payloads[step['file']], RobotTrajectory)
+                samples += self.certify_motion(worker, scene, step, trajectory, holding)
+                print(f'STACK_REPLAY_PREPARING step={step["index"]} total={len(recipe["steps"])} samples={samples}', flush=True)
+        recipe['validated_samples'] = samples
+        recipe['replay_preparation_seconds'] = time.monotonic()-began
+        context = self.package_context(metadata['input_sha256'], metadata['hardware_class'])
+        updated, _ = self.seal_recipe(recipe, payloads, context, initial_hash,
+                                     source_plan_id=metadata['plan_id'], offline_prepared=True)
+        destination = replay.save_package(self.library, updated, recipe, payloads)
+        # Preserve the old recipe/session byte for byte. GUI ④ can now load the
+        # archive after checking the actual initial layout and measured start.
+        print('STACK_REPLAY_SAVED '+json.dumps(dict(path=str(destination), samples=samples,
+              seconds=round(time.monotonic()-began, 3), robot_commands=0)), flush=True)
+
     def plan(self):
+        plan_began = time.monotonic()
         self.spin_until(self.fresh)
         self.startup_read_stage = 'physical_plan_preflight'
         try:
@@ -871,23 +1171,40 @@ class PhysicalStackTask(AirTask):
             raise RuntimeError('그리퍼가 비어 있고 정지한 센서 상태를 확인한 뒤 새 경로를 계획하세요. 잡고 있는 블록은 먼저 안전하게 내려놓으세요.')
         clear_held_fault()
         inputs = self.input_hashes()
+        self.acquire_stack_lock()
+        if getattr(self, 'library', None) is not None and self.restore_saved_plan(inputs, kind):
+            return
         raw = self.path.with_name(self.path.name+'.raw.json')
         self.meta_path.unlink(missing_ok=True)
+        # The C++ planner owns this same domain lock while generating a new
+        # recipe. Do not make the parent conflict with its own child on a cache
+        # miss. The outer air-task lock still excludes other physical sessions.
+        self.release_stack_lock()
         self.planner(raw)
+        # Reacquire before reading artifacts or mutating the validation scene.
+        # A competing C++ task must make this fail, never bypass the lock.
         self.acquire_stack_lock()
+        search_seconds = time.monotonic()-plan_began
+        print(f'STACK_PLAN_TIMING stage=search seconds={search_seconds:.3f}', flush=True)
         recipe = json.loads(raw.read_text())
         recipe['arm_execution_profile'] = arm_execution_profile()
         recipe['grasp_policy'] = GRASP_POLICY
         steps = validate_recipe(recipe)
         initial = self.read_message(recipe['initial_scene_file'], PlanningScene)
         hashes, samples_checked, duration = {}, 0, 0.
+        worker = None
+        validation_began = time.monotonic()
         try:
-            for step in steps:
+            worker = CollisionWorker(
+                {'robot_description': self.model, 'robot_description_semantic': self.semantic},
+                self.path.parent, lambda: (self.check_stop(), rclpy.spin_once(self, timeout_sec=0.)))
+            for step, holding in replay.holding_steps(steps):
                 self.check_stop()
                 before = self.read_message(step['scene_before_file'], PlanningScene)
                 after = self.read_message(step['scene_after_file'], PlanningScene)
                 self.apply_snapshot(before)
-                step['scene_before_sha256'] = scene_fingerprint(self.scene())
+                applied_before = self.scene()
+                step['scene_before_sha256'] = scene_fingerprint(applied_before)
                 if step['kind'] != 'scene':
                     trajectory = self.read_message(step['file'], RobotTrajectory)
                     if step['kind'] == 'arm':
@@ -896,9 +1213,7 @@ class PhysicalStackTask(AirTask):
                         validated_name = step['file']+'.validated.cdr'
                         atomic_write(self.path.parent/validated_name, serialize_message(trajectory))
                         step['file'] = validated_name
-                    samples_checked += self.validate_samples(
-                        self.tracking_motion_samples(step, trajectory) if step['kind'] == 'arm'
-                        else self.motion_samples(step, trajectory))
+                    samples_checked += self.certify_motion(worker, applied_before, step, trajectory, holding)
                     step['duration'] = trajectory_duration(trajectory)
                     duration += step['duration']
                 self.apply_snapshot(after)
@@ -908,7 +1223,13 @@ class PhysicalStackTask(AirTask):
         finally:
             # Stop or validation failure cannot leave the live display in a
             # future attachment/tower scene. No robot commands are sent here.
-            self.apply_snapshot(initial, cancel=False)
+            try:
+                if worker is not None:
+                    worker.close()
+            finally:
+                self.apply_snapshot(initial, cancel=False)
+        validation_seconds = time.monotonic()-validation_began
+        print(f'STACK_PLAN_TIMING stage=collision_validation backend=local_cpp seconds={validation_seconds:.3f} samples={samples_checked}', flush=True)
         self.check_stop()
         if inputs != self.input_hashes():
             raise RuntimeError('선택 배치나 보정 설정이 계획 중 바뀌었습니다. 다시 계획하세요.')
@@ -929,24 +1250,15 @@ class PhysicalStackTask(AirTask):
         recipe['path_kind'] = 'physical_stack'
         recipe['validated_samples'] = samples_checked
         recipe['duration'] = duration
-        data = (json.dumps(recipe, sort_keys=True, allow_nan=False)+'\n').encode()
-        metadata = dict(schema=1, path_kind='physical_stack', created_at=time.time(),
-                        scene_hash_policy=SCENE_HASH_POLICY,
-                        recipe_policy=RECIPE_POLICY,
-                        grasp_policy=GRASP_POLICY,
-                        arm_execution_profile=arm_execution_profile(),
-                        valid_for_seconds=REVIEW_TTL, hardware_class=kind,
-                        input_sha256=inputs, model_sha256=digest(self.model.encode()),
-                        semantic_sha256=digest(self.semantic.encode()),
-                        recipe_sha256=digest(data), artifact_sha256=hashes,
-                        scene_sha256=initial_fingerprint, validated_samples=samples_checked,
-                        duration=duration, motion_steps=sum(s['kind'] != 'scene' for s in steps))
-        metadata['plan_id'] = digest(json.dumps(metadata, sort_keys=True).encode())[:16]
+        recipe['planning_timing'] = dict(search_seconds=search_seconds, validation_seconds=validation_seconds,
+                                        collision_backend='local_cpp', total_seconds=time.monotonic()-plan_began)
+        payloads = {name: artifact_path(self.path.parent, name).read_bytes() for name in hashes}
+        metadata, data = self.seal_recipe(recipe, payloads, self.package_context(inputs, kind), initial_fingerprint)
+        destination = replay.save_package(self.library, metadata, recipe, payloads)
         atomic_write(self.path, data)
         atomic_write(self.meta_path, (json.dumps(metadata, indent=2)+'\n').encode())
-        self.display.publish(self.recipe_display(recipe, steps))
-        print('STACK_PHYSICAL_PLAN '+json.dumps(metadata, sort_keys=True), flush=True)
-        print('STACK_STATUS phase=PLAN_READY moved=0 total='+str(recipe['moves'])+' target='+str(recipe['target_cell'])+' layers='+str(recipe['foundation_layers']), flush=True)
+        print('STACK_REPLAY_SAVED '+json.dumps(dict(path=str(destination), samples=samples_checked)), flush=True)
+        self.announce_plan(metadata, recipe)
 
     def recipe_display(self, recipe, steps):
         display = DisplayTrajectory()
@@ -976,10 +1288,10 @@ class PhysicalStackTask(AirTask):
         display.trajectory = [combined]
         return display
 
-    def load_recipe(self):
-        if read_held_fault() is not None:
+    def load_recipe(self, preparing=False):
+        if not preparing and read_held_fault() is not None:
             raise RuntimeError('이전 작업의 잡힌 블록 상태를 복구한 뒤 새 경로를 계획하세요.')
-        if self.param('workspace_clear') is not True:
+        if not preparing and self.param('workspace_clear') is not True:
             raise RuntimeError('작업 공간과 블록 배치를 확인한 뒤 실제 집기·쌓기를 승인하세요.')
         if not self.path.is_file() or self.path.stat().st_size > MAX_FILE_BYTES:
             raise RuntimeError('먼저 실제 집기·쌓기 전체 경로를 계획하세요.')
@@ -991,29 +1303,41 @@ class PhysicalStackTask(AirTask):
             raise RuntimeError('이 파일은 검증된 실제 집기·쌓기 경로가 아닙니다.')
         if metadata.get('scene_hash_policy') != SCENE_HASH_POLICY:
             raise RuntimeError('충돌 장면 검증 형식이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
-        if metadata.get('recipe_policy') != RECIPE_POLICY:
-            raise RuntimeError('적층 전환 층수·높은 접근 경로 설정이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
+        accepted = PREPARABLE_POLICIES if preparing else (RECIPE_POLICY,)
+        if metadata.get('recipe_policy') not in accepted:
+            raise RuntimeError('저장 경로의 실행 검증 형식이 다릅니다. v13 경로는 physical_prepare로 한 번 변환하고, 이전 경로는 다시 계획하세요.')
         if metadata.get('grasp_policy') != GRASP_POLICY:
             raise RuntimeError('잡기 명령 완료 기준이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
         if metadata.get('arm_execution_profile') != arm_execution_profile():
             raise RuntimeError('팔 경로 추종·도착 허용 범위가 바뀌었습니다. 경로를 다시 계획하세요.')
-        self.check_files(metadata)
+        if preparing:
+            self.check_files(metadata, allow_expired=True)
+        else:
+            self.check_files(metadata)
         recipe = json.loads(self.path.read_text())
         if recipe.get('grasp_policy') != GRASP_POLICY:
             raise RuntimeError('저장된 잡기 명령 완료 기준이 다릅니다. 경로를 다시 계획하세요.')
         if recipe.get('arm_execution_profile') != arm_execution_profile():
             raise RuntimeError('검증된 팔 실행 설정이 경로 파일과 일치하지 않습니다. 다시 계획하세요.')
         validate_recipe(recipe)
+        if not preparing:
+            if metadata.get('finger_joint_bounds') != list(self.bounds[HAND]):
+                raise RuntimeError('Saved finger joint limits differ from this robot model')
+            replay.check_certificates(recipe, metadata)
+            pinned_meta, pinned_recipe, payloads = replay.read_package(self.path.parent, self.path.name)
+            if pinned_meta != metadata or pinned_recipe != recipe:
+                raise RuntimeError('Saved path changed while loading')
+            self.execution_artifacts = payloads
         return metadata, recipe
 
-    def check_files(self, metadata):
+    def check_files(self, metadata, allow_expired=False):
         if (metadata.get('arm_execution_profile') != arm_execution_profile()
                 or metadata.get('grasp_policy') != GRASP_POLICY
                 or metadata.get('input_sha256') != self.input_hashes()
                 or metadata.get('model_sha256') != digest(self.model.encode())
                 or metadata.get('semantic_sha256') != digest(self.semantic.encode())
                 or metadata.get('recipe_sha256') != file_digest(self.path)
-                or not 0 <= time.time()-metadata.get('created_at', 0) <= metadata.get('valid_for_seconds', 0)
+                or (not allow_expired and not 0 <= time.time()-metadata.get('created_at', 0) <= metadata.get('valid_for_seconds', 0))
                 or metadata.get('valid_for_seconds') != REVIEW_TTL):
             raise RuntimeError('집기·쌓기 경로가 오래됐거나 배치·보정·파일이 바뀌었습니다. 다시 계획하세요.')
         artifacts = metadata.get('artifact_sha256')
@@ -1041,7 +1365,11 @@ class PhysicalStackTask(AirTask):
             raise RuntimeError('팔·그리퍼의 최신 피드백과 정지를 확인하지 못했습니다.')
         if any(abs(self.values[name]-q) > START_TOLERANCE for name, q in zip(ARM, step['start_joints'])):
             raise RuntimeError('팔이 검토한 집기·쌓기 시작 위치에서 바뀌었습니다.')
-        if (not (self.carrying and not self.release_stage)
+        initial_open = (getattr(self, 'prevalidated_replay', False) and step['index'] == 1
+                        and step['kind'] == 'hand' and step['phase'] == 'open'
+                        and step['collision_certificate']['finger_range'][0] <= self.values[HAND]
+                            <= step['collision_certificate']['finger_range'][1])
+        if (not (self.carrying and not self.release_stage) and not initial_open
                 and abs(self.values[HAND]-step['start_joints'][-1]) > HAND_START_TOLERANCE):
             raise RuntimeError('그리퍼가 검토한 집기·쌓기 시작 위치에서 바뀌었습니다.')
         if not self.holding_ok():
@@ -1049,6 +1377,58 @@ class PhysicalStackTask(AirTask):
         if step['phase'] == 'release_first' and self.values[HAND] <= HAND_TARGETS['release_first']+.001:
             raise RuntimeError('현재 잡힘 위치에서는 0.70이 열림 동작인지 확인할 수 없습니다. 팔은 정지합니다.')
         self.check_stop()
+
+    def replay_checkpoint(self, metadata, step, expected_scene):
+        """Check measured boundaries/context without resampling the saved path."""
+        self.check_stop()
+        rclpy.spin_once(self, timeout_sec=0.)
+        if (self.input_hashes() != metadata['input_sha256']
+                or file_digest(self.path) != metadata['recipe_sha256']
+                or not 0 <= time.time()-metadata['created_at'] <= REVIEW_TTL):
+            raise RuntimeError('저장 경로의 배치·파일·검토 시간이 바뀌었습니다.')
+        if expected_scene != step['scene_before_sha256']:
+            raise RuntimeError('Saved physical scene sequence is discontinuous')
+        self.prepare_replay_monitors(metadata, expected_scene)
+        if not self.fresh() or not self.sensor_fresh() or not self.measured_stop():
+            raise RuntimeError('팔·그리퍼의 최신 피드백과 정지를 확인하지 못했습니다.')
+        if any(abs(self.values.get(name, math.inf)-q) > START_TOLERANCE
+               for name, q in zip(ARM, step['start_joints'])):
+            raise RuntimeError('팔이 저장 경로의 시작 자세와 다릅니다.')
+        initial_open = (step['index'] == 1 and step['kind'] == 'hand' and step['phase'] == 'open'
+                        and step['collision_certificate']['finger_range'][0] <= self.values[HAND]
+                            <= step['collision_certificate']['finger_range'][1])
+        if (not (self.carrying and not self.release_stage) and not initial_open
+                and abs(self.values.get(HAND, math.inf)-step['start_joints'][-1]) > HAND_START_TOLERANCE):
+            raise RuntimeError('그리퍼가 저장 경로의 시작 자세와 다릅니다.')
+        if not self.holding_ok():
+            raise RuntimeError('그리퍼 형상이 검토 범위를 벗어났습니다.')
+        if step['phase'] == 'release_first' and self.values[HAND] <= HAND_TARGETS['release_first']+.001:
+            raise RuntimeError('현재 잡힘 위치에서는 0.70이 열림 동작인지 확인할 수 없습니다.')
+        self.check_stop()
+
+    def bind_certified_motion(self, step, trajectory, expected_scene):
+        """Bind measured hand geometry to an already checked certificate; no RPC."""
+        cert = step['collision_certificate']
+        if (cert['scene_sha256'] != expected_scene or cert['context_sha256'] != replay.motion_context(step)
+                or self.trajectory_fingerprint(trajectory) != cert['trajectory_content_sha256']):
+            raise RuntimeError('Saved motion no longer matches its collision certificate')
+        low, high = cert['finger_range']
+        if self.carrying and not self.release_stage:
+            interval = self.holding_interval()
+            if (not self.holding_ok() or interval is None
+                    or not low <= interval[0] <= interval[1] <= high):
+                raise RuntimeError('실측 잡힘 범위가 저장 경로의 사전 검증 범위 밖입니다. 경로 준비를 다시 수행하세요.')
+            self.verified_holding_context = dict(
+                key=self.holding_context_key(step, trajectory, expected_scene), interval=interval,
+                scene=expected_scene, step=step['index'], samples=cert['checked_samples'], source='saved_certificate')
+        else:
+            self.verified_holding_context = None
+            margin = replay.EMPTY_MOTION_TOLERANCE if step['kind'] == 'arm' else 0.
+            actual = self.values[HAND]
+            required_low = max(self.bounds[HAND][0], actual-margin)
+            required_high = min(self.bounds[HAND][1], actual+margin)
+            if not low-1e-12 <= required_low <= required_high <= high+1e-12:
+                raise RuntimeError('실측 그리퍼가 저장 경로의 사전 검증 범위 밖입니다.')
 
     def live_arm_validation(self, step, trajectory, expected_scene):
         if scene_fingerprint(self.scene()) != expected_scene:
@@ -1109,23 +1489,27 @@ class PhysicalStackTask(AirTask):
             raise RuntimeError('Live scene changed during finger validation')
 
     def execute(self):
+        began = time.monotonic()
         self.acquire_stack_lock()
         metadata, recipe = self.load_recipe()
+        self.prevalidated_replay = True
         self.active_recipe = recipe
         steps = recipe['steps']
         expected_scene = metadata['scene_sha256']
         self.spin_until(self.fresh)
         self.guard(metadata, steps[0], expected_scene)
+        self.prepare_replay_monitors(metadata, expected_scene)
+        print('STACK_REPLAY_READY '+json.dumps(dict(plan_id=metadata['plan_id'],
+              collision_rechecks=0, startup_seconds=round(time.monotonic()-began, 3))), flush=True)
         motions = [step for step in steps if step['kind'] != 'scene']
         if self.execution_mode == 'continuous':
             approval_metadata = dict(metadata, gripper_position=self.values[HAND])
             self.await_approval(lambda: self.recipe_display(recipe, steps), approval_metadata, None, 1, 1,
                                 f'실제 집기·쌓기 전체 경로 · 블록 {recipe["moves"]}개 · 임시 적재 {recipe["buffer_moves"]}회',
-                                context=lambda *_: self.guard(metadata, steps[0], expected_scene))
-            self.guard(metadata, steps[0], expected_scene)
+                                context=lambda *_: self.replay_checkpoint(metadata, steps[0], expected_scene))
         motion_index, completed = 0, 0
         for step in steps:
-            self.guard(metadata, step, expected_scene)
+            self.replay_checkpoint(metadata, step, expected_scene)
             if expected_scene != step['scene_before_sha256']:
                 raise RuntimeError('Physical recipe scene sequence is discontinuous')
             if step['kind'] == 'scene':
@@ -1153,26 +1537,16 @@ class PhysicalStackTask(AirTask):
             motion_index += 1
             trajectory = self.read_message(step['file'], RobotTrajectory)
             if self.execution_mode == 'step':
-                if step['kind'] == 'arm':
-                    self.live_arm_validation(step, trajectory, expected_scene)
-                else:
-                    self.live_hand_validation(step, trajectory, expected_scene)
+                self.bind_certified_motion(step, trajectory, expected_scene)
                 approval_metadata = dict(metadata, gripper_position=self.values[HAND])
                 if self.carrying and not self.release_stage:
                     if not self.holding_context_verified(step, trajectory, expected_scene):
                         raise RuntimeError('Pending physical motion lacks its validated holding interval')
                     approval_metadata['holding_context_key'] = self.verified_holding_context['key']
                 self.await_approval(lambda: self.recipe_display(recipe, [step]), approval_metadata, None, motion_index, len(motions), step['label'],
-                                    context=lambda *_: self.guard(metadata, step, expected_scene))
-                self.guard(metadata, step, expected_scene)
-            # Validate immediately before dispatch in both modes. Step mode
-            # also validates before its operator pause. Continuous mode has no
-            # per-motion pause, so an identical earlier check adds no boundary.
-            if step['kind'] == 'arm':
-                self.live_arm_validation(step, trajectory, expected_scene)
-            else:
-                self.live_hand_validation(step, trajectory, expected_scene)
-            self.guard(metadata, step, expected_scene)
+                                    context=lambda *_: self.replay_checkpoint(metadata, step, expected_scene))
+            self.bind_certified_motion(step, trajectory, expected_scene)
+            self.replay_checkpoint(metadata, step, expected_scene)
             self.run_motion(step, trajectory, metadata, expected_scene,
                             motion_index if self.execution_mode == 'step' else 1,
                             len(motions) if self.execution_mode == 'step' else 1)
@@ -1192,12 +1566,24 @@ class PhysicalStackTask(AirTask):
         print(f'STACK_STATUS phase=DONE moved={recipe["moves"]} total={recipe["moves"]} target={recipe["target_cell"]} layers={recipe["layers"]}', flush=True)
 
     def run_motion(self, step, trajectory, metadata, scene_hash, index, total):
+        preparation_began = time.monotonic()
+        fast = getattr(self, 'prevalidated_replay', False)
         hand = step['kind'] == 'hand'
         action = GripperCommand if hand else FollowJointTrajectory
-        endpoint = self.gripper_runtime() if hand else f'/{CONTROLLER}/follow_joint_trajectory'
-        client = ActionClient(self, action, endpoint)
+        endpoint = (('' if self.mock else '/gripper')+'/dh_ag95_gripper_controller/gripper_cmd'
+                    if hand and fast else self.gripper_runtime() if hand else f'/{CONTROLLER}/follow_joint_trajectory')
+        if fast:
+            key = (action, endpoint)
+            if key not in self.motion_clients:
+                self.motion_clients[key] = ActionClient(self, action, endpoint)
+            client = self.motion_clients[key]
+        else:
+            client = ActionClient(self, action, endpoint)
         self.spin_until(client.server_is_ready)
-        self.guard(metadata, step, scene_hash)
+        if fast:
+            self.replay_checkpoint(metadata, step, scene_hash)
+        else:
+            self.guard(metadata, step, scene_hash)
         goal = action.Goal()
         if hand:
             goal.command.position = float(step['hand_target'])
@@ -1241,7 +1627,7 @@ class PhysicalStackTask(AirTask):
                 if not self.holding_context_verified(step, trajectory, scene_hash):
                     raise RuntimeError('Physical motion has no matching validated holding envelope')
                 held_key = self.verified_holding_context['key']
-            queries = self.flight_queries(metadata, scene_hash)
+            queries = self.replay_queries if fast else self.flight_queries(metadata, scene_hash)
             self.prewarm_flight_queries(queries)
             if not self.measured_stop(seconds=.6):
                 stop_with_reason(self, 'STANDSTILL_UNCONFIRMED_AFTER_MONITOR_PREWARM')
@@ -1308,7 +1694,7 @@ class PhysicalStackTask(AirTask):
                     stop_with_reason(self, 'JOINT_FEEDBACK_STALE', stage='motion')
                 elif not self.sensor_fresh():
                     stop_with_reason(self, 'GRIPPER_SENSOR_STALE', stage='motion',
-                                     sample_sequence=self.sensor_sequence)
+                                     **PhysicalStackTask.sensor_stale_details(self))
                 elif now-began > timeout:
                     stop_with_reason(self, 'MOTION_TIMEOUT', service=endpoint,
                                      elapsed=round(now-began, 3), limit=timeout)
@@ -1332,6 +1718,7 @@ class PhysicalStackTask(AirTask):
                     self.goal.cancel_goal_async()
                     cancelled_at = now
             result = self.result_future.result()
+            terminal_at = time.monotonic()
             quiet = self.measured_stop()
             arm_result = None
             if not hand:
@@ -1400,13 +1787,34 @@ class PhysicalStackTask(AirTask):
                                    ' '+json.dumps(arm_result, sort_keys=True))
             if self.execution_mode == 'step':
                 self.phase('STACK_STEP_COMPLETED', index=index, total=total, label=step['label'])
+            if fast:
+                print('STACK_REPLAY_STEP_TIMING '+json.dumps(dict(step=step['index'], phase=step['phase'],
+                      prepare_seconds=round(began-preparation_began, 3),
+                      action_seconds=round(terminal_at-began, 3),
+                      settle_seconds=round(time.monotonic()-terminal_at, 3), collision_rechecks=0)), flush=True)
         finally:
-            if 'queries' in locals():
+            if not fast and 'queries' in locals():
                 self.destroy_flight_queries(queries)
             self.cancel_remaining_goal()
             if self.stopped and step['phase'] == 'grasp':
                 self.preserve_contact_after_stop()
-            client.destroy()
+            if not fast:
+                client.destroy()
+
+    def prepare_replay_monitors(self, metadata, scene_hash):
+        queries = self.replay_queries
+        if queries is None:
+            queries = self.replay_queries = self.flight_queries(metadata, scene_hash)
+            self.replay_monitor_scene = scene_hash
+        elif self.replay_monitor_scene != scene_hash:
+            scene_query = next(q for q in queries if q['service'] == '/get_planning_scene')
+            self.destroy_flight_queries([scene_query])
+            scene_query.update(
+                valid=lambda reply: scene_fingerprint(reply.scene) == scene_hash,
+                describe=lambda reply: dict(expected_sha256=scene_hash, actual_sha256=scene_fingerprint(reply.scene)),
+                sent=-math.inf, verified=False, last_ok=-math.inf)
+            self.replay_monitor_scene = scene_hash
+        self.prewarm_flight_queries(queries)
 
     def flight_queries(self, metadata, scene_hash):
         """Fresh predicates/futures per motion, using clients warmed before goals."""
@@ -1416,6 +1824,12 @@ class PhysicalStackTask(AirTask):
         request_scene = GetPlanningScene.Request()
         request_scene.components.components = 1023
         queries = []
+        def active_hardware(reply, plugin, joints):
+            return any(c.class_type == plugin and c.state.id == 3 and all(
+                name+'/position' in {interface.name for interface in c.command_interfaces if interface.is_claimed}
+                for name in joints) for c in reply.component)
+        arm_joints = ARM if getattr(self, 'prevalidated_replay', False) else []
+        hand_joints = [HAND] if getattr(self, 'prevalidated_replay', False) else []
         def add(kind, service, request, period, valid, describe=None):
             if not hasattr(self, 'monitor_clients'):
                 self.monitor_clients = {}
@@ -1431,10 +1845,10 @@ class PhysicalStackTask(AirTask):
             lambda reply: any(c.name == 'dh_ag95_gripper_controller' and c.state == 'active' for c in reply.controller),
             lambda reply: dict(controllers={c.name: c.state for c in reply.controller}))
         add(ListHardwareComponents, '/controller_manager/list_hardware_components', ListHardwareComponents.Request(), 2.,
-            lambda reply: any(c.class_type == expected and c.state.id == 3 for c in reply.component),
+            lambda reply: active_hardware(reply, expected, arm_joints),
             lambda reply: dict(hardware=[dict(plugin=c.class_type, state=c.state.id) for c in reply.component]))
         add(ListHardwareComponents, grip_manager+'/list_hardware_components', ListHardwareComponents.Request(), 2.,
-            lambda reply: any(c.class_type == grip_expected and c.state.id == 3 for c in reply.component),
+            lambda reply: active_hardware(reply, grip_expected, hand_joints),
             lambda reply: dict(hardware=[dict(plugin=c.class_type, state=c.state.id) for c in reply.component]))
         add(GetPlanningScene, '/get_planning_scene', request_scene, .5,
             lambda reply: scene_fingerprint(reply.scene) == scene_hash,
@@ -1446,6 +1860,11 @@ class PhysicalStackTask(AirTask):
             add(GetParameters, owner+'/get_parameters', request, 2.,
                 lambda reply, expected=texts: len(reply.values) == len(expected) and
                 all(value.string_value == text for value, text in zip(reply.values, expected)))
+        if getattr(self, 'prevalidated_replay', False):
+            request = GetParameters.Request()
+            request.names = ['allow_trajectory_execution']
+            add(GetParameters, '/move_group/get_parameters', request, 2.,
+                lambda reply: bool(reply.values and reply.values[0].bool_value))
         return queries
 
     def prewarm_flight_queries(self, queries):
@@ -1462,7 +1881,8 @@ class PhysicalStackTask(AirTask):
             if not self.fresh():
                 stop_with_reason(self, 'JOINT_FEEDBACK_STALE', stage='monitor_prewarm')
             elif not self.sensor_fresh():
-                stop_with_reason(self, 'GRIPPER_SENSOR_STALE', stage='monitor_prewarm')
+                stop_with_reason(self, 'GRIPPER_SENSOR_STALE', stage='monitor_prewarm',
+                                 **PhysicalStackTask.sensor_stale_details(self))
             self.poll_flight_queries(queries, warming=True)
             self.check_stop()
             if all(query['verified'] and now-query['last_ok'] <= 2. and
@@ -1470,11 +1890,13 @@ class PhysicalStackTask(AirTask):
                 # Remove any in-flight warm-up reads before a new motion/event
                 # can change its expected scene. Late replies cannot satisfy a
                 # new future: rclpy matches the service request sequence ID.
-                self.destroy_flight_queries(queries)
-                for query in queries:
-                    query['sent'] = -math.inf
-                print('STACK_MONITORS_READY '+json.dumps(dict(services=len(queries),
-                      elapsed=round(time.monotonic()-began, 3))), flush=True)
+                if not getattr(self, 'prevalidated_replay', False):
+                    self.destroy_flight_queries(queries)
+                    for query in queries:
+                        query['sent'] = -math.inf
+                if time.monotonic()-began >= .05 or not getattr(self, 'prevalidated_replay', False):
+                    print('STACK_MONITORS_READY '+json.dumps(dict(services=len(queries),
+                          elapsed=round(time.monotonic()-began, 3))), flush=True)
                 return
             if now-began > 10.:
                 pending = [query['service'] for query in queries if not query['verified']]
@@ -1525,9 +1947,15 @@ class PhysicalStackTask(AirTask):
                 query['future'] = None
 
     def close_monitor_clients(self):
+        if getattr(self, 'replay_queries', None):
+            self.destroy_flight_queries(self.replay_queries)
+            self.replay_queries = None
         for client in getattr(self, 'monitor_clients', {}).values():
             self.destroy_client(client)
         self.monitor_clients = {}
+        for client in getattr(self, 'motion_clients', {}).values():
+            client.destroy()
+        self.motion_clients = {}
 
     def preserve_contact_after_stop(self):
         """Do not erase a physically held cube when Stop arrives near attachment."""
@@ -1622,8 +2050,10 @@ class PhysicalStackTask(AirTask):
             self.plan()
         elif self.mode == 'physical_run':
             self.execute()
+        elif self.mode == 'physical_prepare':
+            self.prepare_saved_plan()
         else:
-            raise ValueError('Physical stack mode must be physical_plan or physical_run')
+            raise ValueError('Physical stack mode must be physical_plan, physical_prepare or physical_run')
 
 
 def main():
@@ -1653,8 +2083,7 @@ def main():
                 print('STACK_PHYSICAL_HOLD_RECOVERY_PENDING '+str(error), flush=True)
         if code and task.goal_pending is None and task.measured_stop():
             print('STACK_STOPPED_CONFIRMED', flush=True)
-        if task.stack_lock is not None:
-            os.close(task.stack_lock)
+        task.release_stack_lock()
         task.close_monitor_clients()
         task.close_service_clients()
         task.destroy_node()

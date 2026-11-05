@@ -1,5 +1,8 @@
 # 실물 실행의 대기 시간과 속도·가속도 조절
 
+> 아래 수치와 0.20 배율은 2026-11-04의 과거 분석이다.
+> 2026-11-05 적용한 로컬 계획 검증·직접 이동·1.00 이동 배율은 [최신 안내](planning_optimization.md)를 따른다.
+
 [실물 사용법](real_robot.md) · [README](../README.md)
 
 2026-11-04 점검 당시 코드와 저장된 장애물 11번·목표 14번의 실물 경로를 기준으로 확인했다.
@@ -21,11 +24,11 @@
 연속 모드에서 승인 대기 없이 동일 구간을 연달아 검사하던 부분은 **한 번으로 줄였다**.
 단계별 모드는 승인 전·후 두 번 검사하며, 두 모드 모두 **실제 동작 직전 검증과 상태 검사**는 유지한다.
 관련 승인·집기·취소·복구 검사 420개가 통과했다.
-검사 로그(로컬 검증 기록·공유 대상 제외)
+[검사 로그](../log/stack_speed_execution_tests_20261104.log)
 
 전체 경로의 파일 1,187개·약 45MB를 해시 확인하는 데 이번 PC에서 약 0.117초가 걸렸다.
 이는 파일 검사 한 번의 측정이며 전체 시작 지연이나 현재 상태 충돌 검사 시간을 뜻하지 않는다.
-실측·단계별 시간(로컬 검증 기록·공유 대상 제외)
+[실측·단계별 시간](../log/stack_speed_analysis_20261104.json)
 
 ## 현재 적용되는 속도·가속도
 
@@ -51,10 +54,10 @@ GUI의 **팔 시운전 속도 (최대 0.05)**는 블록 없는 팔 시운전용�
 
 | 파일 | 역할 |
 | --- | --- |
-| [stack_blocks.yaml](https://github.com/Nanju03/ur5e_team_ws/blob/main/ur5e_a3_grid/config/stack_blocks.yaml) | 공통 기본값. 실물 런치에서 아래 값으로 덮어쓴다. |
-| [block_task.launch.py](https://github.com/Nanju03/ur5e_team_ws/blob/main/ur5e_block_bringup/launch/block_task.launch.py)의 `if physical:` | 실물에 최종 적용하는 네 배율을 지정한다. |
-| [physical_stack.py](https://github.com/Nanju03/ur5e_team_ws/blob/main/ur5e_block_bringup/ur5e_block_bringup/physical_stack.py)의 `ARM_SPEEDS`·`validate_recipe()` | 해당 배율의 경로만 허용한다. 런치와 다르면 실행을 거절한다. |
-| [stack_gui.py](https://github.com/Nanju03/ur5e_team_ws/blob/main/ur5e_a3_grid/scripts/stack_gui.py)의 `save_selection()`·안내 문구 | 배치 파일에 저장하는 값과 사용자 표시를 맞춘다. |
+| [stack_blocks.yaml](../src/ur5e/ur5e_a3_grid/config/stack_blocks.yaml) | 공통 기본값. 실물 런치에서 아래 값으로 덮어쓴다. |
+| [block_task.launch.py](../src/ur5e/ur5e_block_bringup/launch/block_task.launch.py)의 `if physical:` | 실물에 최종 적용하는 네 배율을 지정한다. |
+| [physical_stack.py](../src/ur5e/ur5e_block_bringup/ur5e_block_bringup/physical_stack.py)의 `ARM_SPEEDS`·`validate_recipe()` | 해당 배율의 경로만 허용한다. 런치와 다르면 실행을 거절한다. |
+| [stack_gui.py](../src/ur5e/ur5e_a3_grid/scripts/stack_gui.py)의 `save_selection()`·안내 문구 | 배치 파일에 저장하는 값과 사용자 표시를 맞춘다. |
 
 실제로 조절하려면 다음 순서로 적용한다.
 
@@ -95,7 +98,7 @@ GUI의 **팔 시운전 속도 (최대 0.05)**는 블록 없는 팔 시운전용�
 
 마지막 행은 실물 사용을 권장하는 설정이 아니다. 이 계산은 현재 시간 분포를 축소하는 방식의 추정이며
 최적 제어의 절대 최소 시간이나 1.0 배율의 실물 파지·적재 가능성을 증명하지 않는다.
-계산 조건·결과(로컬 검증 기록·공유 대상 제외)
+[계산 조건·결과](../log/stack_retiming_estimate_20261104.json)
 
 5분 안에 23회 운반하려면 검사·그리퍼·이동을 모두 포함해 회당 평균 약 13초여야 한다.
 현재는 속도 배율만 높이기보다 **큰 우회 경로·반복 대기 자세·이동 높이·중간 정지와 검증 비용**을

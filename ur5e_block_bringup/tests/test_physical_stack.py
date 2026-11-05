@@ -23,7 +23,8 @@ from ur5e_block_bringup.air_task import AirTask
 def recipe():
     result = dict(schema=1, joint_names=physical.JOINTS, initial_joints=[0]*6+[.4],
                   initial_scene_file='initial.cdr', initial_state_file='state.cdr',
-                  approach_acceleration_scaling=.05, transfer_acceleration_scaling=.20,
+                  approach_acceleration_scaling=.05, transfer_acceleration_scaling=1.,
+                  physical_contact_clearance=.04,
                   placement_policy='raised_tower_clearance_v1', placement_mode='side',
                   vertical_placement_layers=19, placement_approach_clearance=.12,
                   target_cell=11, foundation_layers=1, moves=1, layers=2, steps=[],
@@ -64,12 +65,12 @@ def recipe():
 def test_complete_recipe_requires_grasp_and_two_stationary_releases_before_retreat():
     value = recipe()
     assert physical.validate_recipe(value) == value['steps']
-    assert value['steps'][4]['velocity_scaling'] == .2
-    assert value['steps'][-1]['velocity_scaling'] == .2
+    assert value['steps'][4]['velocity_scaling'] == 1.
+    assert value['steps'][-1]['velocity_scaling'] == 1.
     assert value['steps'][1]['velocity_scaling'] == .05
     assert value['steps'][1]['acceleration_scaling'] == .05
-    assert value['steps'][4]['acceleration_scaling'] == .20
-    assert value['steps'][-1]['acceleration_scaling'] == .20
+    assert value['steps'][4]['acceleration_scaling'] == 1.
+    assert value['steps'][-1]['acceleration_scaling'] == 1.
 
 
 @pytest.mark.parametrize('change', ['old_policy', 'missing_clearance', 'low_clearance', 'nan_clearance',
@@ -104,10 +105,12 @@ def execution_validation_fixture(monkeypatch, mode):
                            release_stage=0, scene_request_pending=False, invalid=False,
                            verified_holding_context=None)
     task.acquire_stack_lock = Mock()
-    task.load_recipe = lambda: (dict(scene_sha256='same'), value)
+    task.load_recipe = lambda: (dict(scene_sha256='same', plan_id='saved'), value)
     task.fresh = lambda: True
     task.spin_until = lambda predicate: predicate()
     task.guard = lambda metadata, step, scene: events.append(('guard', step['index']))
+    task.replay_checkpoint = task.guard
+    task.prepare_replay_monitors = Mock()
     task.read_message = lambda *args: RobotTrajectory()
     task.recipe_display = lambda *args: SimpleNamespace(trajectory=[RobotTrajectory()])
     task.apply_snapshot = Mock()
@@ -118,13 +121,14 @@ def execution_validation_fixture(monkeypatch, mode):
     task.await_approval = lambda *args, **kwargs: events.append(('approval',))
 
     def validate(step, trajectory, scene):
-        events.append(('validate', step['index']))
+        events.append(('certificate', step['index']))
         if task.invalid:
             raise RuntimeError('Actual pose changed before dispatch')
         if task.carrying and not task.release_stage:
             task.verified_holding_context = dict(key='reviewed')
 
-    task.live_arm_validation = task.live_hand_validation = validate
+    task.bind_certified_motion = validate
+    task.live_arm_validation = task.live_hand_validation = Mock(side_effect=AssertionError('Runtime collision check'))
     def motion(step, *args):
         events.append(('motion', step['index']))
         if step['kind'] == 'hand':
@@ -136,18 +140,20 @@ def execution_validation_fixture(monkeypatch, mode):
 
 
 @pytest.mark.parametrize('mode', ['step', 'continuous'])
-def test_recipe_loop_retains_validation_before_dispatch_with_one_continuous_check(monkeypatch, mode):
+def test_recipe_loop_binds_saved_certificates_without_runtime_collision_checks(monkeypatch, mode):
     task, value, events = execution_validation_fixture(monkeypatch, mode)
     physical.PhysicalStackTask.execute(task)
     motions = [step for step in value['steps'] if step['kind'] != 'scene']
     assert [e[1] for e in events if e[0] == 'motion'] == [step['index'] for step in motions]
     assert sum(e[0] == 'approval' for e in events) == (len(motions) if mode == 'step' else 1)
     for step in motions:
-        assert events.count(('validate', step['index'])) == (2 if mode == 'step' else 1)
+        assert events.count(('certificate', step['index'])) == (2 if mode == 'step' else 1)
         dispatched = events.index(('motion', step['index']))
-        assert ('validate', step['index']) in events[:dispatched]
+        assert ('certificate', step['index']) in events[:dispatched]
         assert events[dispatched-1] == ('guard', step['index'])
     assert task.apply_snapshot.call_count == 2
+    task.live_arm_validation.assert_not_called()
+    task.live_hand_validation.assert_not_called()
 
 
 @pytest.mark.parametrize('mode', ['step', 'continuous'])
@@ -405,15 +411,20 @@ def test_validation_failure_restores_initial_scene_even_when_stopped(tmp_path, m
     task = SimpleNamespace(spin_until=Mock(), fresh=lambda: True, check_model=Mock(),
                            hardware=lambda **_: 'mock', gripper_runtime=Mock(), measured_stop=lambda: True,
                            sensor_fresh=lambda: True, mock=True, path=path, meta_path=tmp_path/'meta.json',
-                           input_hashes=lambda: {}, planner=Mock(), acquire_stack_lock=Mock(), check_stop=Mock(),
+                           input_hashes=lambda: {}, planner=Mock(), acquire_stack_lock=Mock(), release_stack_lock=Mock(), check_stop=Mock(),
                            apply_snapshot=Mock(), motion_samples=Mock(return_value=[(0., [0.]*7)]),
                            validate_samples=Mock(side_effect=RuntimeError('collision')))
     task.read_message = lambda name, kind: initial if name == 'initial.cdr' else trajectory if kind is RobotTrajectory else before
     monkeypatch.setattr(physical, 'clear_held_fault', Mock())
     monkeypatch.setattr(physical, 'scene_fingerprint', lambda _: 'scene')
     task.scene = lambda: before
+    task.model, task.semantic = '<robot/>', '<semantic/>'
+    worker = SimpleNamespace(validate=Mock(side_effect=RuntimeError('collision')), close=Mock())
+    task.certify_motion = lambda checker, scene, step, trajectory, holding: checker.validate(scene, [])
+    monkeypatch.setattr(physical, 'CollisionWorker', Mock(return_value=worker))
     with pytest.raises(RuntimeError, match='collision'):
         physical.PhysicalStackTask.plan(task)
+    worker.close.assert_called_once()
     assert task.apply_snapshot.call_args.args[0] is initial
     assert task.apply_snapshot.call_args.kwargs == {'cancel': False}
 
@@ -1282,7 +1293,7 @@ def test_all_physical_phases_use_requested_point_one_with_precise_stationary_bou
     assert profile['goal_velocity'] == .01 and profile['goal_time_seconds'] == 5
     for phase, tolerances in profile['phase_path_position'].items():
         assert tolerances == [.1]*6
-    assert set(profile['phase_path_position']) == {'approach', 'lift', 'retreat', 'transfer'}
+    assert set(profile['phase_path_position']) == {'approach', 'contact', 'lift', 'retreat', 'transfer'}
     assert profile['transfer_sweep_limit'] == .010
     assert profile['transfer_sweep_step'] == .005
     assert physical.HAND_HOLD_TOLERANCE == .005

@@ -48,7 +48,11 @@ add_executable(plate_placement_check src/plate_placement_check.cpp)
 target_compile_features(plate_placement_check PUBLIC cxx_std_17)
 ament_target_dependencies(plate_placement_check rclcpp moveit_ros_planning moveit_core moveit_msgs shape_msgs geometric_shapes)
 
-install(TARGETS a3_grid stack_blocks plate_placement_check DESTINATION lib/${PROJECT_NAME})
+add_executable(physical_collision_checker src/physical_collision_checker.cpp)
+target_compile_features(physical_collision_checker PUBLIC cxx_std_17)
+ament_target_dependencies(physical_collision_checker rclcpp moveit_ros_planning moveit_core moveit_msgs)
+
+install(TARGETS a3_grid stack_blocks plate_placement_check physical_collision_checker DESTINATION lib/${PROJECT_NAME})
 install(PROGRAMS scripts/stack_gui.py DESTINATION lib/${PROJECT_NAME} RENAME stack_gui)
 install(PROGRAMS scripts/stack_sweep.py DESTINATION lib/${PROJECT_NAME} RENAME stack_sweep)
 install(PROGRAMS scripts/gazebo_layout.py DESTINATION lib/${PROJECT_NAME} RENAME gazebo_layout)

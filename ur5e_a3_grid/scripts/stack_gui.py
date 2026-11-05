@@ -360,7 +360,8 @@ class StackGui:
         self.controls.append(placement)
         actions = [("③ Gazebo 배치 초기화 / RViz에 표시" if getattr(self, "simulation_backend", "mock") == "gazebo" else "③ 선택 배치를 RViz에 표시", "scene")]
         if self.real_backend:
-            actions.append(("④ 실물 집기·쌓기 경로 계획", "physical_plan"))
+            actions.append(("④ 저장 경로 불러오기 / 새 경로 계획", "physical_plan"))
+            actions.append(("기존 저장 경로 빠른 실행 준비 (1회)", "physical_prepare"))
             actions.append(("블록 없이 팔 경로 계획 · 시운전", "plan"))
         else:
             actions.append(("④ 전체 경로 / 높이 확인", "plan"))
@@ -383,7 +384,7 @@ class StackGui:
                                                  command=self.open_gripper_calibration)
             self.calibration_button.pack(fill="x", pady=(7, 2))
             self.controls.append(self.calibration_button)
-        guidance = ("파랑: 25mm 블록 / 빨강: 25×25×150mm 장애물\n노랑: 바닥 블록이 있는 쌓을 홈 / 회색: 빈칸\n\n실물 집기·쌓기: 잡기 0.73 → 놓기 0.70 → 0.60까지 연 뒤 팔 이동.\n집기·놓기 진입: 속도·가속도 0.05 / 들어올림·운반·후퇴: 속도·가속도 0.20 배율입니다.\n실물 경로 계획 후 상단 실행과 OK로 승인합니다.\n팔 경로 시운전은 블록 없이 현재 그리퍼 자세를 유지합니다.\n모서리 맞춤은 그리퍼 0.65, 각 X/Y 위치에서 조정 후 OK로 재개합니다."
+        guidance = ("파랑: 25mm 블록 / 빨강: 25×25×150mm 장애물\n노랑: 바닥 블록이 있는 쌓을 홈 / 회색: 빈칸\n\n실물 집기·쌓기: 잡기 0.73 → 놓기 0.70 → 0.60까지 연 뒤 팔 이동.\n집기·놓기 진입과 처음 40mm 이탈: 0.05 / 나머지 이동: 속도·가속도 1.00(설정 한계)입니다.\n실물 경로 계획 후 상단 실행과 OK로 승인합니다.\n팔 경로 시운전은 블록 없이 현재 그리퍼 자세를 유지합니다.\n모서리 맞춤은 그리퍼 0.65, 각 X/Y 위치에서 조정 후 OK로 재개합니다."
                     if self.real_backend else
                     ("파랑: 블록 / 빨강: 장애물\n노랑: 바닥 블록 1개가 있는 쌓을 홈 / 회색: 빈칸\n노란 블록은 유지하고 파란 블록을 2층부터 쌓습니다.\n" if self.plate_enabled else
                      "파랑: 블록 / 빨강: 장애물\n노랑: 탑 밑 블록 / 회색: 빈칸\n모든 파란 블록을 노란 칸에 쌓습니다.\n") +
@@ -623,7 +624,7 @@ class StackGui:
             "gripper_open_position": .4, "gripper_grasp_position": .73,
             "staged_release_enabled": True, "release_first_position": .70,
             "release_clearance_position": .60, "approach_velocity_scaling": .05,
-            "transfer_velocity_scaling": .20,
+            "transfer_velocity_scaling": 1.0 if self.real_backend else .20,
         }}}
         if getattr(self, "plate_enabled", False):
             data["/**"]["ros__parameters"].update(self.current_plate_parameters())
@@ -988,7 +989,7 @@ class StackGui:
     def air_path_note(self):
         if getattr(self, "plan_kind", "air") == "physical":
             return (f"ROS domain {self.domain} · 실물 집기·쌓기 · 0.73 잡기 명령 완료 후 상승 / 놓기 0.70→0.60 · "
-                    "진입 0.05 / 운반 0.20 · 표시된 팔·그리퍼 경로를 OK로 승인")
+                    "접촉·40mm 이탈 0.05 / 이동 1.00 · 저장 경로 재검사 생략 · 표시 경로를 OK로 승인")
         if getattr(self, "plate_alignment", False):
             return (f"ROS domain {self.domain} · 모서리 X/Y 두 방향 8회 맞춤 · 그리퍼 {self.ALIGNMENT_HAND:g}rad / 끝은 상판 위 10mm · "
                     "상승 후 90° 회전 · 정지 후 판을 맞추고 손을 뺀 뒤 다음 OK")
@@ -1070,19 +1071,19 @@ class StackGui:
         if action == "plate_align" and not getattr(self, "plate_enabled", False):
             self.status.set("모서리 홈 맞춤은 플레이트 모드에서 사용하세요.")
             return
-        if action == "physical_plan" and not self.real_backend:
+        if action in ("physical_plan", "physical_prepare") and not self.real_backend:
             self.status.set("실물 집기·쌓기 계획은 실물 모드에서 사용하세요.")
             return
         if action == "recovery" and not self.real_backend:
             self.status.set("초기 자세 복구는 실물 모드에서 사용하세요.")
             return
-        if self.real_backend and action in ("plan", "scan", "plate_align", "physical_plan"):
-            self.set_plan_kind("physical" if action == "physical_plan" else "air")
+        if self.real_backend and action in ("plan", "scan", "plate_align", "physical_plan", "physical_prepare"):
+            self.set_plan_kind("physical" if action in ("physical_plan", "physical_prepare") else "air")
         if (action in ("run", "recovery") or self.real_backend and action in ("plan", "scan", "plate_align", "physical_plan")) and not self.execution_ready():
             self.status.set("대기: 팔 제어기 active와 팔 6개·그리퍼 1개 관절의 최신 피드백을 확인하세요." if self.real_backend else
                             "실행 대기: 팔·DH 제어기가 active이고 관절 피드백이 수신되어야 합니다. 위 상태와 demo 터미널을 확인하세요.")
             return
-        if action in ("plan", "scan", "plate_align", "physical_plan"):
+        if action in ("plan", "scan", "plate_align", "physical_plan", "physical_prepare"):
             self.set_scan_mode(action in ("scan", "plate_align"), alignment=action == "plate_align")
         if self.real_backend and action == "plate_align":
             current_hand = getattr(self, "joint_values", {}).get(self.HAND_JOINT, math.nan)
@@ -1167,7 +1168,7 @@ class StackGui:
             path_description = ((f"선택한 공급 블록을 {self.target}번 홈의 바닥 블록 위 2층부터 쌓습니다. "
                                  "잡기 0.73rad 명령이 완료되면 잡힌 것으로 간주하고, 잡힘·이탈 센서 상태로 진행을 막지 않습니다. "
                                  "놓기 0.70rad→0.60rad 순서이며, 손가락을 연 뒤 팔이 후퇴합니다. "
-                                 "집기·놓기 진입 속도 배율은 0.05, 운반은 0.20입니다.")
+                                 "집기·놓기 진입과 처음 40mm 이탈은 0.05, 나머지 이동은 설정 한계 1.00입니다.")
                                 if physical else
                                 (f"빈 플레이트의 모서리 홈 A→B→C→D에서 X/Y 두 방향으로 각각 정지합니다. 그리퍼는 {self.ALIGNMENT_HAND:g}rad, 끝은 상판보다 10mm 높게 유지합니다. "
                                  "X 맞춤 후 위로 올라가 90° 회전하고 Y를 맞춥니다. 팔이 정지한 뒤에만 판을 조정하고 손을 뺀 다음 경로를 승인하세요.")
@@ -1232,7 +1233,7 @@ class StackGui:
             self.visible_layout["_air_preview"] = True
         if self.real_backend:
             mode = {"plan": "dry_plan", "scan": "dry_plan", "plate_align": "dry_plan",
-                    "alignment_gripper": "alignment_prepare", "physical_plan": "physical_plan", "recovery": "physical_recover",
+                    "alignment_gripper": "alignment_prepare", "physical_plan": "physical_plan", "physical_prepare": "physical_prepare", "recovery": "physical_recover",
                     "run": "physical_run" if getattr(self, "plan_kind", "air") == "physical" else "dry_run"}.get(action, action)
             trajectory_file = (getattr(self, "recovery_trajectory_file", self.folder / "recovery.recipe.json")
                                if action == "recovery" else self.trajectory_file)
@@ -1267,7 +1268,8 @@ class StackGui:
         self.status.set({"scene": "RViz 배치 반영 중",
                          "plate_align": f"모서리 X/Y 두 방향 맞춤 경로 계획 중 · 그리퍼 {self.ALIGNMENT_HAND:g}rad / 끝은 상판 위 10mm · 계획만으로 움직이지 않습니다.",
                          "alignment_gripper": f"그리퍼 {self.ALIGNMENT_HAND:g}rad 준비 경로 확인 중 · 상단 OK를 눌러야 움직입니다.",
-                         "physical_plan": "실물 집기·쌓기 전체 경로 검사 중 · 팔과 그리퍼는 움직이지 않습니다.",
+                         "physical_plan": "일치하는 저장 경로를 찾는 중 · 없으면 새로 계획·사전 검사합니다. 로봇은 움직이지 않습니다.",
+                         "physical_prepare": "기존 경로를 다시 계산하지 않고 실행 검사 결과를 저장 중 · 로봇은 움직이지 않습니다.",
                          "recovery": "빈 그리퍼·정지 확인 및 초기 자세 복구 경로 계획 중 · 상단 OK로 승인해야 움직입니다.",
                          "scan": (("장애물 선택이 없어 7번을 장애물로 가정했습니다. " if assumed_obstacle else "") +
                                   f"장애물 상단보다 {self.empty_hand_clearance.get()}mm 이상 여유로 24칸 XY 경로 계획 중 · 로봇은 움직이지 않습니다.")
@@ -1524,7 +1526,8 @@ class StackGui:
                     messages = {"scene": "선택한 블록·장애물을 RViz에 표시했습니다.",
                                 "plate_align": "모서리 X/Y 두 방향 맞춤 경로를 준비했습니다. 각 맞춤 위치에서 정지한 뒤 판을 조정하고 OK로 재개하세요.",
                                 "alignment_gripper": f"그리퍼 {self.ALIGNMENT_HAND:g}rad 준비 완료 · 현재 자세로 모서리 홈 경로를 계획합니다.",
-                                "physical_plan": "실물 집기·쌓기 경로를 저장했습니다. 팔·그리퍼 경로를 확인한 뒤 상단 실물 실행과 OK로 승인하세요.",
+                                "physical_plan": "실물 저장 경로를 준비했습니다. RViz 확인 후 ⑤와 OK로 실행하세요. 실행 중 경로 충돌 재검사는 생략합니다.",
+                                "physical_prepare": "기존 경로의 사전 검사 결과를 별도 보관했습니다. 초기 배치를 맞추고 ④로 불러오세요.",
                                 "recovery": "초기 자세·그리퍼 0.4rad 복귀 완료 · 이전 계획을 폐기하고 저장한 배치를 다시 표시합니다.",
                                 "scan": "24칸 XY 순회 경로를 저장했습니다. 장애물 위 전체 저장 경로를 RViz에서 확인한 뒤 실행하세요.",
                                 "plan": f"{self.empty_hand_clearance.get()}mm 위 공중 경로를 저장했습니다. RViz에서 전체 저장 경로를 확인한 뒤 실행하세요." if self.real_backend else
@@ -1611,6 +1614,15 @@ class StackGui:
                 match = re.search(r"required=(\d+) reachable=(\d+)", line)
                 if match:
                     self.status.set(f"높이 검사: 필요 {match[1]}층 / 도달 확인 {match[2]}층")
+            elif "STACK_REPLAY_SAVED " in line and self.job_action == "physical_prepare":
+                self.job_succeeded = True
+                self.status.set("저장 경로 빠른 실행 준비 완료 · 초기 배치를 맞추고 ④로 불러오세요.")
+            elif "STACK_REPLAY_CACHE_HIT " in line:
+                self.status.set("일치하는 저장 경로를 불러왔습니다. 추가 경로 계산·충돌 재검사 없이 실행을 준비합니다.")
+            elif "STACK_REPLAY_PREPARING " in line:
+                match = re.search(r"step=(\d+) total=(\d+) samples=(\d+)", line)
+                if match:
+                    self.status.set(f"기존 경로 1회 사전 검사: {match[1]}/{match[2]}단계 · {match[3]}개 상태 · 로봇은 움직이지 않습니다.")
             elif "STACK_PHYSICAL_VALIDATING " in line:
                 match = re.search(r"step=(\d+) total=(\d+) samples=(\d+)", line)
                 if (match and self.job_action == "physical_plan" and not self.job_failed

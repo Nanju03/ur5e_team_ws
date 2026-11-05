@@ -255,7 +255,7 @@ def test_physical_plan_has_separate_recipe_and_explicit_user_gripper_sequence(tm
     assert not value['plate_alignment_test'] and not value['empty_xy_scan']
     assert value['gripper_grasp_position'] == .73
     assert value['release_first_position'] == .70 and value['release_clearance_position'] == .60
-    assert value['approach_velocity_scaling'] == .05 and value['transfer_velocity_scaling'] == .20
+    assert value['approach_velocity_scaling'] == .05 and value['transfer_velocity_scaling'] == 1.
     assert value['gripper_open_position'] == .4
     assert 'workspace_clear:=true' not in command
     assert not obj.visible_layout.get('_air_preview', False)
@@ -281,7 +281,7 @@ def test_physical_run_requires_its_reviewed_recipe_and_actual_gripper_modal(tmp_
     assert obj.job_plan_id == 'physical_recipe' and obj.node.clients == []
     title, description = modal.call_args.args[:2]
     assert '팔·그리퍼' in title and '실제 블록' in description
-    assert all(token in description for token in ('0.73', '0.70', '0.60', '0.05', '0.20', '바닥 블록'))
+    assert all(token in description for token in ('0.73', '0.70', '0.60', '0.05', '1.00', '40mm', '바닥 블록'))
     assert '블록이 없는 상태' not in description
 
 
@@ -304,6 +304,21 @@ def test_physical_recipe_requires_a_selected_destination(tmp_path, monkeypatch):
     obj.launch_task('physical_plan')
     start.assert_not_called()
     assert '쌓을 칸' in obj.status.get()
+
+
+def test_offline_prepare_preserves_the_existing_recipe_and_has_no_motion_permission(tmp_path, monkeypatch):
+    obj = gui(tmp_path)
+    obj.target = 11
+    obj.set_plan_kind('physical')
+    start = prepare_launch(obj, monkeypatch)
+    before = obj.trajectory_file.read_bytes()
+    meta_path = obj.trajectory_file.with_name(obj.trajectory_file.name+'.meta.json')
+    metadata = meta_path.read_bytes()
+    obj.launch_task('physical_prepare')
+    command = start.call_args.args[0]
+    assert 'stack_mode:=physical_prepare' in command
+    assert 'workspace_clear:=true' not in command
+    assert obj.trajectory_file.read_bytes() == before and meta_path.read_bytes() == metadata
 
 
 def test_restored_physical_selection_keeps_recipe_separate_from_air_file(tmp_path):

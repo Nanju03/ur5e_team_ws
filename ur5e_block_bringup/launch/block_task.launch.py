@@ -25,7 +25,7 @@ def physical_held_path():
 def start(context):
     value = lambda name: LaunchConfiguration(name).perform(context)
     mode = value('stack_mode')
-    physical = mode in ('physical_plan', 'physical_run', 'physical_recover')
+    physical = mode in ('physical_plan', 'physical_prepare', 'physical_run', 'physical_recover')
     recovery = mode == 'physical_recover'
     held = physical_held_path()
     if not physical and (held.exists() or held.is_symlink()):
@@ -61,9 +61,10 @@ def start(context):
             gripper_open_position=.4, gripper_grasp_position=.73,
             staged_release_enabled=True, release_first_position=.70,
             release_clearance_position=.60, split_stack_speeds=True,
-            approach_velocity_scaling=.05, transfer_velocity_scaling=.20,
+            approach_velocity_scaling=.05, transfer_velocity_scaling=1.,
             stack_acceleration_scaling=.05, approach_acceleration_scaling=.05,
-            transfer_acceleration_scaling=.20, velocity_scaling=.20, acceleration_scaling=.05,
+            transfer_acceleration_scaling=1., velocity_scaling=1., acceleration_scaling=.05,
+            physical_contact_clearance=.04,
             vertical_placement_layers=19, placement_approach_clearance=.12,
             trajectory_file=value('trajectory_file'),
             recipe_manifest_file=value('recipe_manifest_file') or value('trajectory_file'),
@@ -133,7 +134,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('calibration_file', default_value=str(Path.home()/'ur5e_ws/robot_calibration/ur5e_20261031.yaml')),
         DeclareLaunchArgument('physical_profile', default_value=str(Path.home()/'ur5e_ws/physical_setup.yaml')),
-        DeclareLaunchArgument('stack_mode', default_value='scene', choices=['scene', 'plan', 'reach', 'reset', 'dry_plan', 'dry_run', 'alignment_prepare', 'physical_plan', 'physical_run', 'physical_recover']),
+        DeclareLaunchArgument('stack_mode', default_value='scene', choices=['scene', 'plan', 'reach', 'reset', 'dry_plan', 'dry_run', 'alignment_prepare', 'physical_plan', 'physical_prepare', 'physical_run', 'physical_recover']),
         DeclareLaunchArgument('selection_file', default_value=''),
         DeclareLaunchArgument('trajectory_file', default_value=str(Path.home()/'.ros/ur5e_a3_stack/air_plan_domain0.cdr')),
         DeclareLaunchArgument('recipe_manifest_file', default_value=''),
