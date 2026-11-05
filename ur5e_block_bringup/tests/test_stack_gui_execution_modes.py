@@ -386,6 +386,28 @@ def test_normal_motion_settled_log_does_not_claim_a_stop_or_change_the_status(mo
     assert obj.status.get() == '승인한 경로 실행 중'
 
 
+@pytest.mark.parametrize('failed', [False, True])
+def test_archive_result_is_shown_without_any_motion_or_approval(monkeypatch, failed):
+    obj = make_gui(real=False)
+    obj.closing = False
+    obj.calibration_window = obj.stop_future = None
+    obj.refresh_connection = obj.refresh_step_approval = obj.refresh_stop = Mock()
+    obj.log = SimpleNamespace(insert=Mock(), index=lambda *args: '1.0', delete=Mock(), see=Mock())
+    obj.root = SimpleNamespace(after=Mock())
+    obj.events = queue.Queue()
+    line = ('STACK_ARCHIVE_ERROR disk full' if failed else
+            'STACK_PATH_ARCHIVED '+json.dumps({'file': '/tmp/recorded/successful_path.zip'}))
+    obj.events.put(('job', line))
+    monkeypatch.setattr(ui.rclpy, 'ok', lambda: False)
+    obj.poll()
+    if failed:
+        assert obj.job_failed and '저장 실패' in obj.status.get()
+    else:
+        assert obj.saved_path_file.endswith('successful_path.zip') and '성공 경로 저장' in obj.status.get()
+    assert obj.node.clients == []
+    assert not obj.stop_acknowledged
+
+
 @pytest.mark.parametrize('state', ['planning', 'failed', 'stopped', 'stop_pending', 'other_task'])
 def test_physical_validation_progress_updates_only_active_plan_status(monkeypatch, state):
     obj = make_gui()

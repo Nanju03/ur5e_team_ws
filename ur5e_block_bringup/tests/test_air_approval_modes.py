@@ -6,6 +6,7 @@ import numpy as np
 import importlib.util
 from pathlib import Path
 import sys
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -55,6 +56,12 @@ class Publisher:
 
 class GateHarness:
     preview_digest = staticmethod(air.AirTask.preview_digest)
+
+    def prepare_preview(self, build):
+        # Most gate tests use a tiny synchronous preview; dedicated regression
+        # cases below exercise the production worker with independent publishers.
+        display = build()
+        return display, self.preview_digest(display)
 
     def __init__(self):
         self.stopped = False
@@ -185,6 +192,17 @@ def test_changed_robot_does_not_turn_a_click_into_approved_execution(runtime, pa
     runtime.on_spin = script
     with pytest.raises(RuntimeError, match='changed while waiting'):
         run_gate(task, path)
+    diagnostic = next(payload for name, payload in task.phases if name == 'STACK_APPROVAL_STATE_CHANGED')
+    assert diagnostic['feedback_fresh'] is (change != 'feedback')
+    assert diagnostic['changed_arm_joints'] == ([air.ARM[0]] if change == 'arm' else [])
+    if change == 'hand':
+        assert diagnostic['gripper_check_passed'] is False
+        assert diagnostic['gripper']['delta'] == pytest.approx(.02)
+    if change == 'arm':
+        assert diagnostic['arm'][air.ARM[0]]['delta'] == pytest.approx(.01)
+    # Missing samples must remain JSON null; the diagnostic must not contain
+    # nonstandard NaN/Infinity values that make an operator log unparseable.
+    json.dumps(diagnostic, allow_nan=False)
     assert not any(name == 'STACK_STEP_APPROVED' for name, _ in task.phases)
     assert task.destroyed == task.services
 
@@ -234,6 +252,83 @@ def test_preview_fingerprint_survives_transport_but_detects_changed_motion(path)
     assert air.AirTask.preview_digest(display) == air.AirTask.preview_digest(transported)
     transported.trajectory[0].joint_trajectory.points[-1].positions[0] += .001
     assert air.AirTask.preview_digest(display) != air.AirTask.preview_digest(transported)
+
+
+def test_slow_continuous_preview_services_both_feedback_publishers_before_offering_approval(monkeypatch, path):
+    task = GateHarness()
+    task.prepare_preview = lambda build: air.AirTask.prepare_preview(task, build)
+    task.now = 0.
+    task.received = {name: 0. for name in air.ARM+[air.HAND]}
+    task.fresh = lambda: all(task.now-task.received[name] < 1. for name in air.ARM+[air.HAND])
+    completed = threading.Event()
+    callbacks = []
+
+    def build():
+        # Hold assembly until independent arm/hand callbacks have run for more
+        # than the 1 s freshness budget. No token may be offered meanwhile.
+        assert completed.wait(timeout=2.)
+        return path[0]
+
+    def spin(current, timeout_sec):
+        if not current.services:
+            current.now += .3
+            names = air.ARM if len(callbacks) % 2 == 0 else [air.HAND]
+            for name in names:
+                current.received[name] = current.now
+            callbacks.append(tuple(names))
+            if len(callbacks) >= 6:
+                completed.set()
+            # Allow the data-only worker to finish without a busy fake loop.
+            threading.Event().wait(.001)
+        else:
+            assert current.fresh()
+            assert completed.is_set()
+            assert current.approve().success
+
+    monkeypatch.setattr(air.rclpy, 'spin_once', spin)
+    air.AirTask.await_approval(task, build, path[1], None, 1, 1, '전체 물리 경로')
+    assert task.now >= 1.8-1e-9
+    assert tuple(air.ARM) in callbacks and (air.HAND,) in callbacks
+    assert [name for name, _ in task.phases] == ['STACK_STEP_READY', 'STACK_STEP_APPROVED']
+    assert task.phases[0][1]['preview_sha256'] == air.AirTask.preview_digest(path[0])
+    assert task.destroyed == task.services
+
+
+def test_stop_during_preview_computation_never_offers_an_approval(monkeypatch, path):
+    task = GateHarness()
+    task.prepare_preview = lambda build: air.AirTask.prepare_preview(task, build)
+    release = threading.Event()
+    finished = threading.Event()
+
+    def build():
+        try:
+            assert release.wait(timeout=2.)
+            return path[0]
+        finally:
+            finished.set()
+
+    def spin(current, timeout_sec):
+        current.stopped = True
+
+    monkeypatch.setattr(air.rclpy, 'spin_once', spin)
+    try:
+        with pytest.raises(RuntimeError, match='stopped before motion'):
+            air.AirTask.await_approval(task, build, path[1], None, 1, 1, '전체 물리 경로')
+        assert not task.services and not task.phases and not task.display.messages
+    finally:
+        release.set()
+        assert finished.wait(timeout=2.)
+
+
+def test_preview_worker_failure_is_reported_without_a_live_approval(monkeypatch, path):
+    task = GateHarness()
+    task.prepare_preview = lambda build: air.AirTask.prepare_preview(task, build)
+    def fail():
+        raise ValueError('Unreadable reviewed trajectory')
+    monkeypatch.setattr(air.rclpy, 'spin_once', lambda *a, **kw: threading.Event().wait(.001))
+    with pytest.raises(ValueError, match='Unreadable reviewed trajectory'):
+        air.AirTask.await_approval(task, fail, path[1], None, 1, 1, '전체 물리 경로')
+    assert not task.services and not task.phases
 
 
 class ExecutionHarness:

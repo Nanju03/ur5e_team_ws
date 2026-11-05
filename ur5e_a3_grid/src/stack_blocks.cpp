@@ -11,6 +11,7 @@
 #include <fstream>
 #include <filesystem>
 #include <future>
+#include <functional>
 #include <iomanip>
 #include <limits>
 #include <map>
@@ -26,8 +27,12 @@
 #include <vector>
 
 #include <controller_manager_msgs/srv/list_hardware_components.hpp>
+#include <control_msgs/action/follow_joint_trajectory.hpp>
+#include <control_msgs/action/gripper_command.hpp>
 #include <geometric_shapes/shapes.h>
 #include <geometric_shapes/shape_operations.h>
+#include <gazebo_msgs/srv/get_entity_state.hpp>
+#include <hardware_interface/component_parser.hpp>
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
@@ -42,18 +47,24 @@
 #include <rcl_interfaces/msg/parameter_type.hpp>
 #include <rcl_interfaces/srv/get_parameters.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 #include <rclcpp/serialization.hpp>
 #include <rclcpp/serialized_message.hpp>
 #include <shape_msgs/msg/solid_primitive.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include "rearrangement.hpp"
+#include "gazebo_settling.hpp"
 
 namespace {
 using T = Eigen::Isometry3d;
 using State = moveit::core::RobotState;
 using MGI = moveit::planning_interface::MoveGroupInterface;
 constexpr double PI = 3.14159265358979323846;
+// The physical validator sweeps wrist_3 by +/-0.010rad on transfers.
+// Reserve that interval during planning, with 0.001rad for interpolation.
+constexpr double PHYSICAL_WRIST_MARGIN = .011;
 const std::string PREFIX = "ur5e_stack/";
 
 std::string jsonString(const std::string& value) {
@@ -112,6 +123,8 @@ struct Step {
   std::vector<double> start_joints,end_joints;
   double velocity_scaling=0.,acceleration_scaling=0.;
   int completed=0;
+  int block=0,destination=0;
+  bool temporary=false;
 };
 struct GripperBounds {
   const moveit::core::LinkModel* link=nullptr;
@@ -129,6 +142,12 @@ class StackTask {
 public:
   explicit StackTask(rclcpp::Node::SharedPtr node):node_(std::move(node)),logger_(node_->get_logger()) {
     mode_=parameter<std::string>(node_,"stack_mode","scene");
+    physical_stack_=parameter<bool>(node_,"physical_stack_task",false);
+    simulation_backend_=parameter<std::string>(node_,"simulation_backend","mock");
+    if(simulation_backend_!="mock"&&simulation_backend_!="gazebo")throw std::runtime_error("Invalid simulation_backend");
+    release_lift_=parameter<double>(node_,"placement_release_lift",0.);
+    if(!std::isfinite(release_lift_)||release_lift_<0.||release_lift_>.01||
+       (release_lift_>0.&&simulation_backend_!="gazebo"))throw std::runtime_error("placement_release_lift is a Gazebo-only setting in 0..0.01m");
     if(mode_!="scene" && mode_!="plan" && mode_!="run" && mode_!="reset" && mode_!="reach") throw std::runtime_error("Invalid stack_mode");
     execution_mode_=parameter<std::string>(node_,"execution_mode","step");
     if(execution_mode_!="step"&&execution_mode_!="continuous")throw std::runtime_error("execution_mode must be step or continuous");
@@ -150,6 +169,9 @@ public:
     recipe_file_=parameter<std::string>(node_,"recipe_manifest_file","");
     if(!recipe_file_.empty()&&(mode_!="plan"||empty_hand_test_||plate_alignment_||empty_xy_scan_))
       throw std::runtime_error("recipe_manifest_file requires a full stacking plan; no execution is performed by this exporter");
+    archive_directory_=parameter<std::string>(node_,"execution_archive_directory","");
+    if(!archive_directory_.empty()&&(mode_!="run"||simulation_backend_!="gazebo"||empty_hand_test_||plate_alignment_||empty_xy_scan_))
+      throw std::runtime_error("Execution recording requires a full Gazebo stacking run");
     group_=parameter<std::string>(node_,"planning_group","ur5e_arm");
     hand_group_=parameter<std::string>(node_,"gripper_group","dh_ag95_gripper");
     hand_joint_=parameter<std::string>(node_,"gripper_joint","left_outer_knuckle_joint");
@@ -194,12 +216,15 @@ public:
     grip_height_=parameter<double>(node_,"grasp_height_above_table",.0125);
     clearance_=parameter<double>(node_,"place_clearance",.04);
     placement_mode_=parameter<std::string>(node_,"placement_mode","side");
-    vertical_placement_layers_=parameter<int>(node_,"vertical_placement_layers",10);
+    vertical_placement_layers_=parameter<int>(node_,"vertical_placement_layers",19);
+    placement_clearance_=parameter<double>(node_,"placement_approach_clearance",.12);
     side_clearance_=parameter<double>(node_,"side_clearance",.06);
     vertical_fallback_=parameter<int>(node_,"vertical_fallback_layers",4);
     if(placement_mode_!="side"&&placement_mode_!="vertical")throw std::runtime_error("placement_mode must be side or vertical");
     if(vertical_placement_layers_<0)
       throw std::runtime_error("vertical_placement_layers must be non-negative");
+    if(!std::isfinite(placement_clearance_)||placement_clearance_<.08||placement_clearance_>.20)
+      throw std::runtime_error("placement_approach_clearance must be 80..200 mm");
     if(side_clearance_<=0||vertical_fallback_<0)throw std::runtime_error("Invalid side placement settings");
     if(placement_mode_=="side"&&(block_.array()-block_.x()).abs().maxCoeff()>1e-8)
       throw std::runtime_error("Side placement currently requires cubic blocks");
@@ -272,6 +297,9 @@ public:
   }
   void stop() {
     cancelled_=true;
+    std::function<void()> cancel;
+    {std::lock_guard<std::mutex> lock(gazebo_cancel_mutex_);cancel=gazebo_cancel_;}
+    if(cancel)try {cancel();}catch(const std::exception&){}
     if(auto* pipeline=pipeline_stop_.load())pipeline->terminate();
     if(executing_.load())try {if(auto* arm=arm_stop_.load())arm->stop(); if(auto* hand=hand_stop_.load())hand->stop();}catch(const std::exception&){}
   }
@@ -312,7 +340,7 @@ public:
     }
     scene_=readScene();
     initialiseGeometry(*measured);
-    if(empty_xy_scan_||plate_alignment_)initialiseGripperBounds();
+    if(empty_xy_scan_||plate_alignment_||(mode_!="scene"&&mode_!="reset"))initialiseGripperBounds();
     auto initial=makeInitialScene();
     scene_->setPlanningSceneDiffMsg(initial);
     apply(initial);
@@ -368,48 +396,187 @@ public:
     if(mode_=="reach")return true;
     scene_->setCurrentState(*measured);
     initial_state_=std::make_shared<State>(*measured);
-    if(!recipe_file_.empty())scene_->getPlanningSceneMsg(recipe_initial_scene_);
+    if(!archive_directory_.empty()) {
+      archive_directory_=std::filesystem::absolute(archive_directory_).string();
+      std::filesystem::create_directories(archive_directory_);
+      for(const auto& name:{"plan.recipe.json","execution_result.json","commands.jsonl"})
+        if(std::filesystem::exists(std::filesystem::path(archive_directory_)/name))
+          throw std::runtime_error("Refusing to overwrite an existing execution archive");
+      writeArchiveResult("planning");
+      RCLCPP_INFO(logger_,"STACK_EXECUTION_ARCHIVE %s",("{\"directory\":"+jsonString(archive_directory_)+
+        ",\"plan_id\":"+jsonString(plan_id_)+"}").c_str());
+    }
+    if(captureRecipe())scene_->getPlanningSceneMsg(recipe_initial_scene_);
     initialisePipeline();
     planHand(open_,"Initial gripper open");
     // Plan from measured feedback, including a collision-aware working-home preparation.
     planNeutral("Prepare vertical working home");
-    for(std::size_t index=0;index<sources.size();++index) {
-      checkStop();
-      int source=sources[index]; std::string object=blockId(source);
-      int layer=static_cast<int>(index)+1+foundationLayers();
-      RCLCPP_INFO(logger_,"STACK_PLANNING source=%d target=%d layer=%d/%zu",source,target_,layer,total_+foundationLayers());
-      contacts(object,true);
-      auto grasp=planApproach(at(cells_[source-1],source_surface_z_+grip_height_),travel_z_,"Source "+std::to_string(source));
-      T pick_pre=grasp.second;
-      planHand(close_,"Close on block "+std::to_string(source));
-      attach(object,source);
-      planStraight(pick_pre,"Lift block "+std::to_string(source));
-      tableContact(object,false);
-      // The carried cube intentionally contacts only the supporting top cube.
-      std::string support=index==0?(target_has_foundation_?blockId(target_):plateId()):blockId(sources[index-1]);
-      auto placement=planPlacement(object,support,layer,"Place block "+std::to_string(source)+" layer "+std::to_string(layer));
-      T place_pre=placement.second;
-      if(staged_release_)planHand(release_first_,"Release block "+std::to_string(source)+" first opening");
-      else planHand(open_,"Release block "+std::to_string(source));
-      release(object,layer);
-      steps_.back().completed=static_cast<int>(index)+1;
-      if(staged_release_)planHand(release_clearance_,"Release block "+std::to_string(source)+" clearance opening before retreat");
-      planStraight(place_pre,"Retreat from layer "+std::to_string(layer));
-      contacts(object,false);
-      // Reorient away from the tower before choosing the next vertical grasp.
-      // This also avoids carrying a side-placement wrist branch into a deep pick.
-      if(index+1<sources.size())planNeutral("Prepare next vertical pickup");
-    }
+    planRearranged(sources);
     planNeutral("Return to clear working pose");
     RCLCPP_INFO(logger_,"STACK_PREFLIGHT_PASSED moves=%zu layers=%zu segments=%zu",total_,total_+foundationLayers(),steps_.size());
     showPlan();
-    if(!recipe_file_.empty())exportRecipe();
+    if(!recipe_file_.empty())exportRecipe(recipe_file_);
+    if(!archive_directory_.empty()) {
+      exportRecipe((std::filesystem::path(archive_directory_)/"plan.recipe.json").string(),true);
+      writeRecipeMessage(std::filesystem::path(archive_directory_)/"preview.cdr",planned_display_);
+      writeArchiveResult("planned");
+    }
     if(mode_=="plan"){status("PLAN_READY",0);return true;}
     apply(initial);
+    if(!archive_directory_.empty())writeArchiveResult("running");
     execute();
+    if(!archive_directory_.empty())writeArchiveResult("succeeded");
     return true;
   }
 private:
+  using Layout=rearrangement::Layout;
+  using Move=rearrangement::Move;
+  T layoutCube(const Layout& layout,int id)const {
+    const auto [cell,tier]=layout.locate(id);
+    const auto xy=cell==layout.target?targetXY():cells_.at(cell-1);
+    T cube=T::Identity();cube.linear()=rotation_;
+    cube.translation()=Eigen::Vector3d(xy.x(),xy.y(),
+      (cell==layout.target?stack_surface_z_:source_surface_z_)+block_.z()*(tier+.5));
+    return cube;
+  }
+  planning_scene::PlanningScenePtr layoutScene(const Layout& layout) {
+    auto preview=planning_scene::PlanningScene::clone(rearrangement_scene_);
+    auto update=diff();auto acm=preview->getAllowedCollisionMatrix();
+    for(const auto& [cell,tower]:layout.towers)for(std::size_t tier=0;tier<tower.size();++tier) {
+      const auto id=blockId(tower[tier]);
+      update.world.collision_objects.push_back(box(id,block_,layoutCube(layout,tower[tier])));
+      acm.setEntry(id,touch_,false);
+      acm.setEntry(id,table_,tier==0);if(plate_enabled_)acm.setEntry(id,plateId(),tier==0);
+      for(const auto& [other_cell,other_tower]:layout.towers)for(int other:other_tower)
+        if(other!=tower[tier])acm.setEntry(id,blockId(other),false);
+    }
+    for(const auto& [cell,tower]:layout.towers)for(std::size_t tier=1;tier<tower.size();++tier)
+      acm.setEntry(blockId(tower[tier]),blockId(tower[tier-1]),true);
+    acm.getMessage(update.allowed_collision_matrix);preview->setPlanningSceneDiffMsg(update);
+    return preview;
+  }
+  bool accessible(const Layout& layout,int id) {
+    checkStop();const std::string key=layout.key()+"/"+std::to_string(id);
+    const auto cached=access_cache_.find(key);if(cached!=access_cache_.end())return cached->second;
+    const auto [cell,tier]=layout.locate(id);
+    if(layout.towers.at(cell).back()!=id)return access_cache_[key]=false;
+    const T cube=layoutCube(layout,id);
+    T base=at(cube.translation().head<2>(),cube.translation().z()-block_.z()/2+grip_height_);
+    const auto saved=scene_;scene_=layoutScene(layout);
+    scene_->getAllowedCollisionMatrixNonConst().setEntry(blockId(id),touch_,true);
+    bool found=false;
+    // IK candidates depend on the pickup position, not the changing towers.
+    // Cache geometry-only IK; every reuse still checks the current collision scene.
+    const auto location=std::make_pair(cell,tier);
+    auto candidates=grasp_cache_.find(location);
+    if(candidates==grasp_cache_.end()) {
+      std::vector<State> states;
+      for(int turn=0;turn<4;++turn)for(int trial=0;trial<3;++trial) {
+        State seed(*initial_state_);
+        if(trial==1)seed.setToDefaultValues(arm_group_,parameter<std::string>(node_,"home_pose","home"));
+        if(trial==2)seed.setToRandomPositions(arm_group_);
+        seed.setJointGroupActivePositions(gripper_group_,std::vector<double>{open_});seed.update();
+        T target=base;target.linear()=Eigen::AngleAxisd(turn*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*base.linear();
+        if(seed.setFromIK(arm_group_,world_frame_*target*tip_tcp_.inverse(),tip_,.05))states.push_back(seed);
+      }
+      candidates=grasp_cache_.emplace(location,std::move(states)).first;
+    }
+    try {
+      for(auto state:candidates->second) {
+        checkStop();state.setJointGroupActivePositions(gripper_group_,std::vector<double>{open_});
+        if(!valid(state))continue;
+        bool safe=true;
+        for(double q=open_;q<=close_+1e-9;q+=.02) {
+          state.setJointGroupActivePositions(gripper_group_,std::vector<double>{q});
+          if(!valid(state)){safe=false;break;}
+        }
+        if(!safe)continue;
+        state.setJointGroupActivePositions(gripper_group_,std::vector<double>{open_});state.update();
+        const T low=world_frame_.inverse()*state.getGlobalLinkTransform(tcp_);
+        // The final 50 mm must be a vertical, open-finger corridor. Actual
+        // transfer planning later validates the complete route and controller samples.
+        for(int sample=1;sample<=5;++sample) {
+          T raised=low;raised.translation().z()+=.01*sample;
+          if(!solve(raised,state)){safe=false;break;}
+        }
+        if(safe){found=true;break;}
+      }
+    }catch(...){scene_=saved;throw;}
+    scene_=saved;access_cache_[key]=found;return found;
+  }
+  void planRearranged(const std::vector<int>& sources) {
+    Layout initial;initial.target=independent_target_?0:target_;initial.towers[initial.target]={};
+    if(target_has_foundation_)initial.towers[initial.target].push_back(target_);
+    for(int id:sources)initial.towers[id]={id};
+    rearrangement_scene_=planning_scene::PlanningScene::clone(scene_);
+    const auto first_step=steps_.size();std::set<std::string> rejected;
+    std::string last_failure;
+    for(int attempt=0;attempt<16;++attempt) {
+      checkStop();scene_=planning_scene::PlanningScene::clone(rearrangement_scene_);steps_.resize(first_step);
+      rearrangement::Search search(sources,
+        [this](const Layout& layout,int id){return accessible(layout,id);},
+        [this,&rejected](const Layout& layout,const Move& move){
+          if(rejected.count(layout.key()+"/"+std::to_string(move.block)+">"+std::to_string(move.to)))return false;
+          return !move.temporary||accessible(layout.moved(move),move.block);
+        },[this](int cell){
+          double clearance=(cells_[cell-1]-targetXY()).norm();
+          for(int obstacle:obstacles_)clearance=std::min(clearance,(cells_[cell-1]-cells_[obstacle-1]).norm());
+          return clearance;
+        });
+      const auto moves=search.plan(initial);transport_total_=moves.size();
+      RCLCPP_INFO(logger_,"STACK_REARRANGEMENT transports=%zu blocks=%zu buffers=%zu states=%zu open=%.3f",moves.size(),total_,moves.size()-total_,search.expanded(),open_);
+      Layout layout=initial;int completed=0;bool retry=false;
+      for(std::size_t index=0;index<moves.size();++index) {
+        const auto& move=moves[index];
+        try {planTransfer(layout,move,completed,index+1);layout=layout.moved(move);}
+        catch(const std::exception& error) {
+          checkStop();last_failure=error.what();
+          rejected.insert(layout.key()+"/"+std::to_string(move.block)+">"+std::to_string(move.to));
+          RCLCPP_WARN(logger_,"STACK_REARRANGEMENT_RETRY block=%d from=%d to=%d reason=%s",move.block,move.from,move.to,error.what());
+          retry=true;break;
+        }
+      }
+      if(!retry)return;
+    }
+    throw std::runtime_error("No fully validated rearrangement after bounded route retries: "+last_failure+"; NOTHING executed");
+  }
+  void planTransfer(const Layout& layout,const Move& move,int& completed,std::size_t transport) {
+    checkStop();const auto object=blockId(move.block);const auto& from=layout.towers.at(move.from);
+    const auto& destination=layout.towers.at(move.to);const int layer=destination.size()+1;
+    RCLCPP_INFO(logger_,"STACK_PLANNING source=%d target=%d layer=%d/%zu",move.block,move.to,layer,move.temporary?std::size_t(2):total_+foundationLayers());
+    RCLCPP_INFO(logger_,"STACK_ROUTE_MOVE transport=%zu block=%d from=%d to=%d temporary=%d layer=%d",transport,move.block,move.from,move.to,move.temporary,layer);
+    planHand(open_,"Open before picking block "+std::to_string(move.block));
+    const auto cube=scene_->getWorld()->getObject(object);
+    if(!cube||cube->global_shape_poses_.size()!=1)throw std::runtime_error("Missing current pickup object pose");
+    const T current=world_frame_.inverse()*cube->global_shape_poses_.front();
+    contacts(object,true);
+    auto grasp=planApproach(at(current.translation().head<2>(),current.translation().z()-block_.z()/2+grip_height_),
+      std::max(travel_z_,current.translation().z()+.08),"Source "+std::to_string(move.block));
+    planHand(close_,"Close on block "+std::to_string(move.block));
+    attach(object,move.block);
+    planStraight(grasp.second,"Lift block "+std::to_string(move.block));
+    tableContact(object,false);
+    if(from.size()>1)supportContact(object,blockId(from[from.size()-2]),false);
+    const std::string support=destination.empty()?plateId():blockId(destination.back());
+    std::pair<T,T> placement;
+    if(move.temporary) {
+      supportContact(object,support);
+      const auto xy=cells_[move.to-1];
+      T place=at(xy,source_surface_z_+block_.z()*destination.size()+grip_height_+release_lift_);
+      placement=planApproach(place,std::max(travel_z_,place.translation().z()+clearance_),
+        "Buffer block "+std::to_string(move.block)+" on cell "+std::to_string(move.to));
+      placed_cube_=placement.first*carry_fixed_;
+    }else placement=planPlacement(object,support,layer,"Place block "+std::to_string(move.block)+" layer "+std::to_string(layer));
+    if(staged_release_)planHand(release_first_,"Release block "+std::to_string(move.block)+" first opening");
+    else planHand(open_,"Release block "+std::to_string(move.block));
+    release(object,layer);if(!move.temporary)++completed;
+    steps_.back().completed=completed;steps_.back().block=move.block;
+    steps_.back().destination=move.to;steps_.back().temporary=move.temporary;
+    if(staged_release_)planHand(release_clearance_,"Release block "+std::to_string(move.block)+" clearance opening before retreat");
+    planStraight(placement.second,"Retreat from layer "+std::to_string(layer));
+    contacts(object,false);
+    planNeutral("Prepare next vertical pickup");
+  }
   moveit::core::RobotStatePtr measuredState(double timeout) {
     // Arm and gripper publish separate partial messages. MoveIt's aggregate
     // state timestamp can become current after only the gripper has arrived,
@@ -937,12 +1104,12 @@ private:
   }
   void commit(const moveit_msgs::msg::PlanningScene& update,const std::string& label) {
     Step event;event.label=label;event.event=true;event.diff=update;event.phase=recipePhase(label,false,true);
-    if(!recipe_file_.empty()) {
+    if(captureRecipe()) {
       scene_->getPlanningSceneMsg(event.before_scene);
       event.start_joints=recipeJoints(scene_->getCurrentState());
     }
     scene_->setPlanningSceneDiffMsg(update);
-    if(!recipe_file_.empty()) {
+    if(captureRecipe()) {
       scene_->getPlanningSceneMsg(event.after_scene);
       event.end_joints=recipeJoints(scene_->getCurrentState());
     }
@@ -957,8 +1124,9 @@ private:
     acm.getMessage(update.allowed_collision_matrix);commit(update,"Carried block/support collision checking");
   }
   void attach(const std::string& id,int source) {
-    T cube=T::Identity();cube.linear()=rotation_;
-    cube.translation()=Eigen::Vector3d(cells_[source-1].x(),cells_[source-1].y(),source_surface_z_+block_.z()/2);
+    const auto object=scene_->getWorld()->getObject(id);
+    if(!object||object->global_shape_poses_.size()!=1)throw std::runtime_error("Cannot attach missing current block pose");
+    const T cube=world_frame_.inverse()*object->global_shape_poses_.front();
     State state(scene_->getCurrentState());state.update();
     carry_fixed_=(world_frame_.inverse()*state.getGlobalLinkTransform(tcp_)).inverse()*cube;
     auto update=diff();moveit_msgs::msg::AttachedCollisionObject attached;
@@ -974,13 +1142,22 @@ private:
     if((actual.translation()-placed_cube_.translation()).norm()>.001 ||
        Eigen::AngleAxisd(actual.linear()*placed_cube_.linear().transpose()).angle()>.01)
       throw std::runtime_error("Placed block differs from its attached pose");
-    update.world.collision_objects.push_back(box(id,block_,placed_cube_));
+    T settled=placed_cube_;settled.translation().z()-=release_lift_;
+    update.world.collision_objects.push_back(box(id,block_,settled));
     moveit_msgs::msg::ObjectColor color;color.id=id;color.color.a=1;color.color.r=.2;color.color.g=.75;color.color.b=.4;update.object_colors.push_back(color);
     commit(update,"PLACE "+id+" layer="+std::to_string(layer));
   }
   bool valid(State& state)const {
     state.update();
+    if(physical_stack_) {
+      const auto& wrist=arm_group_->getActiveJointModelNames().back();
+      const auto& bounds=model_->getVariableBounds(wrist);
+      const double q=state.getVariablePosition(wrist);
+      if(bounds.position_bounded_&&(q<bounds.min_position_+PHYSICAL_WRIST_MARGIN||
+                                   q>bounds.max_position_-PHYSICAL_WRIST_MARGIN))return false;
+    }
     if(!state.satisfiesBounds(arm_group_)||scene_->isStateColliding(state,"",false))return false;
+    if(placement_transit_check_&&!placementTransitClear(state))return false;
     return !(empty_xy_scan_||plate_alignment_)||!scan_floor_check_||minimumGripperZ(state)>=scan_floor_-1e-9;
   }
   bool solve(const T& target,State& state) {
@@ -1028,10 +1205,26 @@ private:
       }
     }
     scene_->setCurrentState(original);steps_.resize(count);
+    // A generic approach error otherwise hides whether IK, bounds or scene
+    // geometry rejected the grasp. Diagnose poses only; never execute them.
+    for(int turn=0;turn<4;++turn) {
+      checkStop();T low=base;
+      low.linear()=Eigen::AngleAxisd(turn*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*base.linear();
+      State probe(original);const T goal=world_frame_*low*tip_tcp_.inverse();
+      const bool ik=probe.setFromIK(arm_group_,goal,tip_,.12);probe.update();
+      collision_detection::CollisionRequest request;collision_detection::CollisionResult result;
+      request.contacts=true;request.max_contacts=20;
+      if(ik)scene_->checkCollision(request,result,probe);
+      std::string contacts;
+      for(const auto& contact:result.contacts)contacts+=contact.first.first+"/"+contact.first.second+" ";
+      RCLCPP_WARN(logger_,"STACK_APPROACH_DIAGNOSTIC label=%s yaw=%d hand=%.4f ik=%d bounds=%d collision=%d contacts=%s",
+        label.c_str(),turn*90,original.getVariablePosition(hand_joint_),ik,
+        ik&&probe.satisfiesBounds(arm_group_),result.collision,contacts.c_str());
+    }
     throw std::runtime_error("No collision-free vertical approach: "+label);
   }
-  void supportContact(const std::string& object,const std::string& support) {
-    auto update=diff();auto acm=scene_->getAllowedCollisionMatrix();acm.setEntry(object,support,true);
+  void supportContact(const std::string& object,const std::string& support,bool allowed=true) {
+    auto update=diff();auto acm=scene_->getAllowedCollisionMatrix();acm.setEntry(object,support,allowed);
     acm.getMessage(update.allowed_collision_matrix);commit(update,"Allow placement support contact");
   }
   std::vector<std::pair<T,T>> sideCandidates(int layer,const T& carry)const {
@@ -1044,7 +1237,7 @@ private:
       symmetry(axes[0],0)=sx;symmetry(axes[1],1)=sy;symmetry(axes[2],2)=sz;
       if(symmetry.determinant()<.5)continue;
       T cube=T::Identity();cube.linear()=rotation_*symmetry;
-      cube.translation()=Eigen::Vector3d(targetXY().x(),targetXY().y(),stack_surface_z_+block_.z()*(layer-.5));
+      cube.translation()=Eigen::Vector3d(targetXY().x(),targetXY().y(),stack_surface_z_+block_.z()*(layer-.5)+release_lift_);
       T tcp=cube*carry.inverse();Eigen::Matrix3d approach=tcp.linear()*tcp_approach_.linear();
       if(std::abs(approach(2,2))>.01||std::abs(approach(2,0))>.01)continue;
       T pre=tcp;pre.translation()-=side_clearance_*approach.col(2);
@@ -1059,9 +1252,97 @@ private:
     });return result;
   }
   bool usesVerticalPlacement(int layer)const {
-    // Layer numbers are physical tower layers, with or without an existing
-    // foundation. Ten 25mm cubes reach 250mm above their support surface.
+    // Count the existing foundation: keep the original low-tower method
+    // through layer 19; side insertion starts at physical layer 20.
     return placement_mode_=="vertical"||layer<=vertical_placement_layers_;
+  }
+  template<class Check> bool eachPlacementBound(const State& state,const T& tcp,const T& carry,Check check)const {
+    const T current_tcp=state.getGlobalLinkTransform(tcp_);
+    for(const auto& bound:gripper_bounds_) {
+      const T relative=current_tcp.inverse()*state.getGlobalLinkTransform(bound.link);
+      std::array<Eigen::Vector3d,8> corners;
+      for(std::size_t index=0;index<corners.size();++index)corners[index]=tcp*relative*bound.corners[index];
+      if(!check(corners))return false;
+    }
+    std::array<Eigen::Vector3d,8> corners;std::size_t index=0;
+    for(int x:{-1,1})for(int y:{-1,1})for(int z:{-1,1})
+      corners[index++]=tcp*carry*Eigen::Vector3d(x*block_.x()/2.,y*block_.y()/2.,z*block_.z()/2.);
+    return check(corners);
+  }
+  T raisedPlacement(const T& low,int layer,const T& carry)const {
+    State holding(scene_->getCurrentState());
+    holding.setJointGroupActivePositions(gripper_group_,std::vector<double>{empty_hand_test_?frozen_hand_position_:close_});holding.update();
+    double minimum=std::numeric_limits<double>::infinity();
+    eachPlacementBound(holding,low,carry,[&](const auto& corners) {
+      for(const auto& point:corners)minimum=std::min(minimum,point.z());return true;
+    });
+    const double tower_top=stack_surface_z_+block_.z()*(layer-1);
+    T high=low;
+    high.translation().z()+=std::max(placement_clearance_,tower_top+placement_clearance_-minimum);
+    return high;
+  }
+  bool placementTransitClear(const State& state)const {
+    const T tcp=world_frame_.inverse()*state.getGlobalLinkTransform(tcp_);
+    // During the crossing every finger/body/cube bound must clear the tower.
+    // Before the lift, allow low transit only outside a padded tower footprint.
+    const Eigen::Vector3d half=rotation_.cwiseAbs()*block_/2.;
+    return eachPlacementBound(state,tcp,carry_fixed_,[&](const auto& corners) {
+      Eigen::Vector3d low=Eigen::Vector3d::Constant(std::numeric_limits<double>::infinity()),high=-low;
+      for(const auto& point:corners){low=low.cwiseMin(point);high=high.cwiseMax(point);}
+      if(placement_crossing_)return low.z()>=placement_tower_top_+placement_clearance_-.002;
+      return high.x()<targetXY().x()-half.x()-.01||low.x()>targetXY().x()+half.x()+.01||
+             high.y()<targetXY().y()-half.y()-.01||low.y()>targetXY().y()+half.y()+.01||
+             low.z()>=placement_tower_top_+.02;
+    });
+  }
+  void planPlacementTransit(const T& target,int layer,const std::string& label) {
+    State original(scene_->getCurrentState());original.update();const auto count=steps_.size();
+    const T start=world_frame_.inverse()*original.getGlobalLinkTransform(tcp_);
+    std::vector<Eigen::Vector2d> staging{start.translation().head<2>()};
+    Eigen::Vector2d outward=targetXY()-(world_frame_.inverse()*original.getGlobalLinkTransform("base_link")).translation().head<2>();
+    if(outward.norm()<1e-8)outward=Eigen::Vector2d::UnitX();outward.normalize();
+    const double away=std::atan2(-outward.y(),-outward.x());
+    for(double radius:{.10,.14,.18})for(int turn=0;turn<8;++turn)
+      staging.push_back(targetXY()+radius*Eigen::Vector2d(std::cos(away+turn*PI/4.),std::sin(away+turn*PI/4.)));
+    placement_tower_top_=stack_surface_z_+block_.z()*(layer-1);
+    for(const auto& xy:staging) {
+      checkStop();scene_->setCurrentState(original);steps_.resize(count);
+      placement_transit_check_=true;placement_crossing_=false;
+      try {
+        T stage=start;stage.translation().head<2>()=xy;stage.linear()=target.linear();
+        // At high layers a top-down hand may be unreachable. Reorient outside
+        // the padded tower first, then lift and cross with a fixed orientation.
+        if((xy-start.translation().head<2>()).norm()>1e-6||
+           Eigen::Quaterniond(start.linear()).angularDistance(Eigen::Quaterniond(stage.linear()))>1e-6)
+          planFree(stage,label+" outside tower staging");
+        // Turning the hand can lower a corner even at a fixed TCP height.
+        // Bound the entire orientation interpolation before choosing the lift.
+        double relative_minimum=std::numeric_limits<double>::infinity();
+        const Eigen::Quaterniond first(stage.linear()),last(target.linear());
+        for(int sample=0;sample<=90;++sample) {
+          T probe=T::Identity();probe.linear()=first.slerp(sample/90.,last).toRotationMatrix();
+          eachPlacementBound(original,probe,carry_fixed_,[&](const auto& corners) {
+            for(const auto& point:corners)relative_minimum=std::min(relative_minimum,point.z());return true;
+          });
+        }
+        T up=stage;up.translation().z()=std::max({start.translation().z(),target.translation().z(),
+          placement_tower_top_+placement_clearance_-relative_minimum+.002});
+        planStraight(up,label+" above tower raise");
+        placement_crossing_=true;
+        T across=target;across.translation().z()=up.translation().z();
+        // Deliberately no direct/OMPL shortcut across the growing tower.
+        planStraight(across,label+" above tower crossing");
+        if(up.translation().z()>target.translation().z()+1e-6)planStraight(target,label+" above tower alignment");
+        placement_crossing_=placement_transit_check_=false;
+        RCLCPP_INFO(logger_,"STACK_RAISED_PLACEMENT layer=%d tower_top=%.4f pre_z=%.4f clearance=%.3f",layer,
+          placement_tower_top_,target.translation().z(),placement_clearance_);return;
+      }catch(const std::exception& error) {
+        placement_crossing_=placement_transit_check_=false;checkStop();
+        RCLCPP_WARN(logger_,"STACK_RAISED_RETRY layer=%d stage=%.3f,%.3f reason=%s",layer,xy.x(),xy.y(),error.what());
+      }
+    }
+    scene_->setCurrentState(original);steps_.resize(count);
+    throw std::runtime_error("Cannot clear the tower before placement: "+label);
   }
   std::pair<T,T> planPlacement(const std::string& object,const std::string& support,int layer,const std::string& label) {
     State original(scene_->getCurrentState());auto acm=scene_->getAllowedCollisionMatrix();const auto count=steps_.size();
@@ -1070,7 +1351,9 @@ private:
       checkStop();scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
       try {
         State probe(original);if(!solve(candidate.second,probe))continue;
-        planFree(candidate.second,label+" side approach");
+        const T high=raisedPlacement(candidate.second,layer,carry_fixed_);
+        planPlacementTransit(high,layer,label);
+        planStraight(candidate.second,label+" side descend outside tower");
         supportContact(object,support); // Only the final insertion may touch its support.
         planStraight(candidate.first,label+" horizontal insert");
         placed_cube_=candidate.first*carry_fixed_;
@@ -1083,11 +1366,23 @@ private:
     }
     scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
     if(!vertical&&layer>vertical_fallback_)throw std::runtime_error("No collision-free side placement: "+label);
-    supportContact(object,support);
-    T place=at(targetXY(),stack_surface_z_+block_.z()*(layer-1)+grip_height_);
-    auto result=planApproach(place,place.translation().z()+clearance_,label);
-    placed_cube_=result.first*carry_fixed_;
-    RCLCPP_INFO(logger_,"STACK_PLACEMENT layer=%d mode=vertical",layer);return result;
+    T place=at(targetXY(),stack_surface_z_+block_.z()*(layer-1)+grip_height_+release_lift_);
+    for(int turn=0;turn<4;++turn) {
+      checkStop();scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
+      T low=place;low.linear()=Eigen::AngleAxisd(turn*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*place.linear();
+      try {
+        const T high=raisedPlacement(low,layer,carry_fixed_);
+        planPlacementTransit(high,layer,label);
+        // Only the final straight descent may touch the intended support.
+        supportContact(object,support);
+        planStraight(low,label+" descend");
+        placed_cube_=low*carry_fixed_;
+        RCLCPP_INFO(logger_,"STACK_PLACEMENT layer=%d mode=vertical pre_z=%.4f",layer,high.translation().z());
+        return {low,high};
+      }catch(const std::exception& error){checkStop();RCLCPP_WARN(logger_,"STACK_VERTICAL_RETRY layer=%d yaw=%d reason=%s",layer,turn*90,error.what());}
+    }
+    scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
+    throw std::runtime_error("No collision-free raised vertical placement: "+label);
   }
   void checkTowerReach(const State& measured,int required) {
     State seed(measured);seed.setToDefaultValues(arm_group_,parameter<std::string>(node_,"home_pose","home"));
@@ -1099,15 +1394,18 @@ private:
     T carry=nominal_tcp.inverse()*nominal_cube;
     int maximum=foundationLayers();
     for(int layer=foundationLayers()+1;layer<=required;++layer) {
-      checkStop();T target=at(targetXY(),stack_surface_z_+block_.z()*(layer-1)+grip_height_+clearance_);
+      checkStop();T target=at(targetXY(),stack_surface_z_+block_.z()*(layer-1)+grip_height_+release_lift_);
       bool reached=false;
       const bool vertical=usesVerticalPlacement(layer);
       if(!vertical)for(const auto& candidate:sideCandidates(layer,carry)) {
-        State probe(seed);if(solve(candidate.second,probe)&&solve(candidate.first,probe)){seed=probe;reached=true;break;}
+        State probe(seed);if(solve(raisedPlacement(candidate.second,layer,carry),probe)&&
+          solve(candidate.second,probe)&&solve(candidate.first,probe)){seed=probe;reached=true;break;}
       }
       if(!reached&&(vertical||layer<=vertical_fallback_))for(int turn=0;turn<4;++turn) {
         T candidate=target;candidate.linear()=Eigen::AngleAxisd(turn*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*target.linear();
-        if(solve(candidate,seed)){reached=true;break;}
+        State probe(seed);if(solve(raisedPlacement(candidate,layer,carry),probe)&&solve(candidate,probe)){
+          seed=probe;reached=true;break;
+        }
       }
       if(!reached) {
         State probe(seed);T goal=world_frame_*target*tip_tcp_.inverse();
@@ -1223,14 +1521,14 @@ private:
     Step step;step.label=label;step.hand=hand;step.phase=phase;
     step.velocity_scaling=velocity;step.acceleration_scaling=acceleration;
     trajectory.getRobotTrajectoryMsg(step.trajectory);
-    if(!recipe_file_.empty()) {
+    if(captureRecipe()) {
       scene_->getPlanningSceneMsg(step.before_scene);
       step.start_joints=recipeJoints(trajectory.getFirstWayPoint());
       step.end_joints=recipeJoints(trajectory.getLastWayPoint());
     }
     if((empty_xy_scan_||plate_alignment_)&&scan_floor_check_)scan_minimum_z_=std::min(scan_minimum_z_,verified_minimum);
     scene_->setCurrentState(trajectory.getLastWayPoint());
-    if(!recipe_file_.empty())scene_->getPlanningSceneMsg(step.after_scene);
+    if(captureRecipe())scene_->getPlanningSceneMsg(step.after_scene);
     steps_.push_back(std::move(step));
   }
   void planStraight(const T& target,const std::string& label) {
@@ -1293,6 +1591,16 @@ private:
     request.allowed_planning_time=5.;request.num_planning_attempts=2;
     moveit::core::robotStateToRobotStateMsg(current,request.start_state);
     request.goal_constraints.push_back(kinematic_constraints::constructGoalConstraints(goal,arm_group_,.0001));
+    if(physical_stack_) {
+      const auto& wrist=arm_group_->getActiveJointModelNames().back();
+      const auto& bounds=model_->getVariableBounds(wrist);
+      if(bounds.position_bounded_) {
+        moveit_msgs::msg::JointConstraint margin;margin.joint_name=wrist;
+        margin.position=(bounds.min_position_+bounds.max_position_)/2.;
+        margin.tolerance_above=margin.tolerance_below=(bounds.max_position_-bounds.min_position_)/2.-PHYSICAL_WRIST_MARGIN;
+        margin.weight=1.;request.path_constraints.joint_constraints.push_back(margin);
+      }
+    }
     moveit_msgs::msg::OrientationConstraint orientation;orientation.header.frame_id=frame_;orientation.link_name=approach_;
     orientation.orientation=pose(target*tcp_approach_).orientation;
     orientation.absolute_x_axis_tolerance=.005;orientation.absolute_y_axis_tolerance=.005;
@@ -1323,6 +1631,11 @@ private:
       int count=std::max(1,static_cast<int>(std::ceil(largest/.05)));
       for(int k=1;k<=count;++k){State sample(a);a.interpolate(b,static_cast<double>(k)/count,sample);sample.update();dense.addSuffixWayPoint(sample,0.);}
     }
+    // OMPL may stop within its joint-goal tolerance instead of at the exact
+    // posture. A reverse-IK Cartesian descent starts at that exact posture;
+    // include the short connection here and let save() time/collision-check
+    // it, rather than exporting a discontinuity between physical commands.
+    dense.addSuffixWayPoint(goal,0.);
     RCLCPP_INFO(logger_,"STACK_ROUTE strategy=OMPL label=%s",label.c_str());save(dense,label);
   }
   void planHand(double goal,const std::string& label) {
@@ -1406,10 +1719,12 @@ private:
     if(!stream||std::rename(temporary.c_str(),file.c_str())!=0)
       throw std::runtime_error("Cannot persist full stacking recipe message: "+file.string());
   }
-  void exportRecipe()const {
-    if(recipe_file_.empty()||mode_!="plan"||empty_hand_test_||plate_alignment_||empty_xy_scan_||steps_.empty()||!initial_state_)
+  bool captureRecipe()const{return !recipe_file_.empty()||!archive_directory_.empty();}
+  void exportRecipe(const std::string& filename,bool archived_run=false)const {
+    const bool allowed=archived_run?(mode_=="run"&&simulation_backend_=="gazebo"&&!archive_directory_.empty()):mode_=="plan";
+    if(filename.empty()||!allowed||empty_hand_test_||plate_alignment_||empty_xy_scan_||steps_.empty()||!initial_state_)
       throw std::runtime_error("A full non-executing stacking plan is required for recipe export");
-    const std::filesystem::path manifest=std::filesystem::absolute(recipe_file_);
+    const std::filesystem::path manifest=std::filesystem::absolute(filename);
     const auto folder=manifest.parent_path();std::filesystem::create_directories(folder);
     const auto prefix=manifest.stem().string();
     if(prefix.empty())throw std::runtime_error("Recipe manifest needs a filename");
@@ -1431,6 +1746,17 @@ private:
     strings(out,joint_names);out<<",\"initial_joints\":";numbers(out,recipeJoints(*initial_state_));
     out<<",\"target_cell\":"<<target_<<",\"foundation_layers\":"<<foundationLayers()
        <<",\"moves\":"<<total_<<",\"layers\":"<<total_+foundationLayers()
+       <<",\"routing_policy\":\"open_gripper_buffer_v1\",\"transport_moves\":"<<transport_total_
+       <<",\"buffer_moves\":"<<transport_total_-total_
+       <<",\"source_cells\":[";
+    bool separator=false;
+    for(int id=1;id<=columns_*rows_;++id)if((independent_target_||id!=target_)&&!obstacles_.count(id)&&!empty_.count(id)) {
+      if(separator)out<<',';out<<id;separator=true;
+    }
+    out<<']'
+       <<",\"placement_policy\":\"raised_tower_clearance_v1\",\"placement_mode\":"<<jsonString(placement_mode_)
+       <<",\"vertical_placement_layers\":"<<vertical_placement_layers_
+       <<",\"placement_approach_clearance\":"<<placement_clearance_
        <<",\"gripper_open_position\":"<<open_<<",\"gripper_grasp_position\":"<<close_
        <<",\"release_first_position\":"<<release_first_<<",\"release_clearance_position\":"<<release_clearance_
        <<",\"staged_release_enabled\":"<<(staged_release_?"true":"false")
@@ -1455,6 +1781,8 @@ private:
       out<<",\"end_joints\":";numbers(out,step.end_joints);
       out<<",\"velocity_scaling\":"<<step.velocity_scaling<<",\"acceleration_scaling\":"<<step.acceleration_scaling
          <<",\"completed\":"<<step.completed;
+      if(step.phase=="place")out<<",\"block_id\":"<<step.block<<",\"destination_cell\":"<<step.destination
+        <<",\"temporary\":"<<(step.temporary?"true":"false");
       if(step.hand)out<<",\"hand_target\":"<<step.end_joints.back();
       if(!step.event) {
         const auto& duration=step.trajectory.joint_trajectory.points.back().time_from_start;
@@ -1470,17 +1798,220 @@ private:
     RCLCPP_INFO(logger_,"STACK_RECIPE_SAVED file=%s steps=%zu grasp=%.3f release=%.3f,%.3f approach_velocity=%.3f transfer_velocity=%.3f approach_acceleration=%.3f transfer_acceleration=%.3f",
       manifest.c_str(),steps_.size(),close_,release_first_,release_clearance_,approach_vel_,transfer_vel_,approach_acc_,transfer_acc_);
   }
+  void writeArchiveText(const std::string& name,const std::string& text,bool append=false)const {
+    const auto file=std::filesystem::path(archive_directory_)/name;
+    const auto output=append?file:std::filesystem::path(file.string()+".tmp");
+    std::ofstream stream(output,std::ios::binary|(append?std::ios::app:std::ios::trunc));stream<<text<<'\n';stream.close();
+    if(!stream||(!append&&std::rename(output.c_str(),file.c_str())!=0))
+      throw std::runtime_error("Cannot persist execution archive: "+file.string());
+  }
+  void writeArchiveResult(const std::string& state)const {
+    writeArchiveText("execution_result.json","{\"schema\":1,\"backend\":\"gazebo\",\"status\":"+jsonString(state)+
+      ",\"plan_id\":"+jsonString(plan_id_)+",\"target_cell\":"+std::to_string(target_)+
+      ",\"completed_moves\":"+std::to_string(archive_completed_moves_)+
+      ",\"layers\":"+std::to_string(archive_completed_moves_+foundationLayers())+
+      ",\"completed_commands\":"+std::to_string(archive_completed_commands_)+"}");
+  }
+  std::string commandPrefix(std::size_t index)const {
+    std::ostringstream out;out<<"command_"<<std::setw(4)<<std::setfill('0')<<index;return out.str();
+  }
+  void recordArchiveDispatch(std::size_t index,const Step& step,const robot_trajectory::RobotTrajectory& path,const State& start) {
+    if(archive_directory_.empty())return;
+    const auto prefix=commandPrefix(index);moveit_msgs::msg::RobotTrajectory message;path.getRobotTrajectoryMsg(message);
+    moveit_msgs::msg::RobotState initial;moveit::core::robotStateToRobotStateMsg(start,initial);
+    writeRecipeMessage(std::filesystem::path(archive_directory_)/(prefix+".cdr"),message);
+    writeRecipeMessage(std::filesystem::path(archive_directory_)/(prefix+"_start_state.cdr"),initial);
+    const std::string endpoint=step.hand?"/dh_ag95_gripper_controller/gripper_cmd":"/ur5e_arm_controller/follow_joint_trajectory";
+    writeArchiveText("commands.jsonl","{\"event\":\"dispatched\",\"index\":"+std::to_string(index)+
+      ",\"label\":"+jsonString(step.label)+",\"kind\":"+jsonString(step.hand?"hand":"arm")+
+      ",\"file\":"+jsonString(prefix+".cdr")+",\"start_state_file\":"+jsonString(prefix+"_start_state.cdr")+
+      ",\"action_endpoint\":"+jsonString(endpoint)+",\"goal_time_tolerance_seconds\":5,\"gripper_max_effort_nm\":"+
+      std::to_string(step.hand?parameter<double>(node_,"gazebo_gripper_max_effort",1.2):0.)+"}",true);
+  }
+  void recordArchiveCompleted(std::size_t index) {
+    if(archive_directory_.empty())return;
+    const auto prefix=commandPrefix(index);auto measured=measuredState(3.);
+    moveit_msgs::msg::RobotState state;moveit::core::robotStateToRobotStateMsg(*measured,state);
+    writeRecipeMessage(std::filesystem::path(archive_directory_)/(prefix+"_end_state.cdr"),state);
+    writeArchiveText("commands.jsonl","{\"event\":\"completed\",\"index\":"+std::to_string(index)+
+      ",\"end_state_file\":"+jsonString(prefix+"_end_state.cdr")+"}",true);
+    ++archive_completed_commands_;
+  }
   void checkMockHardware() {
     auto client=node_->create_client<controller_manager_msgs::srv::ListHardwareComponents>("/controller_manager/list_hardware_components");
     if(!client->wait_for_service(std::chrono::seconds(5)))throw std::runtime_error("Simulation hardware status service is unavailable");
     auto future=client->async_send_request(std::make_shared<controller_manager_msgs::srv::ListHardwareComponents::Request>());
     if(future.wait_for(std::chrono::seconds(5))!=std::future_status::ready)throw std::runtime_error("Simulation hardware status timed out");
     std::set<std::string> covered;
+    const std::string expected=simulation_backend_=="gazebo"?"gazebo_ros2_control/GazeboSystem":"mock_components/GenericSystem";
+    std::set<std::string> gazebo_components;
+    if(simulation_backend_=="gazebo") {
+      // Humble's imported Gazebo resource manager may omit class_type.
+      // Resolve only that empty field from the description already matched
+      // byte-for-byte with the running model publisher.
+      for(const auto& hardware:hardware_interface::parse_control_resources_from_urdf(
+            node_->get_parameter("robot_description").as_string()))
+        if(hardware.type=="system"&&hardware.hardware_class_type==expected)gazebo_components.insert(hardware.name);
+    }
     const auto response=future.get();
-    for(const auto& hardware:response->component)if(hardware.class_type=="mock_components/GenericSystem"&&hardware.state.id==3)
-      for(const auto& command:hardware.command_interfaces)if(command.is_claimed)covered.insert(command.name);
+    for(const auto& hardware:response->component) {
+      const bool imported=simulation_backend_=="gazebo"&&hardware.class_type.empty()&&gazebo_components.count(hardware.name);
+      if(hardware.state.id!=3||(hardware.class_type!=expected&&!imported))continue;
+      for(const auto& command:hardware.command_interfaces)if(command.is_claimed&&command.is_available)covered.insert(command.name);
+    }
     auto names=arm_group_->getActiveJointModelNames();names.push_back(hand_joint_);
-    for(const auto& name:names)if(!covered.count(name+"/position"))throw std::runtime_error("RViz stacking runs only on active mock_components/GenericSystem; physical hardware execution refused");
+    for(const auto& name:names) {
+      const std::string interface=simulation_backend_=="gazebo"&&name==hand_joint_?"/effort":"/position";
+      if(!covered.count(name+interface))throw std::runtime_error("Stacking requires active "+expected+" and claimed "+name+interface+"; physical hardware execution refused");
+    }
+  }
+
+  void measuredGazeboHand(robot_trajectory::RobotTrajectory& path,const State& measured,
+                          const planning_scene::PlanningScenePtr& live) {
+    const double start=measured.getVariablePosition(hand_joint_);
+    const double goal=path.getLastWayPoint().getVariablePosition(hand_joint_);
+    path.clear();const int count=std::max(1,static_cast<int>(std::ceil(std::abs(goal-start)/.005)));
+    for(int i=0;i<=count;++i) {
+      State sample(measured);sample.setJointGroupActivePositions(gripper_group_,std::vector<double>{start+(goal-start)*i/count});sample.update();
+      if(!sample.satisfiesBounds(gripper_group_)||live->isStateColliding(sample,"",false))
+        throw std::runtime_error("Measured Gazebo gripper sweep collides");
+      path.addSuffixWayPoint(sample,0.);
+    }
+    trajectory_processing::IterativeParabolicTimeParameterization timing;
+    if(!timing.computeTimeStamps(path,.4,.4))throw std::runtime_error("Gazebo gripper timing failed");
+    if(path.getDuration()<.1)path.setWayPointDurationFromPrevious(path.getWayPointCount()-1,.1);
+  }
+
+  template<class Action>
+  typename rclcpp_action::ClientGoalHandle<Action>::WrappedResult gazeboAction(
+      const typename Action::Goal& goal,const std::string& endpoint,double seconds) {
+    const double sim_min=parameter<double>(node_,"gazebo_motion_sim_timeout",30.);
+    const double wall_min=parameter<double>(node_,"gazebo_motion_wall_timeout",300.);
+    if(!std::isfinite(sim_min)||sim_min<=0.||!std::isfinite(wall_min)||wall_min<=0.||
+       !std::isfinite(seconds)||seconds<0.)throw std::runtime_error("Invalid Gazebo motion time limits");
+    const auto clock=node_->get_clock();
+    if(!clock->ros_time_is_active()||clock->now().nanoseconds()<=0)
+      throw std::runtime_error("Gazebo motion requires an active simulation clock");
+    auto client=rclcpp_action::create_client<Action>(node_,endpoint);
+    if(!client->wait_for_action_server(std::chrono::seconds(5)))throw std::runtime_error("Gazebo action unavailable: "+endpoint);
+    auto sent=client->async_send_goal(goal);
+    if(sent.wait_for(std::chrono::seconds(5))!=std::future_status::ready) {
+      client->async_cancel_all_goals();
+      throw std::runtime_error("Gazebo goal acknowledgement timed out: "+endpoint);
+    }
+    auto handle=sent.get();if(!handle)throw std::runtime_error("Gazebo controller rejected goal: "+endpoint);
+    // A concurrent stop may already have completed the goal. Repeating cancel
+    // must not replace the original stopped/timeout result with UnknownGoalHandle.
+    auto cancel=[client,handle]{try {client->async_cancel_goal(handle);}catch(const std::exception&) {}};
+    {std::lock_guard<std::mutex> lock(gazebo_cancel_mutex_);gazebo_cancel_=cancel;}
+    auto clear=[this]{std::lock_guard<std::mutex> lock(gazebo_cancel_mutex_);gazebo_cancel_={};};
+    try {
+      auto result=client->async_get_result(handle);
+      const auto sim_start=clock->now();auto previous=sim_start;
+      const auto wall_start=std::chrono::steady_clock::now();auto last_log=wall_start;
+      const double sim_limit=std::max(sim_min,2.*seconds+10.);
+      const double wall_limit=std::max(wall_min,20.*seconds+10.);
+      while(result.wait_for(std::chrono::milliseconds(20))!=std::future_status::ready) {
+        if(cancelled_.load()||!rclcpp::ok()) {
+          cancel();result.wait_for(std::chrono::seconds(5));
+          throw std::runtime_error("Gazebo motion stopped: "+endpoint);
+        }
+        const auto now=clock->now();
+        if(now<previous)throw std::runtime_error("Gazebo clock moved backwards during motion; reset the scene before retrying");
+        previous=now;const double sim_elapsed=(now-sim_start).seconds();
+        const auto wall_now=std::chrono::steady_clock::now();
+        const double wall_elapsed=std::chrono::duration<double>(wall_now-wall_start).count();
+        if(sim_elapsed>=sim_limit||wall_elapsed>=wall_limit)
+          throw std::runtime_error("Gazebo motion timed out: "+endpoint+
+            " sim_elapsed="+std::to_string(sim_elapsed)+"s wall_elapsed="+std::to_string(wall_elapsed)+"s");
+        if(wall_now-last_log>=std::chrono::seconds(5)) {
+          RCLCPP_INFO(logger_,"STACK_GAZEBO_WAITING action=%s sim_elapsed=%.3f wall_elapsed=%.3f",
+            endpoint.c_str(),sim_elapsed,wall_elapsed);last_log=wall_now;
+        }
+      }
+      auto reply=result.get();clear();
+      if(reply.code!=rclcpp_action::ResultCode::SUCCEEDED)throw std::runtime_error("Gazebo controller did not complete: "+endpoint);
+      RCLCPP_INFO(logger_,"STACK_GAZEBO_COMPLETED action=%s sim_elapsed=%.3f wall_elapsed=%.3f",
+        endpoint.c_str(),(clock->now()-sim_start).seconds(),
+        std::chrono::duration<double>(std::chrono::steady_clock::now()-wall_start).count());
+      return reply;
+    }catch(...){cancel();clear();throw;}
+  }
+
+  void executeGazebo(const Step& step,const robot_trajectory::RobotTrajectory& path) {
+    if(step.hand) {
+      control_msgs::action::GripperCommand::Goal goal;
+      goal.command.position=path.getLastWayPoint().getVariablePosition(hand_joint_);
+      goal.command.max_effort=parameter<double>(node_,"gazebo_gripper_max_effort",1.2);
+      if(!std::isfinite(goal.command.max_effort)||goal.command.max_effort<=0.||goal.command.max_effort>2.)
+        throw std::runtime_error("Invalid Gazebo gripper effort limit");
+      const auto result=gazeboAction<control_msgs::action::GripperCommand>(goal,"/dh_ag95_gripper_controller/gripper_cmd",path.getDuration());
+      if(!result.result->reached_goal&&!result.result->stalled)throw std::runtime_error("Gazebo gripper completion was not confirmed");
+      if(step.label.rfind("Close on block ",0)!=0&&
+         std::abs(measuredState(3.)->getVariablePosition(hand_joint_)-goal.command.position)>.015)
+        throw std::runtime_error("Gazebo gripper opening/preparation did not reach its target");
+    }else {
+      control_msgs::action::FollowJointTrajectory::Goal goal;
+      moveit_msgs::msg::RobotTrajectory message;path.getRobotTrajectoryMsg(message);goal.trajectory=message.joint_trajectory;
+      goal.goal_time_tolerance.sec=5;
+      const auto result=gazeboAction<control_msgs::action::FollowJointTrajectory>(goal,"/ur5e_arm_controller/follow_joint_trajectory",path.getDuration());
+      if(result.result->error_code!=0)throw std::runtime_error("Gazebo arm controller failed: "+result.result->error_string);
+    }
+  }
+
+  void settleGazeboArm(const State& goal) {
+    const double sim_timeout=parameter<double>(node_,"gazebo_arm_settle_sim_timeout",15.);
+    const double max_sim_timeout=parameter<double>(node_,"gazebo_arm_settle_max_sim_timeout",45.);
+    const double wall_timeout=parameter<double>(node_,"gazebo_arm_settle_wall_timeout",300.);
+    gazebo_settling::Budget budget(sim_timeout,max_sim_timeout,wall_timeout);
+    const auto clock=node_->get_clock();const auto sim_start=clock->now();auto previous=sim_start;
+    if(!clock->ros_time_is_active()||sim_start.nanoseconds()<=0)
+      throw std::runtime_error("Gazebo arm settling requires an active simulation clock");
+    const auto wall_start=std::chrono::steady_clock::now();auto last_log=wall_start;
+    while(true) {
+      checkStop();auto measured=measuredState(3.);double largest=0.;std::string worst;
+      for(const auto& name:arm_group_->getActiveJointModelNames()) {
+        const double error=std::abs(measured->getVariablePosition(name)-goal.getVariablePosition(name));
+        if(error>largest){largest=error;worst=name;}
+      }
+      const auto now=clock->now();
+      if(now<previous)throw std::runtime_error("Gazebo clock moved backwards during motion; reset the scene before retrying");
+      previous=now;const double sim_elapsed=(now-sim_start).seconds();
+      const auto wall_now=std::chrono::steady_clock::now();
+      const double wall_elapsed=std::chrono::duration<double>(wall_now-wall_start).count();
+      const auto decision=budget.observe(sim_elapsed,wall_elapsed,largest);
+      if(decision==gazebo_settling::Result::settled) {
+        RCLCPP_INFO(logger_,"STACK_GAZEBO_SETTLED error=%.6f sim_elapsed=%.3f wall_elapsed=%.3f",
+          largest,sim_elapsed,wall_elapsed);return;
+      }
+      if(decision==gazebo_settling::Result::simulation_timeout||decision==gazebo_settling::Result::wall_timeout)
+        throw std::runtime_error("Gazebo arm did not settle within 0.005rad: joint="+worst+
+          " error="+std::to_string(largest)+"rad sim_elapsed="+std::to_string(sim_elapsed)+
+          "s wall_elapsed="+std::to_string(wall_elapsed)+"s ("+
+          (decision==gazebo_settling::Result::simulation_timeout?"simulation convergence/maximum":"wall-clock watchdog")+" timeout)");
+      if(decision==gazebo_settling::Result::extended)
+        RCLCPP_INFO(logger_,"STACK_GAZEBO_SETTLE_EXTENDED joint=%s error=%.6f sim_elapsed=%.3f next_deadline=%.3f maximum=%.3f",
+          worst.c_str(),largest,sim_elapsed,budget.deadline(),max_sim_timeout);
+      if(wall_now-last_log>=std::chrono::seconds(5)) {
+        RCLCPP_INFO(logger_,"STACK_GAZEBO_SETTLING joint=%s error=%.6f sim_elapsed=%.3f wall_elapsed=%.3f",
+          worst.c_str(),largest,sim_elapsed,wall_elapsed);last_log=wall_now;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    }
+  }
+
+  void observeGazeboBlock(const std::string& id,const Eigen::Vector3d& expected,const std::string& stage) {
+    if(id.rfind(PREFIX+"block_",0)!=0)throw std::runtime_error("Invalid Gazebo block observation");
+    auto client=node_->create_client<gazebo_msgs::srv::GetEntityState>("/gazebo/get_entity_state");
+    auto request=std::make_shared<gazebo_msgs::srv::GetEntityState::Request>();
+    request->name="ur5e_stack_"+id.substr(PREFIX.size());request->reference_frame="world";
+    const auto reply=callService(client,request,std::chrono::seconds(5));
+    const auto& p=reply->state.pose.position;Eigen::Vector3d actual(p.x,p.y,p.z);
+    const double error=(actual-expected).norm();
+    if(!reply->success||!actual.allFinite()||error>.010)
+      throw std::runtime_error("Gazebo "+stage+" not confirmed for "+id+" (position error "+std::to_string(error)+"m); physics scene preserved");
+    RCLCPP_INFO(logger_,"STACK_GAZEBO_OBSERVED stage=%s object=%s error=%.6f xyz=%.6f,%.6f,%.6f",
+      stage.c_str(),id.c_str(),error,p.x,p.y,p.z);
   }
   std::string approvePreview(const moveit_msgs::msg::DisplayTrajectory& preview,
       std::size_t index,std::size_t total,const std::string& label) {
@@ -1547,6 +2078,13 @@ private:
   }
   void execute() {
     int completed=0;status("RUNNING",0);
+    const Step* pending_placement=nullptr;std::string released_object;
+    auto placed=[&](const Step& step) {
+      completed=step.completed;
+      archive_completed_moves_=completed;
+      RCLCPP_INFO(logger_,"STACK_TRANSFER_COMPLETED block=%d destination=%d temporary=%d moved=%d",step.block,step.destination,step.temporary,completed);
+      status(step.temporary?"BUFFERED":"PLACED",completed);
+    };
     std::size_t motion_count=0;
     for(const auto& step:steps_)if(!step.event)++motion_count;
     if(!motion_count)throw std::runtime_error("No planned motion to execute");
@@ -1596,7 +2134,16 @@ private:
         if(alignment_stops_[index].after_segment==step_index+1)arrival_stop=index;
       }
       checkStop();
-      if(step.event){apply(step.diff);if(step.completed){completed=step.completed;status("PLACED",completed);}continue;}
+      if(step.event){
+        apply(step.diff);
+        if(step.phase=="place"){
+          if(simulation_backend_=="gazebo") {
+            pending_placement=&step;
+            for(const auto& object:step.diff.world.collision_objects)if(object.operation==object.ADD)released_object=object.id;
+          }else placed(step);
+        }
+        continue;
+      }
       ++motion_index;
       std::string approval;
       if(execution_mode_=="step") {
@@ -1614,18 +2161,42 @@ private:
       auto measured=measuredState(5.);
       auto live=readScene();State full(live->getCurrentState());full.setVariablePositions(measured->getVariablePositions());full.update();
       robot_trajectory::RobotTrajectory path(model_,step.hand?hand_group_:group_);path.setRobotTrajectoryMsg(full,step.trajectory);
-      if(full.distance(path.getFirstWayPoint(),step.hand?gripper_group_:arm_group_)>.02)throw std::runtime_error("Measured start changed; stacking stopped before "+step.label);
+      if(simulation_backend_=="gazebo"&&step.hand)measuredGazeboHand(path,full,live);
+      else if(full.distance(path.getFirstWayPoint(),step.hand?gripper_group_:arm_group_)>.02)throw std::runtime_error("Measured start changed; stacking stopped before "+step.label);
       if(!live->isPathValid(path,"",false))throw std::runtime_error("Live planning scene changed or path is blocked: "+step.label);
-      MGI::Plan plan;moveit::core::robotStateToRobotStateMsg(full,plan.start_state_);plan.trajectory_=step.trajectory;
+      MGI::Plan plan;moveit::core::robotStateToRobotStateMsg(full,plan.start_state_);path.getRobotTrajectoryMsg(plan.trajectory_);
       RCLCPP_INFO(logger_,"STACK_EXECUTING %s",step.label.c_str());
       checkStop();
+      recordArchiveDispatch(step_index+1,step,path,full);
+      checkStop();  // Stop may arrive while command data is being written.
       if(execution_mode_=="step")RCLCPP_INFO(logger_,"STACK_STEP_EXECUTING %s",approval.c_str());
       else if(motion_index==1||leaving_stop<alignment_stops_.size())
         RCLCPP_INFO(logger_,"STACK_STEP_EXECUTING %s",continuous_approval.c_str());
       executing_=true;
-      auto result=(step.hand?*hand_:*arm_).execute(plan);
+      auto result=moveit::core::MoveItErrorCode(moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
+      if(simulation_backend_=="gazebo")executeGazebo(step,path);
+      else result=(step.hand?*hand_:*arm_).execute(plan);
       executing_=false;
       if(result!=moveit::core::MoveItErrorCode::SUCCESS)throw std::runtime_error("Execution failed: "+step.label+" code="+std::to_string(result.val));
+      if(simulation_backend_=="gazebo") {
+        if(step.hand)std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        else {
+          settleGazeboArm(path.getLastWayPoint());
+          if(step.label.rfind("Lift block ",0)==0) {
+            const std::string id=blockId(std::stoi(step.label.substr(11)));
+            const auto* body=path.getLastWayPoint().getAttachedBody(id);
+            if(!body||body->getGlobalCollisionBodyTransforms().empty())throw std::runtime_error("Missing carried Gazebo block geometry");
+            observeGazeboBlock(id,(world_frame_.inverse()*body->getGlobalCollisionBodyTransforms().front()).translation(),"grasp/lift");
+          }
+          if(step.label.rfind("Retreat from layer ",0)==0&&pending_placement) {
+            auto current=readScene();const auto object=current->getWorld()->getObject(released_object);
+            if(!object||object->global_shape_poses_.empty())throw std::runtime_error("Missing placed Gazebo block geometry");
+            observeGazeboBlock(released_object,(world_frame_.inverse()*object->global_shape_poses_.front()).translation(),"placement");
+            placed(*pending_placement);pending_placement=nullptr;
+          }
+        }
+      }
+      recordArchiveCompleted(step_index+1);
       if(execution_mode_=="step")RCLCPP_INFO(logger_,"STACK_STEP_COMPLETED %s",approval.c_str());
       if(arrival_stop<alignment_stops_.size()) {
         // Every lowered X/Y hold retains its own approval boundary. Neither a
@@ -1644,6 +2215,8 @@ private:
         }
       }
     }
+    if(!archive_directory_.empty()&&completed!=static_cast<int>(total_))
+      throw std::runtime_error("Stacking ended before all target placements completed");
     if(execution_mode_=="continuous"&&!plate_alignment_)RCLCPP_INFO(logger_,"STACK_STEP_COMPLETED %s",continuous_approval.c_str());
     status("DONE",completed);RCLCPP_INFO(logger_,"STACK_SUCCESS moved=%d layers=%d target=%d",completed,completed+foundationLayers(),target_);
   }
@@ -1661,12 +2234,17 @@ private:
     markers_->publish(markers);
   }
   rclcpp::Node::SharedPtr node_;rclcpp::Logger logger_;
-  std::string mode_,execution_mode_,plan_id_,display_file_,recipe_file_,placement_mode_,group_,hand_group_,hand_joint_,frame_,tip_,tcp_,approach_,table_;
+  std::string mode_,execution_mode_,plan_id_,display_file_,recipe_file_,placement_mode_,group_,hand_group_,hand_joint_,frame_,tip_,tcp_,approach_,table_,simulation_backend_;
   std::size_t approval_sequence_=0;
+  std::string archive_directory_;
+  std::size_t archive_completed_commands_=0;
+  int archive_completed_moves_=0;
   std::vector<AlignmentStop> alignment_stops_;
   int target_,columns_,rows_,vertical_fallback_,vertical_placement_layers_;std::set<int> obstacles_,empty_;std::size_t total_=0;
-  double width_,height_,table_z_,grip_height_,clearance_,side_clearance_,vel_,acc_,open_,close_,step_,travel_z_;
-  bool split_speeds_=true,staged_release_=true;
+  double width_,height_,table_z_,grip_height_,clearance_,side_clearance_,vel_,acc_,open_,close_,step_,travel_z_,release_lift_;
+  double placement_clearance_=.12,placement_tower_top_=0.;
+  bool placement_transit_check_=false,placement_crossing_=false;
+  bool split_speeds_=true,staged_release_=true,physical_stack_=false;
   double approach_vel_=.05,transfer_vel_=.20,stack_acc_=.05,approach_acc_=.05,transfer_acc_=.20;
   double release_first_=.70,release_clearance_=.60;
   bool empty_hand_test_=false,empty_xy_scan_=false,scan_floor_check_=false;
@@ -1684,10 +2262,15 @@ private:
   std::atomic<planning_pipeline::PlanningPipeline*> pipeline_stop_{nullptr};
   const moveit::core::JointModelGroup* arm_group_=nullptr;const moveit::core::JointModelGroup* gripper_group_=nullptr;
   planning_scene::PlanningScenePtr scene_;std::shared_ptr<State> initial_state_;std::unique_ptr<planning_pipeline::PlanningPipeline> pipeline_;
+  planning_scene::PlanningScenePtr rearrangement_scene_;
+  std::map<std::string,bool> access_cache_;
+  std::map<std::pair<int,int>,std::vector<State>> grasp_cache_;
+  std::size_t transport_total_=0;
   rclcpp::Client<moveit_msgs::srv::GetPlanningScene>::SharedPtr get_;rclcpp::Client<moveit_msgs::srv::ApplyPlanningScene>::SharedPtr apply_;
   rclcpp::Publisher<moveit_msgs::msg::DisplayTrajectory>::SharedPtr display_;rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_;
   struct JointSample {double position;std::chrono::steady_clock::time_point received;};
   std::mutex feedback_mutex_;std::map<std::string,JointSample> feedback_;
+  std::mutex gazebo_cancel_mutex_;std::function<void()> gazebo_cancel_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr feedback_subscription_;
   moveit_msgs::msg::DisplayTrajectory planned_display_;
   moveit_msgs::msg::PlanningScene recipe_initial_scene_;

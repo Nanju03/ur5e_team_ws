@@ -128,19 +128,23 @@ def test_physical_stack_routes_to_reviewed_executor_and_preserves_support_height
     assert p['recipe_manifest_file'] == p['trajectory_file']
     assert p['workspace_clear'] is False and p['allow_mock_hardware'] is False
     assert p['gripper_open_position'] == .4 and p['gripper_grasp_position'] == .73
+    assert 'gripper_pregrasp_position' not in p
     assert p['release_first_position'] == .70 and p['release_clearance_position'] == .60
     assert p['approach_velocity_scaling'] == .05 and p['transfer_velocity_scaling'] == .20
     assert p['approach_acceleration_scaling'] == .05 and p['transfer_acceleration_scaling'] == .20
     assert p['split_stack_speeds'] is True
     assert p['velocity_scaling'] == .20 and p['acceleration_scaling'] == .05
+    assert p['vertical_placement_layers'] == 19
+    assert p['placement_approach_clearance'] == .12
 
 
 def test_verified_gripper_profile_cannot_override_the_requested_physical_recipe(prepare, monkeypatch):
     monkeypatch.setattr(module, 'load_calibration_profile', lambda **kwargs:
                         dict(gripper_open_position=.5, gripper_grasp_position=.78))
-    p = prepare('physical_plan', gripper_grasp_position=.9, release_first_position=.8)
+    p = prepare('physical_plan', gripper_grasp_position=.9, release_first_position=.8, gripper_pregrasp_position=.72)
     assert p['gripper_grasp_position'] == .73 and p['gripper_open_position'] == .4
     assert p['release_first_position'] == .70 and p['release_clearance_position'] == .60
+    assert 'gripper_pregrasp_position' not in p
 
 
 @pytest.mark.parametrize('mode', ['physical_plan', 'physical_run'])
@@ -152,6 +156,13 @@ def test_saved_uniform_speed_profile_cannot_override_physical_phase_acceleration
     assert p['approach_velocity_scaling'] == p['approach_acceleration_scaling'] == .05
     assert p['transfer_velocity_scaling'] == p['transfer_acceleration_scaling'] == .20
     assert p['stack_acceleration_scaling'] == .05
+
+
+@pytest.mark.parametrize('mode', ['physical_plan', 'physical_run'])
+def test_saved_old_transition_and_low_approach_cannot_override_physical_placement(prepare, mode):
+    p = prepare(mode, vertical_placement_layers=10, placement_approach_clearance=.04)
+    assert p['vertical_placement_layers'] == 19
+    assert p['placement_approach_clearance'] == .12
 
 
 @pytest.mark.parametrize('mode', ['scene', 'plan', 'reach', 'reset', 'dry_plan', 'dry_run', 'alignment_prepare'])

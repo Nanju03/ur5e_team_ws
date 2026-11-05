@@ -5,8 +5,9 @@
     obstacle_cells: []
     empty_cells: []  # Explicitly empty squares; all other non-obstacle squares contain blocks.
     obstacle_size_xyz: [0.025, 0.025, 0.150]  # 150 mm axis is vertical.
-    placement_mode: side  # Vertical through the layer below, then side placement.
-    vertical_placement_layers: 10  # Includes the foundation; 25 mm cubes reach a 250 mm tower top.
+    placement_mode: side  # Vertical through layer 19, then side placement from layer 20.
+    vertical_placement_layers: 19  # Physical layers, including the foundation block.
+    placement_approach_clearance: 0.120  # Lowest gripper/carried-block point above the existing tower during crossing.
     side_clearance: 0.060
     vertical_fallback_layers: 4  # Legacy side-failure fallback; the forced vertical section takes precedence.
     place_clearance: 0.040

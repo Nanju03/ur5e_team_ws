@@ -1,129 +1,119 @@
-# 다른 노트북에서 구성하기
+# 팀원 PC에 설치하기
 
-Ubuntu 22.04와 ROS 2 Humble을 기준으로 합니다. 이 저장소는 UR5e·AG95 드라이버의 수정본,
-사용자 로봇 모델, 플레이트 STL, MoveIt 설정, GUI·쌓기·복구 코드를 포함합니다.
-빌드 결과물과 저장된 실행 궤적 대신 소스에서 다시 빌드하고 실제 시작 자세에서 경로를 새로 계획합니다.
+[저장소 안내](../README.md) · [Gazebo](gazebo.md) · [실물](real_robot.md)
 
-## 1. 저장소와 설정 복사
+Ubuntu 22.04와 ROS 2 Humble을 사용합니다. 이 저장소의 UR·DH·serial 소스와 작업공간 설치 파일을 함께 사용합니다.
+현재 개발 PC는 **apt의 MoveIt 2.5.10**으로 검증했으며, 기존 `~/ws_moveit2` overlay를 자동으로 불러오지 않습니다.
+과거 MoveIt 소스 manifest는 참고용으로 보존합니다.
 
-ROS 2 Humble을 설치한 뒤 필요한 도구와 기본 ROS 패키지를 설치합니다.
+## 1. 소스 받기
+
+비공개 저장소에 팀원의 GitHub 계정이 초대되어 있어야 합니다. 초대를 수락하고 자신의 인증으로 clone합니다.
+
+```bash
+mkdir -p ~/ur5e_team_ws/src
+git clone https://github.com/Nanju03/ur5e_team_ws.git ~/ur5e_team_ws/src/ur5e
+cd ~/ur5e_team_ws/src/ur5e
+python3 scripts/install_workspace.py
+```
+
+설치기는 `workspace/` 파일을 작업공간 루트에 복사합니다. ROS·Gazebo·로봇은 시작하지 않습니다.
+기존 파일이 다르면 교체를 거절합니다. `--dry-run`으로 확인하고, 백업 후 교체하려면 `--overwrite`를 사용합니다.
+다른 경로에는 `--workspace /원하는/작업공간`으로 설치합니다.
+
+## 2. 의존성 설치
+
+ROS 2 Humble을 먼저 설치한 뒤 실행합니다.
 
 ```bash
 sudo apt update
-sudo apt install \
-  ros-humble-ur ros-humble-moveit \
-  ros-humble-ros2-control ros-humble-ros2-controllers \
-  ros-humble-xacro ros-humble-robot-state-publisher \
-  python3-colcon-common-extensions python3-rosdep python3-vcstool \
-  git build-essential cmake
-
-mkdir -p ~/ur5e_ws/src
-git clone https://github.com/gamsaon/ur5e.git ~/ur5e_ws/src/ur5e_ros2
-mkdir -p ~/ur5e_ws/robot_calibration
-cp ~/ur5e_ws/src/ur5e_ros2/workspace/physical_setup.yaml ~/ur5e_ws/
-cp ~/ur5e_ws/src/ur5e_ros2/workspace/robot_calibration/ur5e_20261031.yaml ~/ur5e_ws/robot_calibration/
-cp ~/ur5e_ws/src/ur5e_ros2/workspace/start_*.sh ~/ur5e_ws/
-chmod +x ~/ur5e_ws/start_*.sh
+sudo apt install git build-essential cmake python3-colcon-common-extensions python3-rosdep python3-vcstool python3-pytest python3-tk python3-numpy python3-yaml ros-humble-ur ros-humble-moveit ros-humble-gazebo-ros-pkgs ros-humble-gazebo-ros2-control ros-humble-ros2-control ros-humble-ros2-controllers ros-humble-xacro ros-humble-robot-state-publisher
 ```
 
-기존 작업공간의 설정을 유지할 노트북에서는 복사 전에 해당 파일을 보관합니다.
-보정 YAML은 개발에 사용한 **동일한 실물 UR5e**의 값입니다. 다른 로봇을 연결한다면
-그 로봇에서 추출한 보정값을 사용해야 합니다. 실물 받침 설정은 16mm·그리퍼 어댑터 없음입니다.
-
-rosdep을 처음 사용하는 노트북에서만 한 번 실행합니다.
-
-```bash
-sudo rosdep init
-```
-
-## 2. MoveIt 오버레이 재구성
-
-개발 노트북에서는 `~/ws_moveit2`의 MoveIt 소스를 먼저 불러왔습니다. 같은 소스 구성을
-재현하려면 포함한 manifest로 8개 저장소의 커밋을 고정합니다. 해당 저장소들은 업로드 시점에
-로컬 수정이 없었습니다. 설치된 Humble MoveIt만 사용하는 환경에서는 이 단계를 생략할 수
-있지만, 본 프로젝트의 실제 검증은 이 소스 오버레이와 함께 수행했습니다.
+rosdep을 처음 사용하는 PC에서만 `sudo rosdep init`을 한 번 실행합니다.
 
 ```bash
 source /opt/ros/humble/setup.bash
-mkdir -p ~/ws_moveit2/src
-cd ~/ws_moveit2
-vcs import src < ~/ur5e_ws/src/ur5e_ros2/workspace/moveit2_humble.repos
-for moveit_dependency in "$HOME"/ws_moveit2/src/*; do
-  if [ -d "$moveit_dependency/.git" ]; then
-    git -C "$moveit_dependency" submodule update --init --recursive
-  fi
-done
 rosdep update
-rosdep install --from-paths src --ignore-src --rosdistro humble -y
-colcon build --symlink-install --executor sequential --cmake-args -DCMAKE_BUILD_TYPE=Release
+cd ~/ur5e_team_ws
+rosdep install --from-paths src --ignore-src --rosdistro humble -y --skip-keys 'ament_python warehouse_ros_mongo'
+./check_dependencies.sh
+./build.sh
 ```
 
-Task Constructor의 두 하위 모듈도 위 순서에 포함됩니다. 핵심 apt 패키지의 개발 버전은
-[`environment_versions.txt`](../workspace/environment_versions.txt)에 기록했습니다.
-이 목록은 참고용이며 apt 패키지를 고정 설치하는 lockfile은 아닙니다.
-
-## 3. UR5e 작업공간 빌드
-
-새 터미널에서 기존 overlay 변수를 지우고 의도한 구성만 불러옵니다.
+`warehouse_ros_mongo`는 사용하지 않는 선택 기능이며, `ament_python` 빌드 지원은 colcon/setuptools를 사용합니다.
+Gazebo의 최근 controller manager에는 bridge **0.4.10 이상**을 사용합니다.
 
 ```bash
-unset AMENT_PREFIX_PATH COLCON_PREFIX_PATH CMAKE_PREFIX_PATH PYTHONPATH LD_LIBRARY_PATH
-source /opt/ros/humble/setup.bash
-if [ -f "$HOME/ws_moveit2/install/local_setup.bash" ]; then
-  source "$HOME/ws_moveit2/install/local_setup.bash"
-fi
-cd ~/ur5e_ws
-rosdep install --from-paths src --ignore-src --rosdistro humble -y
-colcon build --symlink-install
+dpkg-query -W ros-humble-gazebo-ros2-control ros-humble-controller-manager
 ```
 
-기존 ZIP의 `ur_description` overlay를 추가로 불러오지 않습니다. UR 모델의 메시는
-`ur_description`, AG95 메시는 저장소의 `dh_ag95_description`, 플레이트는
-`ur5e_block_description/meshes/cube_plate.STL`을 사용합니다.
-
-기본 경로는 `~/ur5e_ws`, `~/ws_moveit2`입니다. 복사한 스크립트에는 사용자 이름이 들어간
-절대 경로가 없으며, 필요하면 `UR5E_WS`, `MOVEIT_WS` 환경변수로 불러올 작업공간을 지정할
-수 있습니다. 일부 개인 설정·그리퍼 보정 결과의 기본 저장 위치는 여전히
-`~/ur5e_ws`이므로 같은 기본 디렉터리 구성을 권장합니다.
-
-## 4. 로봇 없이 화면과 모션 확인
+시스템 bridge가 0.4.7 등으로 남아 있으면 공식 패키지를 이 작업공간에만 풀어 사용할 수 있습니다.
+이 명령은 시스템 패키지를 교체하지 않습니다. apt가 0.4.10 이상을 제공해야 합니다.
 
 ```bash
-~/ur5e_ws/start_block_sim.sh
+./scripts/prepare_gazebo_compat.sh
 ```
 
-이 실행은 도메인 42의 GenericSystem과 GUI를 사용합니다. 실물 UR·그리퍼 드라이버를
-시작하지 않습니다. GUI에서 배치·계획·가상 실행을 선택하고 경로를 본 뒤 OK로 진행합니다.
+다운로드한 `.deb`·공유 라이브러리·`compat/`는 Git에 포함하지 않습니다.
+로컬 bridge는 Gazebo 시작 스크립트가 자동으로 적용합니다.
 
-## 5. 같은 실물 로봇 연결
+## 3. 가상 환경 검증
 
-네트워크·USB 장치 설정은 [실습 가이드](UR5e_DH_노트북_실습가이드.md)를 따릅니다.
-기본 로봇 IP는 `192.168.0.2`, 노트북 유선 IP는 `192.168.0.1`입니다.
-티치펜던트를 원격 제어 모드로 둡니다. 드라이버 초기화 시 그리퍼 손가락이 움직일 수 있습니다.
-
-터미널 1에서 드라이버와 계획 서버를 **한 번만** 실행합니다.
+빠른 설치 검사는 로봇 없는 domain 42를 사용합니다.
 
 ```bash
-~/ur5e_ws/start_block_robot.sh allow_execution:=true use_rviz:=false
+cd ~/ur5e_team_ws
+./check_setup.sh
 ```
 
-별도 터미널 2·3에서 뷰어와 GUI를 엽니다.
+Gazebo 접촉·물리 시험은 별도로 실행합니다.
 
 ```bash
-~/ur5e_ws/start_block_view.sh
+./start_block_gazebo.sh
+```
+
+[Gazebo 절차](gazebo.md)를 따릅니다. 대각선 전체 자동 시험은 기존 Gazebo를 종료한 뒤 시작합니다.
+
+```bash
+./test_block_diagonals.sh
+```
+
+[60가지 시험](gazebo_diagonal_tests.md)과 [저장 파일 형식](saved_paths.md)을 확인합니다.
+
+## 4. 실물 연결
+
+별도 터미널 세 개에서 각각 실행합니다.
+
+```bash
+cd ~/ur5e_team_ws
+./start_block_robot.sh allow_execution:=true use_rviz:=false
 ```
 
 ```bash
-~/ur5e_ws/start_block_gui.sh
+cd ~/ur5e_team_ws
+./start_block_view.sh
 ```
 
-이미 드라이버가 동작 중이면 연결 스크립트를 또 실행하지 않고 뷰어·GUI만 엽니다.
-실물 실행은 도메인 0을 사용합니다. 복사한 스크립트는 기존처럼 추가 launch 인수를 그대로
-전달합니다. 실제 GUI 작업·모서리 X/Y 맞춤·복구 절차는
-[`ur5e_block_bringup/README.md`](../ur5e_block_bringup/README.md)를 따릅니다.
+```bash
+cd ~/ur5e_team_ws
+./start_block_real_gui.sh
+```
 
-## 포함 범위
+로봇 IP·USB 권한·배치·승인·중단·복구는 [실물 사용법](real_robot.md)을 따릅니다.
+포함한 `robot_calibration/ur5e_20261031.yaml`은 기존 팀 UR5e의 값입니다.
+다른 로봇은 그 로봇에서 추출한 보정 파일을 사용합니다. 받침 16mm·어댑터 0mm도 현장과 일치해야 합니다.
+설치·빌드 과정은 실물 드라이버나 동작을 자동 시작하지 않습니다.
 
-빌드·설치 디렉터리, ROS 로그, 예전 실행 궤적·승인 토큰·현재 잡힘 복구 잠금은 옮기지 않습니다.
-작업 배치는 GUI에서 다시 저장하고 현재 모델·보정·시작 관절값으로 새로 계획합니다.
-검증 도구와 과거 결과가 별도로 포함돼 있더라도, 기록 당시 설정과 현재 명령 조건은 다를 수 있습니다.
+## 5. 코드 업데이트
+
+```bash
+cd ~/ur5e_team_ws/src/ur5e
+git pull --ff-only
+python3 scripts/install_workspace.py --overwrite
+cd ~/ur5e_team_ws
+./build.sh
+```
+
+기존 설치 사본은 변경될 때만 `.workspace_backups/`로 보관합니다.
+GUI를 다시 열고 배치와 경로를 새로 계획합니다. 로그·저장 궤적·로그인 정보는 공유 대상에 포함하지 않습니다.

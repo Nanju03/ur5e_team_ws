@@ -40,6 +40,7 @@ def start(context):
     if value('selection_file'):
         selection = yaml.safe_load(Path(value('selection_file')).expanduser().read_text())['/**']['ros__parameters']
         settings.update(selection)
+    settings.pop('gripper_pregrasp_position', None)  # Ignore saved narrow-entry settings.
     if settings.get('plate_enabled', False):
         if selection is not None and selection.get('geometry_profile') != PROFILE:
             raise ValueError('플레이트 좌표 형식이 바뀌었습니다. 새 GUI에서 배치를 저장하고 다시 계획하세요.')
@@ -63,6 +64,7 @@ def start(context):
             approach_velocity_scaling=.05, transfer_velocity_scaling=.20,
             stack_acceleration_scaling=.05, approach_acceleration_scaling=.05,
             transfer_acceleration_scaling=.20, velocity_scaling=.20, acceleration_scaling=.05,
+            vertical_placement_layers=19, placement_approach_clearance=.12,
             trajectory_file=value('trajectory_file'),
             recipe_manifest_file=value('recipe_manifest_file') or value('trajectory_file'),
             selection_file=value('selection_file'), calibration_file=value('calibration_file'),

@@ -1,9 +1,13 @@
 """Optional simulation-only riser; never edits the original URDF/SRDF files."""
 import xml.etree.ElementTree as ET
+import importlib.util
+from pathlib import Path
 from moveit_configs_utils import MoveItConfigsBuilder
 
 
-def make_model(riser_height=0., package="ur5e_ag95_moveit_config", robot="ur5e_on_box"):
+def make_model(riser_height=0., package="ur5e_ag95_moveit_config", robot="ur5e_on_box", simulation_backend="mock"):
+    if simulation_backend not in ("mock", "gazebo"):
+        raise ValueError("simulation_backend must be mock or gazebo")
     height = float(riser_height)
     if not 0 <= height <= .3:
         raise ValueError("riser_height must be between 0 and 0.3 m")
@@ -24,6 +28,8 @@ def make_model(riser_height=0., package="ur5e_ag95_moveit_config", robot="ur5e_o
             if initial is not None and joint.get("name") in positions:
                 initial.text = positions[joint.get("name")]
     if not height:
+        if simulation_backend == "gazebo":
+            apply_gazebo(root, model)
         model.robot_description["robot_description"] = ET.tostring(root, encoding="unicode")
         return model
     base = root.find("joint[@name='base_joint']")
@@ -50,4 +56,14 @@ def make_model(riser_height=0., package="ur5e_ag95_moveit_config", robot="ur5e_o
     for link in ("workbench", "base_link_inertia"):
         ET.SubElement(semantic, "disable_collisions", link1="ur5e_stack_riser", link2=link, reason="Adjacent")
     model.robot_description_semantic["robot_description_semantic"] = ET.tostring(semantic, encoding="unicode")
+    if simulation_backend == "gazebo":
+        apply_gazebo(root, model)
+        model.robot_description["robot_description"] = ET.tostring(root, encoding="unicode")
     return model
+
+
+def apply_gazebo(root, model):
+    spec = importlib.util.spec_from_file_location("ur5e_gazebo_model", Path(__file__).with_name("gazebo_model.py"))
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    helper._gazebo_model(root, model)

@@ -24,3 +24,14 @@ __pycache__/
 CMakeCache.txt
 CMakeFiles/
 *.bundle
+
+# Machine-local simulation libraries, trajectories and share archives
+/compat/
+/saved_paths/
+/artifacts/
+/.tools/
+/.workspace_backups/
+/.workspace-install.json
+*.cdr
+*.jsonl
+*.deb

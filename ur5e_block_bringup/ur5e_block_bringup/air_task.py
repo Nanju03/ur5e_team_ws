@@ -700,6 +700,34 @@ class AirTask(Node):
         return digest(json.dumps(message_to_ordereddict(display), sort_keys=True,
                                  allow_nan=False, separators=(',', ':')).encode())
 
+    def prepare_preview(self, build):
+        """Build/hash message data while the ROS thread keeps processing feedback.
+
+        The worker performs no ROS calls or actuator commands. Approval is not
+        offered until it returns, and Stop can interrupt the wait immediately.
+        """
+        results = queue.Queue(maxsize=1)
+
+        def compute():
+            try:
+                display = build()
+                results.put((display, self.preview_digest(display), None))
+            except BaseException as error:
+                results.put((None, None, error))
+
+        threading.Thread(target=compute, daemon=True, name='reviewed_preview_data').start()
+        deadline = time.monotonic()+60.
+        while results.empty():
+            self.check_stop()
+            if time.monotonic() >= deadline:
+                raise TimeoutError('Timed out preparing the reviewed path preview; nothing approved')
+            rclpy.spin_once(self, timeout_sec=.02)
+        self.check_stop()
+        display, fingerprint, error = results.get_nowait()
+        if error is not None:
+            raise error
+        return display, fingerprint
+
     def approval_hand_ok(self, metadata):
         """The default approval gate keeps its reviewed finger shape frozen."""
         return abs(self.values.get(HAND, math.inf)-metadata['gripper_position']) <= frozen_hand_tolerance(metadata)
@@ -744,6 +772,15 @@ class AirTask(Node):
 
     def await_approval(self, display, metadata, trajectory, index, total, label, context=None):
         """Only this displayed path's single-use service can release its gate."""
+        # A full physical recipe can take >1 s to assemble/hash. Do that work
+        # before creating its approval service, with feedback callbacks active.
+        # Callers can supply a builder so assembly also runs off the ROS thread.
+        build = display if callable(display) else lambda: display
+        display, fingerprint = self.prepare_preview(build)
+        if trajectory is None:
+            if len(display.trajectory) != 1:
+                raise ValueError('A deferred approval preview must contain one trajectory')
+            trajectory = display.trajectory[0]
         request_id = uuid.uuid4().hex
         service_name = '/ur5e_a3_stack/approve_next_'+request_id
         gate = {'approved': False, 'active': True}
@@ -765,17 +802,39 @@ class AirTask(Node):
             self.phase('STACK_STEP_READY', plan_id=metadata['plan_id'], request_id=request_id,
                        index=index, total=total, label=label,
                        duration=duration.sec+duration.nanosec*1e-9,
-                       preview_sha256=self.preview_digest(display), approve_service=service_name)
+                       preview_sha256=fingerprint, approve_service=service_name)
             published_at = checked_at = time.monotonic()
             first = trajectory.joint_trajectory.points[0].positions
             hand_check = getattr(self, 'approval_hand_ok', None) or (lambda meta: AirTask.approval_hand_ok(self, meta))
             while not gate['approved']:
                 rclpy.spin_once(self, timeout_sec=.02)
                 self.check_stop()
-                if (not self.fresh() or not hand_check(metadata)
-                        or any(abs(self.values.get(name, math.inf)-value) > START_TOLERANCE
-                               for name, value in zip(ARM, first))):
-                    raise RuntimeError('Robot or gripper changed while waiting for path approval')
+                fresh = self.fresh()
+                hand_ok = bool(hand_check(metadata)) if fresh else None
+                changed_arm = [name for name, value in zip(ARM, first)
+                               if abs(self.values.get(name, math.inf)-value) > START_TOLERANCE]
+                if not fresh or hand_ok is False or changed_arm:
+                    # Preserve the approval limits. Distinguish stale feedback
+                    # from an actual joint/hand displacement on the next fault.
+                    now = time.monotonic()
+                    received = getattr(self, 'received', {})
+                    finite = lambda value: value if value is not None and math.isfinite(value) else None
+                    arm = {name: dict(reference=value, measured=finite(self.values.get(name)),
+                                     delta=finite(self.values.get(name, math.inf)-value))
+                           for name, value in zip(ARM, first)}
+                    self.phase('STACK_APPROVAL_STATE_CHANGED',
+                               plan_id=metadata['plan_id'], request_id=request_id,
+                               path_kind=metadata.get('path_kind', 'unspecified'),
+                               feedback_fresh=fresh, gripper_check_passed=hand_ok,
+                               arm_tolerance=START_TOLERANCE, changed_arm_joints=changed_arm,
+                               arm=arm,
+                               gripper=dict(reference=metadata['gripper_position'], measured=finite(self.values.get(HAND)),
+                                            delta=finite(self.values.get(HAND, math.inf)-metadata['gripper_position'])),
+                               feedback_age_seconds={name: now-received[name] if name in received else None for name in ARM+[HAND]})
+                    reasons = (['stale joint feedback'] if not fresh else [])
+                    if hand_ok is False: reasons.append('gripper position/holding check failed')
+                    if changed_arm: reasons.append('arm start changed: '+', '.join(changed_arm))
+                    raise RuntimeError('Robot or gripper changed while waiting for path approval: '+'; '.join(reasons))
                 now = time.monotonic()
                 if now-checked_at > 2.:
                     (context or self.execution_context)(metadata, trajectory)
@@ -1046,7 +1105,7 @@ class AirTask(Node):
                     labels[index] = '판 조정 후 손을 빼고 OK로 계속 · '+labels[index]
             else:
                 paths = [trajectory]
-                labels = [f'전체 경로 연속 실행 · {len(segments)}개 구간']
+                labels = [f'블록 없는 팔 경로 연속 실행 · {len(segments)}개 구간']
                 paused = {}
         else:
             paths = segments

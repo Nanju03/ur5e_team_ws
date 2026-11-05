@@ -48,7 +48,7 @@ ARM_SPEEDS = {'approach': .05, 'lift': .20, 'retreat': .20, 'transfer': .20}
 REVIEW_TTL = 3600.
 HAND_START_TOLERANCE = .015
 SCENE_HASH_POLICY = 'physical_normalized_pose_round12_v1'
-RECIPE_POLICY = 'physical_phase_acceleration_contact_tracking_v9'
+RECIPE_POLICY = 'physical_phase_acceleration_contact_tracking_raised_buffer_v12'
 GRASP_POLICY = 'command_completion'
 HAND_HOLD_TOLERANCE = .005
 HAND_COMMAND_TOLERANCE = .003
@@ -230,6 +230,14 @@ def validate_recipe(recipe):
         raise ValueError('Physical recipe arm tracking/goal/start profile differs from the reviewed policy')
     if 'grasp_policy' in recipe and recipe['grasp_policy'] != GRASP_POLICY:
         raise ValueError('Physical recipe grasp command policy differs from the reviewed policy')
+    clearance = recipe.get('placement_approach_clearance')
+    if (recipe.get('placement_policy') != 'raised_tower_clearance_v1'
+            or recipe.get('placement_mode') not in ('side', 'vertical')
+            or type(recipe.get('vertical_placement_layers')) is not int
+            or not 0 <= recipe['vertical_placement_layers'] <= 100
+            or isinstance(clearance, bool) or not isinstance(clearance, (int, float))
+            or not math.isfinite(clearance) or not .08 <= clearance <= .20):
+        raise ValueError('Physical recipe requires the raised tower placement policy and 80..200mm clearance')
     for key, expected_scaling in [('approach_acceleration_scaling', .05), ('transfer_acceleration_scaling', .20)]:
         scaling = recipe.get(key)
         if (isinstance(scaling, bool) or not isinstance(scaling, (int, float))
@@ -240,6 +248,20 @@ def validate_recipe(recipe):
             or type(recipe.get('foundation_layers')) is not int or recipe['foundation_layers'] != 1
             or type(recipe.get('layers')) is not int):
         raise ValueError('Physical stacking requires one existing foundation block and integer counts')
+    sources = recipe.get('source_cells')
+    if (recipe.get('routing_policy') != 'open_gripper_buffer_v1'
+            or not isinstance(sources, list) or len(sources) != recipe['moves']
+            or any(type(cell) is not int or not 1 <= cell <= 100 or cell == recipe['target_cell'] for cell in sources)
+            or len(set(sources)) != len(sources)
+            or type(recipe.get('transport_moves')) is not int
+            or type(recipe.get('buffer_moves')) is not int
+            or not 0 <= recipe['buffer_moves'] <= recipe['moves']
+            or recipe['transport_moves'] != recipe['moves']+recipe['buffer_moves']):
+        raise ValueError('Physical recipe requires the open-gripper buffer routing policy and consistent transport counts')
+    towers = {cell: [cell] for cell in sources}
+    towers[recipe['target_cell']] = [recipe['target_cell']]
+    buffered, finished = set(), set()
+    temporary_places = 0
     expected = recipe['initial_joints']
     carrying = attached = False
     release_stage = 0
@@ -252,7 +274,7 @@ def validate_recipe(recipe):
             raise ValueError('Invalid physical recipe label')
         start, end = step.get('start_joints'), step.get('end_joints')
         if not finite_state(start) or not finite_state(end) or max(abs(a-b) for a, b in zip(start, expected)) > 1e-7:
-            raise ValueError('Physical recipe joint state is discontinuous')
+            raise ValueError(f'Physical recipe joint state is discontinuous at step {index}: {step.get("label", "")}')
         kind, phase = step.get('kind'), step.get('phase')
         if kind == 'arm':
             velocity, acceleration = step.get('velocity_scaling'), step.get('acceleration_scaling')
@@ -266,6 +288,8 @@ def validate_recipe(recipe):
                 raise ValueError('Arm motion precedes attachment or the completed 0.70 -> 0.60 release')
             if abs(start[-1]-end[-1]) > 1e-9:
                 raise ValueError('Arm motion must hold the gripper shape')
+            if phase == 'approach' and not carrying and abs(start[-1]-HAND_TARGETS['open']) > 1e-8:
+                raise ValueError('Pickup approach must keep the gripper open at 0.40rad')
         elif kind == 'hand':
             target = step.get('hand_target')
             if (phase not in HAND_TARGETS or isinstance(target, bool) or not isinstance(target, (int, float))
@@ -290,7 +314,7 @@ def validate_recipe(recipe):
                 release_stage = 0
                 clears += 1
             elif carrying or release_stage:
-                raise ValueError('Initial opening cannot release a carried block')
+                raise ValueError('Opening cannot release a carried block')
         elif kind == 'scene':
             if max(abs(a-b) for a, b in zip(start, end)) > 1e-9:
                 raise ValueError('Scene events must not move robot joints')
@@ -303,6 +327,25 @@ def validate_recipe(recipe):
                     raise ValueError('Place must follow the 0.70 release at the stationary endpoint')
                 carrying = attached = False
                 release_stage = 2
+                block, destination, temporary = step.get('block_id'), step.get('destination_cell'), step.get('temporary')
+                if (type(block) is not int or block not in sources or block in finished
+                        or type(destination) is not int or destination not in towers
+                        or type(temporary) is not bool or temporary != (destination != recipe['target_cell'])):
+                    raise ValueError('Invalid block or destination in physical routing event')
+                origin = next((cell for cell, tower in towers.items() if block in tower), None)
+                if origin is None or origin == destination or not towers[origin] or towers[origin][-1] != block:
+                    raise ValueError('Cannot pick a covered or already placed block')
+                if temporary:
+                    if block in buffered or len(towers[origin]) != 1 or len(towers[destination]) != 1:
+                        raise ValueError('Temporary placement needs an exposed single-block support and a recoverable top')
+                    buffered.add(block)
+                    temporary_places += 1
+                else:
+                    finished.add(block)
+                towers[origin].pop()
+                towers[destination].append(block)
+                if type(step.get('completed')) is not int or step['completed'] != len(finished):
+                    raise ValueError('Temporary placement must not increase target layer progress')
             elif phase != 'scene':
                 raise ValueError('Unknown physical scene event')
         else:
@@ -310,7 +353,8 @@ def validate_recipe(recipe):
         expected = end
     if carrying or attached or release_stage or grasps != clears or grasps < 1:
         raise ValueError('Physical recipe ends without a complete place/release sequence')
-    if recipe.get('moves') != grasps or recipe.get('layers') != grasps+recipe.get('foundation_layers', 0):
+    if (recipe['transport_moves'] != grasps or recipe['buffer_moves'] != temporary_places
+            or len(finished) != recipe['moves'] or recipe['layers'] != len(finished)+recipe['foundation_layers']):
         raise ValueError('Physical recipe block/layer counts differ')
     return steps
 
@@ -948,7 +992,7 @@ class PhysicalStackTask(AirTask):
         if metadata.get('scene_hash_policy') != SCENE_HASH_POLICY:
             raise RuntimeError('충돌 장면 검증 형식이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
         if metadata.get('recipe_policy') != RECIPE_POLICY:
-            raise RuntimeError('팔 추종 허용오차·단계별 가속도·잡힘 검증 설정이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
+            raise RuntimeError('적층 전환 층수·높은 접근 경로 설정이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
         if metadata.get('grasp_policy') != GRASP_POLICY:
             raise RuntimeError('잡기 명령 완료 기준이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
         if metadata.get('arm_execution_profile') != arm_execution_profile():
@@ -1074,11 +1118,9 @@ class PhysicalStackTask(AirTask):
         self.guard(metadata, steps[0], expected_scene)
         motions = [step for step in steps if step['kind'] != 'scene']
         if self.execution_mode == 'continuous':
-            display = self.recipe_display(recipe, steps)
-            preview = display.trajectory[0]
             approval_metadata = dict(metadata, gripper_position=self.values[HAND])
-            self.await_approval(display, approval_metadata, preview, 1, 1,
-                                f'실제 집기·쌓기 전체 경로 · 블록 {recipe["moves"]}개',
+            self.await_approval(lambda: self.recipe_display(recipe, steps), approval_metadata, None, 1, 1,
+                                f'실제 집기·쌓기 전체 경로 · 블록 {recipe["moves"]}개 · 임시 적재 {recipe["buffer_moves"]}회',
                                 context=lambda *_: self.guard(metadata, steps[0], expected_scene))
             self.guard(metadata, steps[0], expected_scene)
         motion_index, completed = 0, 0
@@ -1104,26 +1146,28 @@ class PhysicalStackTask(AirTask):
                     self.carrying = False
                     self.release_stage = 2
                     completed = int(step.get('completed', completed))
-                    print(f'STACK_STATUS phase=PLACED moved={completed} total={recipe["moves"]} target={recipe["target_cell"]} layers={completed+recipe["foundation_layers"]}', flush=True)
+                    phase = 'BUFFERED' if step['temporary'] else 'PLACED'
+                    print(f'STACK_TRANSFER_COMPLETED block={step["block_id"]} destination={step["destination_cell"]} temporary={int(step["temporary"])} moved={completed}', flush=True)
+                    print(f'STACK_STATUS phase={phase} moved={completed} total={recipe["moves"]} target={recipe["target_cell"]} layers={completed+recipe["foundation_layers"]}', flush=True)
                 continue
             motion_index += 1
             trajectory = self.read_message(step['file'], RobotTrajectory)
-            if step['kind'] == 'arm':
-                self.live_arm_validation(step, trajectory, expected_scene)
-            else:
-                self.live_hand_validation(step, trajectory, expected_scene)
             if self.execution_mode == 'step':
-                display = self.recipe_display(recipe, [step])
+                if step['kind'] == 'arm':
+                    self.live_arm_validation(step, trajectory, expected_scene)
+                else:
+                    self.live_hand_validation(step, trajectory, expected_scene)
                 approval_metadata = dict(metadata, gripper_position=self.values[HAND])
                 if self.carrying and not self.release_stage:
                     if not self.holding_context_verified(step, trajectory, expected_scene):
                         raise RuntimeError('Pending physical motion lacks its validated holding interval')
                     approval_metadata['holding_context_key'] = self.verified_holding_context['key']
-                self.await_approval(display, approval_metadata, display.trajectory[0], motion_index, len(motions), step['label'],
+                self.await_approval(lambda: self.recipe_display(recipe, [step]), approval_metadata, None, motion_index, len(motions), step['label'],
                                     context=lambda *_: self.guard(metadata, step, expected_scene))
                 self.guard(metadata, step, expected_scene)
-            # An operator pause can change finger geometry. Revalidate the
-            # actual steady finger geometry after approval as well as before it.
+            # Validate immediately before dispatch in both modes. Step mode
+            # also validates before its operator pause. Continuous mode has no
+            # per-motion pause, so an identical earlier check adds no boundary.
             if step['kind'] == 'arm':
                 self.live_arm_validation(step, trajectory, expected_scene)
             else:
@@ -1345,7 +1389,7 @@ class PhysicalStackTask(AirTask):
                     self.observe_grasp_settle(before)
                 elif (result.status != 4 or abs(self.values[HAND]-step['hand_target']) > .003
                       or result.result.stalled or not result.result.reached_goal):
-                    raise RuntimeError('검토한 그리퍼 열림 위치를 확인하지 못했습니다. '+
+                    raise RuntimeError('검토한 그리퍼 준비·열림 위치를 확인하지 못했습니다. '+
                                        json.dumps(hand_result, sort_keys=True))
             elif arm_result['classification'] != 'SUCCESS':
                 messages = {

@@ -24,7 +24,10 @@ def recipe():
     result = dict(schema=1, joint_names=physical.JOINTS, initial_joints=[0]*6+[.4],
                   initial_scene_file='initial.cdr', initial_state_file='state.cdr',
                   approach_acceleration_scaling=.05, transfer_acceleration_scaling=.20,
-                  target_cell=11, foundation_layers=1, moves=1, layers=2, steps=[])
+                  placement_policy='raised_tower_clearance_v1', placement_mode='side',
+                  vertical_placement_layers=19, placement_approach_clearance=.12,
+                  target_cell=11, foundation_layers=1, moves=1, layers=2, steps=[],
+                  routing_policy='open_gripper_buffer_v1', source_cells=[10], transport_moves=1, buffer_moves=0)
     previous = list(result['initial_joints'])
     def add(kind, phase, target=None):
         nonlocal previous
@@ -41,6 +44,8 @@ def recipe():
                     completed=1 if phase == 'place' else 0)
         if kind == 'hand':
             step['hand_target'] = target
+        if phase == 'place':
+            step.update(block_id=10, destination_cell=11, temporary=False)
         result['steps'].append(step)
         previous = end
     add('hand', 'open', .4)
@@ -65,6 +70,186 @@ def test_complete_recipe_requires_grasp_and_two_stationary_releases_before_retre
     assert value['steps'][1]['acceleration_scaling'] == .05
     assert value['steps'][4]['acceleration_scaling'] == .20
     assert value['steps'][-1]['acceleration_scaling'] == .20
+
+
+@pytest.mark.parametrize('change', ['old_policy', 'missing_clearance', 'low_clearance', 'nan_clearance',
+                                   'boolean_clearance', 'invalid_mode', 'invalid_layer'])
+def test_legacy_or_invalid_placement_policy_is_rejected_before_ros(change):
+    value = recipe()
+    if change == 'old_policy':
+        value.pop('placement_policy')
+    elif change == 'missing_clearance':
+        value.pop('placement_approach_clearance')
+    elif change == 'low_clearance':
+        value['placement_approach_clearance'] = .04
+    elif change == 'nan_clearance':
+        value['placement_approach_clearance'] = math.nan
+    elif change == 'boolean_clearance':
+        value['placement_approach_clearance'] = True
+    elif change == 'invalid_mode':
+        value['placement_mode'] = 'unknown'
+    else:
+        value['vertical_placement_layers'] = 19.5
+    with pytest.raises(ValueError, match='raised tower placement policy'):
+        physical.validate_recipe(value)
+
+
+def execution_validation_fixture(monkeypatch, mode):
+    """Run the production recipe loop with no ROS node or actuator client."""
+    value = recipe()
+    for step in value['steps']:
+        step.update(scene_before_sha256='same', scene_after_sha256='same')
+    events = []
+    task = SimpleNamespace(execution_mode=mode, values={physical.HAND: .4}, carrying=False,
+                           release_stage=0, scene_request_pending=False, invalid=False,
+                           verified_holding_context=None)
+    task.acquire_stack_lock = Mock()
+    task.load_recipe = lambda: (dict(scene_sha256='same'), value)
+    task.fresh = lambda: True
+    task.spin_until = lambda predicate: predicate()
+    task.guard = lambda metadata, step, scene: events.append(('guard', step['index']))
+    task.read_message = lambda *args: RobotTrajectory()
+    task.recipe_display = lambda *args: SimpleNamespace(trajectory=[RobotTrajectory()])
+    task.apply_snapshot = Mock()
+    task.scene = lambda: 'same'
+    task.holding_ok = lambda: True
+    task.holding_context_verified = lambda *args: True
+    task.phase = lambda *args, **kwargs: None
+    task.await_approval = lambda *args, **kwargs: events.append(('approval',))
+
+    def validate(step, trajectory, scene):
+        events.append(('validate', step['index']))
+        if task.invalid:
+            raise RuntimeError('Actual pose changed before dispatch')
+        if task.carrying and not task.release_stage:
+            task.verified_holding_context = dict(key='reviewed')
+
+    task.live_arm_validation = task.live_hand_validation = validate
+    def motion(step, *args):
+        events.append(('motion', step['index']))
+        if step['kind'] == 'hand':
+            task.values[physical.HAND] = step['hand_target']
+    task.run_motion = motion
+    monkeypatch.setattr(physical, 'scene_fingerprint', lambda _: 'same')
+    monkeypatch.setattr(physical, 'read_held_fault', lambda: None)
+    return task, value, events
+
+
+@pytest.mark.parametrize('mode', ['step', 'continuous'])
+def test_recipe_loop_retains_validation_before_dispatch_with_one_continuous_check(monkeypatch, mode):
+    task, value, events = execution_validation_fixture(monkeypatch, mode)
+    physical.PhysicalStackTask.execute(task)
+    motions = [step for step in value['steps'] if step['kind'] != 'scene']
+    assert [e[1] for e in events if e[0] == 'motion'] == [step['index'] for step in motions]
+    assert sum(e[0] == 'approval' for e in events) == (len(motions) if mode == 'step' else 1)
+    for step in motions:
+        assert events.count(('validate', step['index'])) == (2 if mode == 'step' else 1)
+        dispatched = events.index(('motion', step['index']))
+        assert ('validate', step['index']) in events[:dispatched]
+        assert events[dispatched-1] == ('guard', step['index'])
+    assert task.apply_snapshot.call_count == 2
+
+
+@pytest.mark.parametrize('mode', ['step', 'continuous'])
+def test_actual_change_after_approval_still_prevents_every_motion(monkeypatch, mode):
+    task, _, events = execution_validation_fixture(monkeypatch, mode)
+    def approve(*args, **kwargs):
+        events.append(('approval',))
+        task.invalid = True
+    task.await_approval = approve
+    with pytest.raises(RuntimeError, match='Actual pose changed before dispatch'):
+        physical.PhysicalStackTask.execute(task)
+    assert ('approval',) in events
+    assert not any(e[0] == 'motion' for e in events)
+
+
+def test_old_narrow_entry_command_is_rejected_before_any_motion():
+    value = recipe()
+    preparation = copy.deepcopy(value['steps'][0])
+    preparation.update(phase='pregrasp', label='Prepare grasp', hand_target=.70)
+    preparation['end_joints'][-1] = .70
+    value['steps'].insert(1, preparation)
+    value['steps'][2]['start_joints'][-1] = .70
+    value['steps'][2]['end_joints'][-1] = .70
+    value['steps'][3]['start_joints'][-1] = .70
+    for index, step in enumerate(value['steps'], 1):
+        step['index'] = index
+    with pytest.raises(ValueError, match='Unexpected physical gripper target'):
+        physical.validate_recipe(value)
+
+    # A preparation command must never replace the controlled release while
+    # a block is attached, even though both targets happen to be 0.70rad.
+    value = recipe()
+    value['steps'][6]['phase'] = 'pregrasp'
+    with pytest.raises(ValueError, match='Unexpected physical gripper target'):
+        physical.validate_recipe(value)
+
+
+def test_pregrasp_cannot_prepare_with_an_unreviewed_narrower_gap():
+    value = recipe()
+    value['steps'][0].update(phase='pregrasp', hand_target=.72)
+    with pytest.raises(ValueError, match='Unexpected physical gripper target'):
+        physical.validate_recipe(value)
+
+
+def buffered_recipe():
+    value = recipe()
+    template = copy.deepcopy(value['steps'])
+    value.update(source_cells=[10, 15, 24], moves=3, layers=4, transport_moves=4, buffer_moves=1, steps=[])
+    previous = list(value['initial_joints'])
+    for block, destination, temporary, completed in [(10, 24, True, 0), (15, 11, False, 1),
+                                                      (10, 11, False, 2), (24, 11, False, 3)]:
+        for original in template:
+            step = copy.deepcopy(original)
+            step.update(index=len(value['steps'])+1, start_joints=list(previous), end_joints=list(previous))
+            if step['kind'] == 'arm':
+                step['end_joints'][0] += .01
+            elif step['kind'] == 'hand':
+                step['end_joints'][-1] = step['hand_target']
+            if step['phase'] == 'place':
+                step.update(block_id=block, destination_cell=destination, temporary=temporary, completed=completed)
+            value['steps'].append(step)
+            previous = step['end_joints']
+    return value
+
+
+def test_buffered_transport_preserves_target_progress_and_retrieves_before_its_support():
+    value = buffered_recipe()
+    physical.validate_recipe(value)
+    places = [step for step in value['steps'] if step['phase'] == 'place']
+    assert [step['completed'] for step in places] == [0, 1, 2, 3]
+
+
+@pytest.mark.parametrize('fault', ['progress', 'covered_support', 'duplicate_final', 'buffer_count', 'transport_count'])
+def test_buffer_bookkeeping_errors_are_rejected_before_ros(fault):
+    value = buffered_recipe()
+    places = [step for step in value['steps'] if step['phase'] == 'place']
+    if fault == 'progress':
+        places[0]['completed'] = 1
+    elif fault == 'covered_support':
+        places[1]['block_id'] = 24
+    elif fault == 'duplicate_final':
+        places[2]['block_id'] = 15
+    elif fault == 'buffer_count':
+        value['buffer_moves'] = 0
+    else:
+        value['transport_moves'] = 3
+    with pytest.raises(ValueError):
+        physical.validate_recipe(value)
+
+
+def test_unloaded_pickup_requires_the_original_open_shape():
+    value = recipe()
+    for step in value['steps'][:3]:
+        step['start_joints'][-1] = .6
+        if step['phase'] != 'grasp':
+            step['end_joints'][-1] = .6
+    value['initial_joints'][-1] = .6
+    value['steps'].pop(0)
+    for index, step in enumerate(value['steps'], 1):
+        step['index'] = index
+    with pytest.raises(ValueError, match='Pickup approach must keep the gripper open'):
+        physical.validate_recipe(value)
 
 
 @pytest.mark.parametrize('change', ['missing_clearance', 'reordered_release', 'moving_fingers', 'wrong_grasp',
@@ -987,7 +1172,9 @@ def test_old_grasp_detection_metadata_is_rejected_before_file_or_motion_checks(t
 @pytest.mark.parametrize('old_policy', [None, 'physical_phase_acceleration_contact_envelope_v3',
     'physical_phase_acceleration_contact_envelope_v4', 'physical_phase_acceleration_contact_tracking_v5',
     'physical_phase_acceleration_contact_tracking_v6',
-    'physical_phase_acceleration_contact_tracking_v7', 'physical_phase_acceleration_contact_tracking_v8'])
+    'physical_phase_acceleration_contact_tracking_v7', 'physical_phase_acceleration_contact_tracking_v8',
+    'physical_phase_acceleration_contact_tracking_pregrasp_v10',
+    'physical_phase_acceleration_contact_tracking_buffer_v11'])
 def test_old_review_policy_requires_replanning(tmp_path, monkeypatch, old_policy):
     path = tmp_path/'recipe.json'
     path.write_text('{}')
@@ -999,7 +1186,7 @@ def test_old_review_policy_requires_replanning(tmp_path, monkeypatch, old_policy
     meta_path.write_text(json.dumps(metadata))
     task = SimpleNamespace(param=lambda _: True, path=path, meta_path=meta_path, check_files=Mock())
     monkeypatch.setattr(physical, 'read_held_fault', lambda: None)
-    with pytest.raises(RuntimeError, match='가속도'):
+    with pytest.raises(RuntimeError, match='다시 계획'):
         physical.PhysicalStackTask.load_recipe(task)
     task.check_files.assert_not_called()
 

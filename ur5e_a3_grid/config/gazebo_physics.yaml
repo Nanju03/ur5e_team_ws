@@ -1,0 +1,74 @@
+# Nominal simulation values, not an identified UR5e/AG95/material model.
+# The robot's existing URDF supplies arm, gripper-link masses and inertias.
+# ODE gravity/step/solver settings live in worlds/stack.world.
+task:
+  # Contact-heavy scenes can run far below real time. Allow PID settling in
+  # simulation seconds, with a separate wall-clock watchdog for a hung world.
+  gazebo_arm_settle_sim_timeout: 15.0
+  # Extend in 5 s windows only while the measured error is still decreasing.
+  # Position tolerance remains 0.005 rad; stalled/diverging joints still fail.
+  gazebo_arm_settle_max_sim_timeout: 45.0
+  gazebo_arm_settle_wall_timeout: 300.0
+  # Minimum action-result budgets; long trajectories also receive a duration-
+  # dependent allowance. Goal discovery/acknowledgement remains wall-clock based.
+  gazebo_motion_sim_timeout: 30.0
+  gazebo_motion_wall_timeout: 300.0
+  gripper_open_position: 0.40
+  grasp_height_above_table: 0.0225
+  # A small free drop avoids imposing a perfectly rigid two-body contact while
+  # Gazebo's PID-controlled wrist is settling. This is simulation-only tuning.
+  placement_release_lift: 0.003
+  # A force-controlled grasp can stop short of this target on contact.
+  # These are simulation tuning values, separate from the real 0.73 target.
+  gripper_grasp_position: 0.78
+  release_first_position: 0.67
+  release_clearance_position: 0.50
+table:
+  mass_kg: 80.0
+  friction_mu1: 0.8
+  friction_mu2: 0.8
+  contact_kp: 100000.0
+  contact_kd: 1.0
+finger_contact:
+  friction_mu1: 1.2
+  friction_mu2: 1.2
+  contact_kp: 100000.0
+  contact_kd: 1.0
+objects:
+  block_mass_kg: 0.04
+  obstacle_mass_kg: 0.6
+  # Obstacles and the placement plate keep these existing surface values.
+  friction_mu1: 1.0
+  friction_mu2: 1.0
+  # Cubes, including the foundation: initial adjustment, not measured material data.
+  block_friction_mu1: 0.4
+  block_friction_mu2: 0.4
+  contact_kp: 100000.0
+  contact_kd: 1.0
+gripper:
+  # Revolute joint torque in N m, not jaw force in N.
+  # Match the effort controller/MoveIt handle limit in gazebo_controllers.yaml.
+  max_effort_nm: 1.2
+  # GripperCommand also waits for a sustained contact stall; its completion
+  # cannot use only the nominal free-space joint trajectory duration.
+  allowed_goal_duration_margin: 3.0
+  mimic_max_effort_nm: 0.6
+  mimic_kp: 12.0
+  # Coupled finger damping is applied explicitly at every 1 ms physics step.
+  mimic_kd: 0.01
+  joint_damping: 0.005
+  joint_friction: 0.001
+arm_position_pid:
+  shoulder_pan_joint: {kp: 1600.0, ki: 40.0, kd: 80.0, max_integral_error: 20.0, min_integral_error: -20.0}
+  shoulder_lift_joint: {kp: 2400.0, ki: 100.0, kd: 120.0, max_integral_error: 60.0, min_integral_error: -60.0}
+  elbow_joint: {kp: 1800.0, ki: 80.0, kd: 90.0, max_integral_error: 40.0, min_integral_error: -40.0}
+  # Reduced for the coupled wrist/finger inertia at the zero-joint startup pose;
+  # the 1 ms discrete damping bound alone does not validate runtime tracking.
+  wrist_1_joint: {kp: 500.0, ki: 20.0, kd: 8.0, max_integral_error: 12.0, min_integral_error: -12.0}
+  wrist_2_joint: {kp: 400.0, ki: 20.0, kd: 5.0, max_integral_error: 10.0, min_integral_error: -10.0}
+  # Axial inertia with AG95 is only about 0.001–0.002 kg m².
+  wrist_3_joint: {kp: 300.0, ki: 10.0, kd: 0.5, max_integral_error: 5.0, min_integral_error: -5.0}
+logging:
+  sample_hz: 10.0
+  contact_hz: 10.0
+  joint_states: true

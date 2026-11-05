@@ -113,6 +113,8 @@ def test_save_keeps_a_foundation_block_in_the_selected_stack_pocket(tmp_path):
     assert value['cell_centers_xy'][:4] == pytest.approx([.3109, .15, .3703, .15])
     assert value['cell_centers_xy'][-2:] == pytest.approx([.4891, -.15])
     assert value['grasp_height_above_table'] == .018
+    assert value['vertical_placement_layers'] == 19
+    assert value['placement_approach_clearance'] == .12
 
 
 def test_live_translation_moves_pockets_corners_and_stack_together(tmp_path):

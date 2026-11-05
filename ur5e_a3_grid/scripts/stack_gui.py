@@ -26,6 +26,7 @@ from sensor_msgs.msg import JointState
 from rclpy.qos import qos_profile_sensor_data
 from visualization_msgs.msg import Marker, MarkerArray
 from ur5e_block_bringup.plate_geometry import ALIGNMENT_GRIPPER_POSITION, ALIGNMENT_POLICY
+from ur5e_block_bringup.path_archive import archive_from_log
 import yaml
 
 
@@ -35,7 +36,7 @@ class StackGui:
                   "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"}
     HAND_JOINT = "left_outer_knuckle_joint"
     ALIGNMENT_HAND = ALIGNMENT_GRIPPER_POSITION
-    PLACEMENT_LABELS = {"side": "10층까지 수직 / 이후 측면", "vertical": "모든 높이에서 수직"}
+    PLACEMENT_LABELS = {"side": "19층까지 수직 / 20층부터 측면", "vertical": "모든 높이에서 수직"}
     EXECUTION_LABELS = {"step": "단계별 확인", "continuous": "전체 연속 실행"}
     MOTION_ACTIONS = ("run", "alignment_gripper", "recovery")
 
@@ -46,6 +47,9 @@ class StackGui:
         if self.backend not in ("simulation", "real"):
             raise ValueError("backend must be simulation or real")
         self.real_backend = self.backend == "real"
+        self.simulation_backend = self.node.declare_parameter("simulation_backend", "mock").value
+        if self.simulation_backend not in ("mock", "gazebo") or self.real_backend and self.simulation_backend != "mock":
+            raise ValueError("Gazebo is supported only as an explicit simulation backend")
         simulation_riser = self.node.declare_parameter("simulation_riser_height", 0.0).value
         self.simulation_riser_height = 0.0
         if not self.real_backend:
@@ -130,7 +134,7 @@ class StackGui:
         self.domain = os.getenv("ROS_DOMAIN_ID", "0")
         self.folder = Path.home() / ".ros/ur5e_a3_stack"
         self.folder.mkdir(parents=True, exist_ok=True)
-        suffix = "_real" if self.real_backend else ""
+        suffix = "_real" if self.real_backend else "_gazebo" if self.simulation_backend == "gazebo" else ""
         geometry_suffix = "_cube_plate_v1" if self.plate_enabled else ""
         self.selection_file = self.folder / f"layout_domain_{self.domain}{suffix}{geometry_suffix}.yaml"
         self.trajectory_file = self.folder / f"air_plan_domain{self.domain}{geometry_suffix}.cdr"
@@ -219,7 +223,8 @@ class StackGui:
         return home
 
     def build(self):
-        self.root.title(("UR5e · cube plate " if self.plate_enabled else "UR5e · A3 ") + ("실물 로봇 제어" if self.real_backend else f"가상 로봇 · ROS {self.domain}"))
+        simulator = "Gazebo 물리 시뮬레이션" if getattr(self, "simulation_backend", "mock") == "gazebo" else "가상 로봇"
+        self.root.title(("UR5e · cube plate " if self.plate_enabled else "UR5e · A3 ") + ("실물 로봇 제어" if self.real_backend else f"{simulator} · ROS {self.domain}"))
         width = min(1880, max(640, self.root.winfo_screenwidth()-60))
         height = min(1040, max(480, self.root.winfo_screenheight()-100))
         self.root.geometry(f"{width}x{height}")
@@ -251,6 +256,7 @@ class StackGui:
         top.pack(fill="x", pady=(8, 10))
         ttk.Label(top, textvariable=self.connection).pack(side="left")
         wrapped_label(top, text=("start_block_robot.sh와 RViz를 먼저 실행하세요." if self.real_backend else
+                                 "start_block_gazebo.sh · Gazebo에서 접촉·쌓기를 확인하세요." if getattr(self, "simulation_backend", "mock") == "gazebo" else
                                  "start_block_sim.sh 가상 모드 · RViz에서 동작을 확인하세요.")).pack(side="right")
         wrapped_label(outer, textvariable=self.hardware_status).pack(fill="x", pady=(0, 8))
         execution_bar = ttk.Frame(outer)
@@ -262,7 +268,7 @@ class StackGui:
         self.controls.append(execution_choice)
         self.run_button = ttk.Button(
             execution_bar,
-            text="⑤ 선택한 방식으로 팔 경로 실행" if self.real_backend else "⑤ 선택한 방식으로 가상 실행",
+            text="⑤ 블록 없는 팔 경로 실행" if self.real_backend else "⑤ 선택한 방식으로 가상 실행",
             command=lambda: self.launch_task("run"))
         self.run_button.pack(side="left", padx=(12, 0))
         self.controls.append(self.run_button)
@@ -340,7 +346,7 @@ class StackGui:
             self.controls.append(entry)
         for label, callback in ((("검사한 판 배치로 복원" if self.plate_enabled else "현재 home 중심으로"), self.home_board),
                                 ("간단한 3층 예시", self.example),
-                                (("쌓을 홈 선택 · 전체 예시" if self.plate_enabled else "전체 23층 예시 / 10층 이후 측면"), self.full_example),
+                                (("쌓을 홈 선택 · 전체 예시" if self.plate_enabled else "전체 23층 예시 / 19층 이후 측면"), self.full_example),
                                 ("선택 초기화", self.clear_selection)):
             button = ttk.Button(settings, text=label, command=callback)
             button.grid(column=0, columnspan=2, sticky="ew", pady=1)
@@ -352,15 +358,18 @@ class StackGui:
                                  values=tuple(self.PLACEMENT_LABELS.values()), width=28, state="readonly")
         placement.pack(fill="x", pady=(3, 0))
         self.controls.append(placement)
-        actions = [("③ 선택 배치를 RViz에 표시", "scene"),
-                   ("④ 블록 없이 팔 경로 계획" if self.real_backend else "④ 전체 경로 / 높이 확인", "plan")]
+        actions = [("③ Gazebo 배치 초기화 / RViz에 표시" if getattr(self, "simulation_backend", "mock") == "gazebo" else "③ 선택 배치를 RViz에 표시", "scene")]
+        if self.real_backend:
+            actions.append(("④ 실물 집기·쌓기 경로 계획", "physical_plan"))
+            actions.append(("블록 없이 팔 경로 계획 · 시운전", "plan"))
+        else:
+            actions.append(("④ 전체 경로 / 높이 확인", "plan"))
         if self.plate_enabled:
             actions.append(("플레이트 맞춤 · 모서리 X/Y", "plate_align"))
         if self.real_backend:
-            actions.append(("실물 집기·쌓기 경로 계획", "physical_plan"))
             actions.append(("장애물 위 XY 순회 경로", "scan"))
             actions.append(("안전 확인 후 초기 자세 복구", "recovery"))
-        actions.append(("RViz 작업 물체 지우기", "reset"))
+        actions.append(("Gazebo / RViz 작업 물체 지우기" if getattr(self, "simulation_backend", "mock") == "gazebo" else "RViz 작업 물체 지우기", "reset"))
         for label, action in actions:
             button = ttk.Button(right, text=label, command=lambda action=action: self.launch_task(action))
             button.pack(fill="x", pady=2)
@@ -378,10 +387,16 @@ class StackGui:
                     if self.real_backend else
                     ("파랑: 블록 / 빨강: 장애물\n노랑: 바닥 블록 1개가 있는 쌓을 홈 / 회색: 빈칸\n노란 블록은 유지하고 파란 블록을 2층부터 쌓습니다.\n" if self.plate_enabled else
                      "파랑: 블록 / 빨강: 장애물\n노랑: 탑 밑 블록 / 회색: 빈칸\n모든 파란 블록을 노란 칸에 쌓습니다.\n") +
-                    "25mm 블록은 10층(250mm)까지 수직, 11층부터 측면입니다. 모든 높이 수직도 선택할 수 있습니다.\n\n단계별 확인은 구간마다, 전체 연속 실행은 전체 경로 확인 후 상단 OK로 움직입니다.\n가상 로봇과 GUI를 같은 ROS domain에서 실행하세요.")
+                    "25mm 블록은 19층(475mm)까지 수직, 20층부터 측면입니다. 모든 높이 수직도 선택할 수 있습니다.\n\n단계별 확인은 구간마다, 전체 연속 실행은 전체 경로 확인 후 상단 OK로 움직입니다.\n가상 로봇과 GUI를 같은 ROS domain에서 실행하세요.")
         wrapped_label(right, text=guidance, justify="left").pack(fill="x", pady=8)
-        ttk.Label(terminal, text="실행 터미널 · 로그", font=("Sans", 14, "bold")).pack(anchor="w")
-        wrapped_label(terminal, text="가운데 경계를 드래그해 크기를 조절하고, 로그를 선택해 복사할 수 있습니다.").pack(fill="x", pady=(5, 8))
+        log_header = ttk.Frame(terminal)
+        log_header.pack(fill="x")
+        ttk.Label(log_header, text="실행 터미널 · 로그", font=("Sans", 14, "bold")).pack(side="left")
+        self.copy_log_button = ttk.Button(log_header, text="로그 전체 복사", command=self.copy_log)
+        self.copy_log_button.pack(side="right")
+        self.log_copy_status = tk.StringVar(value="")
+        wrapped_label(terminal, textvariable=self.log_copy_status).pack(fill="x", pady=(3, 0))
+        wrapped_label(terminal, text="로그 전체 복사는 현재 작업의 저장 로그를 복사합니다. 화면에서 잘린 앞부분도 포함합니다.").pack(fill="x", pady=(5, 8))
         log_area = ttk.Frame(terminal)
         log_area.pack(fill="both", expand=True)
         log_area.rowconfigure(0, weight=1)
@@ -399,7 +414,8 @@ class StackGui:
             wrapped_label(outer, textvariable=self.footer_note,
                           font=("Sans", 9)).pack(side="bottom", anchor="w", fill="x", pady=(5, 0))
         else:
-            wrapped_label(outer, text=f"ROS domain {self.domain} · 수직으로 집기 / 측면 또는 수직으로 놓기 · GenericSystem 시뮬레이션",
+            physics = "Gazebo 접촉·마찰·중력 · 시험 물성" if getattr(self, "simulation_backend", "mock") == "gazebo" else "GenericSystem 시뮬레이션"
+            wrapped_label(outer, text=f"ROS domain {self.domain} · 수직으로 집기 / 측면 또는 수직으로 놓기 · {physics}",
                           font=("Sans", 9)).pack(side="bottom", fill="x", pady=(5, 0))
         body.pack(fill="both", expand=True)
 
@@ -464,7 +480,7 @@ class StackGui:
                              f"상단 여유 {self.empty_hand_clearance.get()}mm · 잡기 없음\n"
                              "마지막 위치 유지")
         else:
-            rule = ("25mm 블록 10층(250mm)까지 수직 / 11층부터 측면"
+            rule = ("25mm 블록 19층(475mm)까지 수직 / 20층부터 측면"
                     if self.placement_mode.get() == self.PLACEMENT_LABELS["side"] else "모든 높이에서 수직으로 놓기")
             if getattr(self, "plate_enabled", False):
                 foundation = 1 if self.target else 0
@@ -518,9 +534,9 @@ class StackGui:
         if getattr(self, "plate_enabled", False):
             self.status.set("21번 홈의 바닥 블록 1개에 나머지 23개를 더해 24층으로 쌓는 예시입니다. 쌓을 홈은 직접 바꿀 수 있습니다.")
             return
-        self.status.set("23층 경로 예시: 10층(250mm)까지 수직, 11층부터 측면. 장애물 1번, 탑 24번입니다. 실제 블록 없이 먼저 계획하세요."
+        self.status.set("23층 경로 예시: 19층(475mm)까지 수직, 20층부터 측면. 장애물 1번, 탑 24번입니다. 실제 블록 없이 먼저 계획하세요."
                         if self.real_backend else
-                        "23층 예시: 10층(250mm)까지 수직, 11층부터 측면. 장애물 1번, 탑 24번을 demo RViz에 표시하세요.")
+                        "23층 예시: 19층(475mm)까지 수직, 20층부터 측면. 장애물 1번, 탑 24번을 demo RViz에 표시하세요.")
 
     def load_selection(self):
         if not self.selection_file.exists():
@@ -602,7 +618,8 @@ class StackGui:
             "obstacle_size_xyz": [.025, .025, height], "velocity_scaling": speed,
             "robot_riser_height": getattr(self, "simulation_riser_height", 0.0) if not self.real_backend else 0.0,
             "placement_mode": placement,
-            "vertical_placement_layers": 10,
+            "vertical_placement_layers": 19,
+            "placement_approach_clearance": .12,
             "gripper_open_position": .4, "gripper_grasp_position": .73,
             "staged_release_enabled": True, "release_first_position": .70,
             "release_clearance_position": .60, "approach_velocity_scaling": .05,
@@ -863,6 +880,30 @@ class StackGui:
         self.busy(True)
         self.status.set("25mm 파지 보정 창을 열었습니다. 팔 작업은 잠겼으며 보정 창의 준비 확인 후 그리퍼만 움직입니다.")
 
+    def copy_log(self):
+        """Keep complete worker output available even after the 500-line view trims."""
+        contents, fallback = None, False
+        path = getattr(self, "job_logfile", None)
+        if path is not None:
+            try:
+                contents = Path(path).read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                fallback = True
+        if contents is None:
+            contents = self.log.get("1.0", "end-1c")
+        if not contents.strip():
+            self.log_copy_status.set("복사할 로그가 없습니다.")
+            return
+        try:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(contents)
+            self.root.update_idletasks()
+        except tk.TclError as error:
+            self.log_copy_status.set(f"로그 복사 실패: {error}")
+            return
+        source = "저장 파일을 읽을 수 없어 표시 로그만" if fallback else "로그 전체"
+        self.log_copy_status.set(f"{source} {len(contents):,}자 복사 완료")
+
     def gripper_calibration_status(self, message):
         self.status.set(message)
         self.log.insert("end", message + "\n")
@@ -1014,7 +1055,7 @@ class StackGui:
                        self.execution_ready())
             self.run_button.configure(state="normal" if enabled else "disabled")
             self.run_button.configure(text="⑤ 실물 집기·쌓기 실행" if getattr(self, "plan_kind", "air") == "physical"
-                                      else "⑤ 선택한 방식으로 팔 경로 실행")
+                                      else "⑤ 블록 없는 팔 경로 실행")
 
     def launch_task(self, action):
         if self.job or self.stop_pending or self.close_requested or self.calibration_window is not None:
@@ -1211,7 +1252,8 @@ class StackGui:
         else:
             command = ["ros2", "launch", "ur5e_a3_grid", "stack_blocks.launch.py",
                        f"stack_mode:={'plan' if action == 'plate_align' else action}", f"selection_file:={self.selection_file}",
-                       f"riser_height:={getattr(self, 'simulation_riser_height', 0.0)}"]
+                       f"riser_height:={getattr(self, 'simulation_riser_height', 0.0)}",
+                       f"simulation_backend:={getattr(self, 'simulation_backend', 'mock')}"]
             if action == "run":
                 command.append(f"execution_mode:={execution_mode}")
         try:
@@ -1236,6 +1278,8 @@ class StackGui:
                                 "전체 사전 검사 후 경로를 표시합니다. 상단 OK를 눌러야 움직입니다.",
                          "reset": "작업 물체를 지우는 중"}[action])
         logfile = self.folder / f"{time.strftime('%Y%m%d_%H%M%S')}_{action}.log"
+        self.job_logfile = logfile
+        self.saved_path_file = None
         job = self.job
         def read():
             with logfile.open("w") as stream:
@@ -1243,6 +1287,18 @@ class StackGui:
                     stream.write(line)
                     stream.flush()
                     self.events.put(("job", line))
+            try:
+                bundle = archive_from_log(logfile)
+                if bundle is not None:
+                    line = 'STACK_PATH_ARCHIVED '+json.dumps({'file': str(bundle)}, ensure_ascii=False)+'\n'
+                    with logfile.open('a') as stream:
+                        stream.write(line)
+                    self.events.put(("job", line))
+            except (OSError, ValueError, KeyError, TypeError) as error:
+                line = 'STACK_ARCHIVE_ERROR '+str(error)+'\n'
+                with logfile.open('a') as stream:
+                    stream.write(line)
+                self.events.put(("job", line))
             self.events.put(("finished", str(logfile)))
         threading.Thread(target=read, daemon=True).start()
 
@@ -1479,9 +1535,12 @@ class StackGui:
                                         if getattr(self, 'plate_alignment', False) else
                                         f"{'장애물 상단보다' if self.scan_mode else '블록 지지면보다' if getattr(self, 'plate_enabled', False) else '테이블보다'} {self.empty_hand_clearance.get()}mm 이상 여유의 공중 경로 시운전을 완료했습니다. 그리퍼 명령은 보내지 않았습니다."
                                         if self.real_backend else "선택한 홈의 바닥 블록 위에 나머지 블록을 쌓았습니다."),
-                                "reset": "RViz 작업 물체를 지웠습니다."}
+                                "reset": "Gazebo / RViz 작업 물체를 지웠습니다." if getattr(self, "simulation_backend", "mock") == "gazebo" else "RViz 작업 물체를 지웠습니다."}
                     if (not self.job_failed and (not (self.real_backend and self.job_action in ("plan", "scan", "plate_align", "physical_plan")) or self.remember_plan())):
-                        self.status.set(messages[self.job_action])
+                        message = messages[self.job_action]
+                        if self.job_action == 'run' and getattr(self, 'saved_path_file', None):
+                            message += '\n성공 경로 저장: '+self.saved_path_file
+                        self.status.set(message)
                 elif not self.job_failed:
                     self.status.set("작업이 중지되었거나 완료되지 않았습니다. 아래 로그를 확인하세요.")
                 self.alignment_paused = False
@@ -1504,7 +1563,18 @@ class StackGui:
             self.log.see("end")
             if self.process_step_event(line):
                 continue
-            if "STACK_RECOVERY_DONE " in line:
+            if "STACK_PATH_ARCHIVED " in line:
+                try:
+                    bundle = json.loads(line.split('STACK_PATH_ARCHIVED ', 1)[1])['file']
+                    self.saved_path_file = bundle
+                    self.status.set('적층 완료 · 성공 경로 저장: '+bundle)
+                except (ValueError, KeyError, TypeError):
+                    self.status.set('경로 저장 결과를 읽지 못했습니다. 실행 로그를 확인하세요.')
+            elif "STACK_ARCHIVE_ERROR " in line:
+                self.job_failed = True
+                self.last_failure_message = '동작 후 성공 경로 저장 실패: '+line.split('STACK_ARCHIVE_ERROR ', 1)[1].strip()
+                self.status.set(self.last_failure_message)
+            elif "STACK_RECOVERY_DONE " in line:
                 try:
                     self.receive_recovery_done(json.loads(line.split("STACK_RECOVERY_DONE ", 1)[1].strip()))
                 except (ValueError, TypeError) as error:
@@ -1550,6 +1620,10 @@ class StackGui:
                 match = re.search(r"source=(\d+) target=(\d+) layer=(\d+)/(\d+)", line)
                 if match:
                     self.status.set(f"경로 검사 중: {match[1]}번 → {match[2]}번, {match[3]}/{match[4]}층")
+            elif "STACK_TRANSFER_COMPLETED " in line:
+                match = re.search(r"block=(\d+) destination=(\d+) temporary=(\d+) moved=(\d+)", line)
+                if match and match[3] == '1':
+                    self.status.set(f"임시 적재: {match[1]}번 블록을 {match[2]}번 블록 위에 보관 · 목표 적재 {match[4]}개")
             elif "STACK_STATUS " in line:
                 phase_match = re.search(r"\bphase=(\w+)", line)
                 if phase_match:

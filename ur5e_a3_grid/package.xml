@@ -15,6 +15,13 @@
   <depend>moveit_msgs</depend>
   <depend>moveit_ros_planning</depend>
   <depend>controller_manager_msgs</depend>
+  <depend>hardware_interface</depend>
+  <build_depend>gazebo_dev</build_depend>
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>gazebo_ros2_control</exec_depend>
+  <depend>gazebo_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>rclcpp_action</depend>
   <depend>shape_msgs</depend>
   <depend>geometric_shapes</depend>
   <depend>std_srvs</depend>
