@@ -1,0 +1,2 @@
+# Preserve the audited CSV bytes (UTF-8 BOM and CRLF) on every platform.
+*.csv -text whitespace=cr-at-eol

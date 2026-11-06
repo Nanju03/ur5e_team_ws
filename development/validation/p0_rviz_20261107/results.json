@@ -1,0 +1,1490 @@
+{
+  "updated_at": "2026-11-07T02:55:11+09:00",
+  "completed": 32,
+  "total": 32,
+  "results": [
+    {
+      "number": 1,
+      "obstacle": 11,
+      "target": 8,
+      "category": "중앙 / 좌상",
+      "started_at": "2026-11-07T02:09:00+09:00",
+      "domain": 176,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 42.62
+        },
+        {
+          "layer": 3,
+          "elapsed": 77.725
+        },
+        {
+          "layer": 4,
+          "elapsed": 115.434
+        },
+        {
+          "layer": 5,
+          "elapsed": 150.915
+        },
+        {
+          "layer": 6,
+          "elapsed": 186.482
+        },
+        {
+          "layer": 7,
+          "elapsed": 224.797
+        },
+        {
+          "layer": 8,
+          "elapsed": 265.342
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 26.646,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.803,
+      "finished_at": "2026-11-07T02:14:01+09:00"
+    },
+    {
+      "number": 2,
+      "obstacle": 11,
+      "target": 7,
+      "category": "중앙 / 좌",
+      "started_at": "2026-11-07T02:09:03+09:00",
+      "domain": 177,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 55.719
+        },
+        {
+          "layer": 3,
+          "elapsed": 104.32
+        },
+        {
+          "layer": 4,
+          "elapsed": 136.902
+        },
+        {
+          "layer": 5,
+          "elapsed": 169.888
+        },
+        {
+          "layer": 6,
+          "elapsed": 207.782
+        },
+        {
+          "layer": 7,
+          "elapsed": 242.974
+        },
+        {
+          "layer": 8,
+          "elapsed": 275.897
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 31.658,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.748,
+      "finished_at": "2026-11-07T02:14:03+09:00"
+    },
+    {
+      "number": 3,
+      "obstacle": 11,
+      "target": 6,
+      "category": "중앙 / 좌하",
+      "started_at": "2026-11-07T02:09:02+09:00",
+      "domain": 178,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 47.927
+        },
+        {
+          "layer": 3,
+          "elapsed": 83.874
+        },
+        {
+          "layer": 4,
+          "elapsed": 122.934
+        },
+        {
+          "layer": 5,
+          "elapsed": 157.515
+        },
+        {
+          "layer": 6,
+          "elapsed": 192.364
+        },
+        {
+          "layer": 7,
+          "elapsed": 228.585
+        },
+        {
+          "layer": 8,
+          "elapsed": 264.904
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 27.89,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.715,
+      "finished_at": "2026-11-07T02:14:03+09:00"
+    },
+    {
+      "number": 4,
+      "obstacle": 11,
+      "target": 12,
+      "category": "중앙 / 상",
+      "started_at": "2026-11-07T02:09:00+09:00",
+      "domain": 179,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 41.837
+        },
+        {
+          "layer": 3,
+          "elapsed": 91.242
+        },
+        {
+          "layer": 4,
+          "elapsed": 126.902
+        },
+        {
+          "layer": 5,
+          "elapsed": 161.584
+        },
+        {
+          "layer": 6,
+          "elapsed": 199.64
+        },
+        {
+          "layer": 7,
+          "elapsed": 235.943
+        },
+        {
+          "layer": 8,
+          "elapsed": 270.532
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 25.478,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.076,
+      "finished_at": "2026-11-07T02:14:01+09:00"
+    },
+    {
+      "number": 5,
+      "obstacle": 11,
+      "target": 10,
+      "category": "중앙 / 하",
+      "started_at": "2026-11-07T02:14:06+09:00",
+      "domain": 176,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 64.409
+        },
+        {
+          "layer": 3,
+          "elapsed": 98.639
+        },
+        {
+          "layer": 4,
+          "elapsed": 132.534
+        },
+        {
+          "layer": 5,
+          "elapsed": 172.673
+        },
+        {
+          "layer": 6,
+          "elapsed": 211.889
+        },
+        {
+          "layer": 7,
+          "elapsed": 248.272
+        },
+        {
+          "layer": 8,
+          "elapsed": 286.109
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 35.565,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.348,
+      "finished_at": "2026-11-07T02:19:08+09:00"
+    },
+    {
+      "number": 6,
+      "obstacle": 11,
+      "target": 16,
+      "category": "중앙 / 우상",
+      "started_at": "2026-11-07T02:14:09+09:00",
+      "domain": 177,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 48.595
+        },
+        {
+          "layer": 3,
+          "elapsed": 86.808
+        },
+        {
+          "layer": 4,
+          "elapsed": 119.04
+        },
+        {
+          "layer": 5,
+          "elapsed": 157.699
+        },
+        {
+          "layer": 6,
+          "elapsed": 194.081
+        },
+        {
+          "layer": 7,
+          "elapsed": 229.377
+        },
+        {
+          "layer": 8,
+          "elapsed": 272.613
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 31.612,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.982,
+      "finished_at": "2026-11-07T02:19:10+09:00"
+    },
+    {
+      "number": 7,
+      "obstacle": 11,
+      "target": 15,
+      "category": "중앙 / 우",
+      "started_at": "2026-11-07T02:14:08+09:00",
+      "domain": 178,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 53.164
+        },
+        {
+          "layer": 3,
+          "elapsed": 107.316
+        },
+        {
+          "layer": 4,
+          "elapsed": 138.913
+        },
+        {
+          "layer": 5,
+          "elapsed": 182.433
+        },
+        {
+          "layer": 6,
+          "elapsed": 220.5
+        },
+        {
+          "layer": 7,
+          "elapsed": 256.205
+        },
+        {
+          "layer": 8,
+          "elapsed": 292.332
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 29.974,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.317,
+      "finished_at": "2026-11-07T02:19:09+09:00"
+    },
+    {
+      "number": 8,
+      "obstacle": 11,
+      "target": 14,
+      "category": "중앙 / 우하",
+      "started_at": "2026-11-07T02:14:07+09:00",
+      "domain": 179,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 4,
+      "complete_cycle_layer": 4,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 48.162
+        },
+        {
+          "layer": 3,
+          "elapsed": 80.436
+        },
+        {
+          "layer": 4,
+          "elapsed": 118.709
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 27.947,
+      "run_exit_code": 1,
+      "stop_reason": "Actual pick/place motion stopped; current scene preserved; {\"code\": \"JOINT_FEEDBACK_STALE\", \"stage\": \"motion\"}; {\"classification\": \"ARM_ACTION_CANCELED\", \"endpoint_position_tolerance\": 0.001, \"error_code\": 0, \"error_string\": \"\", \"goal_position_tolerance\": 0.001, \"goal_time_seconds\": 5, \"goal_velocity_tolerance\": 0.01, \"joints\": {\"elbow_joint\": {\"actual\": 2.2677398128748036, \"error\": -0.015995603583517592, \"target\": 2.2837354164583212}, \"shoulder_lift_joint\": {\"actual\": -1.8249995390474478, \"error\": -0.011620345627943562, \"target\": -1.8133791934195043}, \"shoulder_pan_joint\": {\"actual\": -0.4488384284326967, \"error\": 7.051685985975942e-05, \"target\": -0.4489089452925565}, \"wrist_1_joint\": {\"actual\": -2.012470752002113, \"error\": 0.02761626377408888, \"target\": -2.040087015776202}, \"wrist_2_joint\": {\"actual\": -1.5646737630850145, \"error\": 8.435081488333829e-05, \"target\": -1.5647581138998978}, \"wrist_3_joint\": {\"actual\": 1.1303580041510426, \"error\": -0.00010827646004374358, \"target\": 1.1304662806110863}}, \"label\": \"Place block on layer 5\", \"last_feedback\": {\"actual\": {\"elbow_joint\": 2.2636799663311336, \"shoulder_lift_joint\": -1.8277887174604752, \"shoulder_pan_joint\": -0.44882073539569606, \"wrist_1_joint\": -2.0056216444918125, \"wrist_2_joint\": -1.5646535073311723, \"wrist_3_joint\": 1.130330924352999}, \"age_seconds\": 0.336, \"desired\": {\"elbow_joint\": 2.263904008363751, \"shoulder_lift_joint\": -1.8276369150161118, \"shoulder_pan_joint\": -0.44882170902361546, \"wrist_1_joint\": -2.005997493559241, \"wrist_2_joint\": -1.5646546099061547, \"wrist_3_joint\": 1.1303324133642147}, \"error\": {\"elbow_joint\": 0.0002240420326176107, \"shoulder_lift_joint\": 0.0001518024443634136, \"shoulder_pan_joint\": -9.736279193983677e-07, \"wrist_1_joint\": -0.00037584906742837987, \"wrist_2_joint\": -1.1025749824256081e-06, \"wrist_3_joint\": 1.489011215660696e-06}}, \"path_position_tolerance\": {\"elbow_joint\": 0.1, \"shoulder_lift_joint\": 0.1, \"shoulder_pan_joint\": 0.1, \"wrist_1_joint\": 0.1, \"wrist_2_joint\": 0.1, \"wrist_3_joint\": 0.1}, \"phase\": \"approach\", \"quiet\": true, \"status\": 5, \"step\": 9}",
+      "elapsed_seconds": 153.977,
+      "finished_at": "2026-11-07T02:16:41+09:00"
+    },
+    {
+      "number": 9,
+      "obstacle": 4,
+      "target": 3,
+      "category": "좌상 모서리 / 아래",
+      "started_at": "2026-11-07T02:19:13+09:00",
+      "domain": 176,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 4,
+      "complete_cycle_layer": 4,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 60.868
+        },
+        {
+          "layer": 3,
+          "elapsed": 93.602
+        },
+        {
+          "layer": 4,
+          "elapsed": 128.609
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 34.052,
+      "run_exit_code": 1,
+      "stop_reason": "0.73 잡기 명령 완료를 확인하지 못했습니다. {\"command_sample_sequence\": -1, \"communication_age\": null, \"force_percent\": null, \"grip_state\": null, \"measured\": 0.4, \"nominal_target\": 0.73, \"phase\": \"grasp\", \"position_error\": -0.32999999999999996, \"raw_position\": null, \"reached_goal\": true, \"result_position\": 0.73, \"sample_sequence\": -1, \"stalled\": false, \"start\": 0.4, \"status\": 4, \"target\": 0.73}",
+      "elapsed_seconds": 154.041,
+      "finished_at": "2026-11-07T02:21:47+09:00"
+    },
+    {
+      "number": 10,
+      "obstacle": 4,
+      "target": 8,
+      "category": "좌상 모서리 / 오른쪽",
+      "started_at": "2026-11-07T02:19:15+09:00",
+      "domain": 177,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 52.914
+        },
+        {
+          "layer": 3,
+          "elapsed": 84.942
+        },
+        {
+          "layer": 4,
+          "elapsed": 116.906
+        },
+        {
+          "layer": 5,
+          "elapsed": 152.947
+        },
+        {
+          "layer": 6,
+          "elapsed": 192.516
+        },
+        {
+          "layer": 7,
+          "elapsed": 230.194
+        },
+        {
+          "layer": 8,
+          "elapsed": 268.826
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 29.185,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.892,
+      "finished_at": "2026-11-07T02:24:16+09:00"
+    },
+    {
+      "number": 11,
+      "obstacle": 4,
+      "target": 7,
+      "category": "좌상 모서리 / 대각선",
+      "started_at": "2026-11-07T02:19:15+09:00",
+      "domain": 178,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 58.687
+        },
+        {
+          "layer": 3,
+          "elapsed": 97.556
+        },
+        {
+          "layer": 4,
+          "elapsed": 137.137
+        },
+        {
+          "layer": 5,
+          "elapsed": 170.556
+        },
+        {
+          "layer": 6,
+          "elapsed": 207.105
+        },
+        {
+          "layer": 7,
+          "elapsed": 244.87
+        },
+        {
+          "layer": 8,
+          "elapsed": 286.889
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 37.373,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.776,
+      "finished_at": "2026-11-07T02:24:16+09:00"
+    },
+    {
+      "number": 12,
+      "obstacle": 24,
+      "target": 20,
+      "category": "우상 모서리 / 왼쪽",
+      "started_at": "2026-11-07T02:16:48+09:00",
+      "domain": 179,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 58.338
+        },
+        {
+          "layer": 3,
+          "elapsed": 107.98
+        },
+        {
+          "layer": 4,
+          "elapsed": 141.321
+        },
+        {
+          "layer": 5,
+          "elapsed": 175.55
+        },
+        {
+          "layer": 6,
+          "elapsed": 216.04
+        },
+        {
+          "layer": 7,
+          "elapsed": 249.941
+        },
+        {
+          "layer": 8,
+          "elapsed": 288.841
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 34.701,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.772,
+      "finished_at": "2026-11-07T02:21:50+09:00"
+    },
+    {
+      "number": 13,
+      "obstacle": 24,
+      "target": 19,
+      "category": "우상 모서리 / 대각선",
+      "started_at": "2026-11-07T02:21:53+09:00",
+      "domain": 176,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 48.828
+        },
+        {
+          "layer": 3,
+          "elapsed": 85.174
+        },
+        {
+          "layer": 4,
+          "elapsed": 124.582
+        },
+        {
+          "layer": 5,
+          "elapsed": 158.3
+        },
+        {
+          "layer": 6,
+          "elapsed": 195.884
+        },
+        {
+          "layer": 7,
+          "elapsed": 230.861
+        },
+        {
+          "layer": 8,
+          "elapsed": 272.528
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 29.307,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.173,
+      "finished_at": "2026-11-07T02:26:54+09:00"
+    },
+    {
+      "number": 14,
+      "obstacle": 24,
+      "target": 23,
+      "category": "우상 모서리 / 아래",
+      "started_at": "2026-11-07T02:24:22+09:00",
+      "domain": 177,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 52.089
+        },
+        {
+          "layer": 3,
+          "elapsed": 87.887
+        },
+        {
+          "layer": 4,
+          "elapsed": 125.884
+        },
+        {
+          "layer": 5,
+          "elapsed": 160.897
+        },
+        {
+          "layer": 6,
+          "elapsed": 198.191
+        },
+        {
+          "layer": 7,
+          "elapsed": 239.148
+        },
+        {
+          "layer": 8,
+          "elapsed": 279.089
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 30.761,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.614,
+      "finished_at": "2026-11-07T02:29:24+09:00"
+    },
+    {
+      "number": 15,
+      "obstacle": 1,
+      "target": 2,
+      "category": "좌하 모서리 / 위",
+      "started_at": "2026-11-07T02:24:22+09:00",
+      "domain": 178,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 7,
+      "complete_cycle_layer": 7,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 43.857
+        },
+        {
+          "layer": 3,
+          "elapsed": 99.398
+        },
+        {
+          "layer": 4,
+          "elapsed": 137.7
+        },
+        {
+          "layer": 5,
+          "elapsed": 172.303
+        },
+        {
+          "layer": 6,
+          "elapsed": 214.049
+        },
+        {
+          "layer": 7,
+          "elapsed": 261.59
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 25.206,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.964,
+      "finished_at": "2026-11-07T02:29:24+09:00"
+    },
+    {
+      "number": 16,
+      "obstacle": 1,
+      "target": 6,
+      "category": "좌하 모서리 / 대각선",
+      "started_at": "2026-11-07T02:21:56+09:00",
+      "domain": 179,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 44.447
+        },
+        {
+          "layer": 3,
+          "elapsed": 83.635
+        },
+        {
+          "layer": 4,
+          "elapsed": 123.406
+        },
+        {
+          "layer": 5,
+          "elapsed": 158.824
+        },
+        {
+          "layer": 6,
+          "elapsed": 194.385
+        },
+        {
+          "layer": 7,
+          "elapsed": 230.915
+        },
+        {
+          "layer": 8,
+          "elapsed": 267.05
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 24.684,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.041,
+      "finished_at": "2026-11-07T02:26:57+09:00"
+    },
+    {
+      "number": 17,
+      "obstacle": 1,
+      "target": 5,
+      "category": "좌하 모서리 / 오른쪽",
+      "started_at": "2026-11-07T02:27:00+09:00",
+      "domain": 176,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 3,
+      "complete_cycle_layer": 3,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 55.979
+        },
+        {
+          "layer": 3,
+          "elapsed": 120.481
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 31.439,
+      "run_exit_code": 1,
+      "stop_reason": "Actual pick/place motion stopped; current scene preserved; {\"code\": \"JOINT_FEEDBACK_STALE\", \"stage\": \"motion\"}; {\"classification\": \"ARM_ACTION_CANCELED\", \"endpoint_position_tolerance\": 0.001, \"error_code\": 0, \"error_string\": \"\", \"goal_position_tolerance\": 0.001, \"goal_time_seconds\": 5, \"goal_velocity_tolerance\": 0.01, \"joints\": {\"elbow_joint\": {\"actual\": 2.4150404008338966, \"error\": -0.16820102184382435, \"target\": 2.583241422677721}, \"shoulder_lift_joint\": {\"actual\": -1.9951625114012752, \"error\": -0.20922040416294285, \"target\": -1.7859421072383324}, \"shoulder_pan_joint\": {\"actual\": -0.3461805230345925, \"error\": 0.001034411961872428, \"target\": -0.34721493499646494}, \"wrist_1_joint\": {\"actual\": -1.9896074963183612, \"error\": 0.3774228122327925, \"target\": -2.3670303085511537}, \"wrist_2_joint\": {\"actual\": -1.5647618931999872, \"error\": 0.001472197626045002, \"target\": -1.5662340908260322}, \"wrist_3_joint\": {\"actual\": -1.90860749728908, \"error\": -0.0011196182353823136, \"target\": -1.9074878790536978}}, \"label\": \"Pickup Source 9 continuous approach and descent\", \"last_feedback\": {\"actual\": {\"elbow_joint\": 2.399990536347087, \"shoulder_lift_joint\": -2.005321779312607, \"shoulder_pan_joint\": -0.34609837192550263, \"wrist_1_joint\": -1.9643980550576827, \"wrist_2_joint\": -1.564691553884128, \"wrist_3_joint\": -1.908691191006163}, \"age_seconds\": 0.281, \"desired\": {\"elbow_joint\": 2.4010697734785365, \"shoulder_lift_joint\": -2.0046226430660905, \"shoulder_pan_joint\": -0.3461042161525131, \"wrist_1_joint\": -1.966176450994714, \"wrist_2_joint\": -1.5646963930048527, \"wrist_3_joint\": -1.9086852600392816}, \"error\": {\"elbow_joint\": 0.0010792371314494176, \"shoulder_lift_joint\": 0.0006991362465162965, \"shoulder_pan_joint\": -5.8442270104430705e-06, \"wrist_1_joint\": -0.0017783959370312186, \"wrist_2_joint\": -4.839120724797752e-06, \"wrist_3_joint\": 5.930966881395605e-06}}, \"path_position_tolerance\": {\"elbow_joint\": 0.1, \"shoulder_lift_joint\": 0.1, \"shoulder_pan_joint\": 0.1, \"wrist_1_joint\": 0.1, \"wrist_2_joint\": 0.1, \"wrist_3_joint\": 0.1}, \"phase\": \"transfer\", \"quiet\": true, \"status\": 5, \"step\": 3}",
+      "elapsed_seconds": 142.392,
+      "finished_at": "2026-11-07T02:29:23+09:00"
+    },
+    {
+      "number": 18,
+      "obstacle": 21,
+      "target": 18,
+      "category": "우하 모서리 / 대각선",
+      "started_at": "2026-11-07T02:29:32+09:00",
+      "domain": 177,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 1,
+      "complete_cycle_layer": 1,
+      "placements": [],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "run_exit_code": 1,
+      "stop_reason": "Physical pick/place stopped; current holding state preserved; {\"code\": \"JOINT_FEEDBACK_STALE\", \"stage\": \"monitor_prewarm\"}",
+      "elapsed_seconds": 62.874,
+      "finished_at": "2026-11-07T02:30:35+09:00"
+    },
+    {
+      "number": 19,
+      "obstacle": 21,
+      "target": 17,
+      "category": "우하 모서리 / 왼쪽",
+      "started_at": "2026-11-07T02:29:31+09:00",
+      "domain": 178,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 1,
+      "complete_cycle_layer": 1,
+      "placements": [],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 65.927,
+      "run_exit_code": 1,
+      "stop_reason": "Physical pick/place stopped; current holding state preserved; {\"code\": \"STANDSTILL_UNCONFIRMED_AFTER_MONITOR_PREWARM\"}",
+      "elapsed_seconds": 78.293,
+      "finished_at": "2026-11-07T02:30:50+09:00"
+    },
+    {
+      "number": 20,
+      "obstacle": 21,
+      "target": 22,
+      "category": "우하 모서리 / 위",
+      "started_at": "2026-11-07T02:27:02+09:00",
+      "domain": 179,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 3,
+      "complete_cycle_layer": 3,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 51.823
+        },
+        {
+          "layer": 3,
+          "elapsed": 92.608
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 32.725,
+      "run_exit_code": 1,
+      "stop_reason": "실측 팔 관절값이 검토한 도착 목표와 다릅니다. {\"classification\": \"ARM_ENDPOINT_MISMATCH\", \"endpoint_position_tolerance\": 0.001, \"error_code\": 0, \"error_string\": \"Goal successfully reached!\", \"goal_position_tolerance\": 0.001, \"goal_time_seconds\": 5, \"goal_velocity_tolerance\": 0.01, \"joints\": {\"elbow_joint\": {\"actual\": 2.265226561653488, \"error\": -0.0005000082551736007, \"target\": 2.2657265699086615}, \"shoulder_lift_joint\": {\"actual\": -1.695240219042804, \"error\": -0.0005110021002081577, \"target\": -1.6947292169425958}, \"shoulder_pan_joint\": {\"actual\": -0.7261758122816144, \"error\": 2.161864057437235e-06, \"target\": -0.7261779741456719}, \"wrist_1_joint\": {\"actual\": -2.1397183552982777, \"error\": 0.0010110172638895243, \"target\": -2.140729372562167}, \"wrist_2_joint\": {\"actual\": -1.5650213706222824, \"error\": 3.7438122240107674e-06, \"target\": -1.5650251144345064}, \"wrist_3_joint\": {\"actual\": -0.7170168492926907, \"error\": -3.936294142858898e-06, \"target\": -0.7170129129985479}}, \"label\": \"Place block on layer 4\", \"last_feedback\": {\"actual\": {\"elbow_joint\": 2.265517321704484, \"shoulder_lift_joint\": -1.694943423325752, \"shoulder_pan_joint\": -0.726177069074606, \"wrist_1_joint\": -2.1403059150915364, \"wrist_2_joint\": -1.565023545105037, \"wrist_3_joint\": -0.7170145611065598}, \"age_seconds\": 0.0, \"desired\": {\"elbow_joint\": 2.2655436887638607, \"shoulder_lift_joint\": -1.6949164677312505, \"shoulder_pan_joint\": -0.7261771830854222, \"wrist_1_joint\": -2.1403592381095295, \"wrist_2_joint\": -1.565023742591986, \"wrist_3_joint\": -0.717014353513046}, \"error\": {\"elbow_joint\": 2.6367059376752877e-05, \"shoulder_lift_joint\": 2.695559450160978e-05, \"shoulder_pan_joint\": -1.1401081623230169e-07, \"wrist_1_joint\": -5.332301799310102e-05, \"wrist_2_joint\": -1.9748694901622343e-07, \"wrist_3_joint\": 2.0759351382348967e-07}}, \"path_position_tolerance\": {\"elbow_joint\": 0.1, \"shoulder_lift_joint\": 0.1, \"shoulder_pan_joint\": 0.1, \"wrist_1_joint\": 0.1, \"wrist_2_joint\": 0.1, \"wrist_3_joint\": 0.1}, \"phase\": \"approach\", \"quiet\": true, \"status\": 4, \"step\": 9}",
+      "elapsed_seconds": 125.683,
+      "finished_at": "2026-11-07T02:29:08+09:00"
+    },
+    {
+      "number": 21,
+      "obstacle": 12,
+      "target": 8,
+      "category": "상단 가장자리 / 왼쪽",
+      "started_at": "2026-11-07T02:29:29+09:00",
+      "domain": 176,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 4,
+      "complete_cycle_layer": 3,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 104.899
+        },
+        {
+          "layer": 3,
+          "elapsed": 186.761
+        },
+        {
+          "layer": 4,
+          "elapsed": 250.18
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 72.727,
+      "run_exit_code": 1,
+      "stop_reason": "Actual pick/place motion stopped; current scene preserved; {\"code\": \"JOINT_FEEDBACK_STALE\", \"stage\": \"motion\"}",
+      "elapsed_seconds": 253.209,
+      "finished_at": "2026-11-07T02:33:43+09:00"
+    },
+    {
+      "number": 22,
+      "obstacle": 12,
+      "target": 16,
+      "category": "상단 가장자리 / 오른쪽",
+      "started_at": "2026-11-07T02:39:47+09:00",
+      "domain": 177,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 5,
+      "complete_cycle_layer": 5,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 88.234
+        },
+        {
+          "layer": 3,
+          "elapsed": 179.844
+        },
+        {
+          "layer": 4,
+          "elapsed": 218.487
+        },
+        {
+          "layer": 5,
+          "elapsed": 263.58
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 60.373,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.979,
+      "finished_at": "2026-11-07T02:44:48+09:00"
+    },
+    {
+      "number": 23,
+      "obstacle": 9,
+      "target": 5,
+      "category": "하단 가장자리 / 왼쪽",
+      "started_at": "2026-11-07T02:39:45+09:00",
+      "domain": 178,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 5,
+      "complete_cycle_layer": 5,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 102.145
+        },
+        {
+          "layer": 3,
+          "elapsed": 185.359
+        },
+        {
+          "layer": 4,
+          "elapsed": 226.987
+        },
+        {
+          "layer": 5,
+          "elapsed": 272.72
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 75.028,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.888,
+      "finished_at": "2026-11-07T02:44:45+09:00"
+    },
+    {
+      "number": 24,
+      "obstacle": 9,
+      "target": 10,
+      "category": "하단 가장자리 / 위",
+      "started_at": "2026-11-07T02:29:15+09:00",
+      "domain": 179,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 2,
+      "complete_cycle_layer": 1,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 76.605
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 53.126,
+      "run_exit_code": 1,
+      "stop_reason": "Actual pick/place motion stopped; current scene preserved; {\"code\": \"JOINT_FEEDBACK_STALE\", \"stage\": \"motion\"}",
+      "elapsed_seconds": 79.404,
+      "finished_at": "2026-11-07T02:30:34+09:00"
+    },
+    {
+      "number": 25,
+      "obstacle": 3,
+      "target": 2,
+      "category": "좌측 가장자리 / 아래",
+      "started_at": "2026-11-07T02:39:45+09:00",
+      "domain": 176,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 2,
+      "complete_cycle_layer": 2,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 85.863
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 60.926,
+      "run_exit_code": 1,
+      "stop_reason": "0.73 잡기 명령 완료를 확인하지 못했습니다. {\"command_sample_sequence\": -1, \"communication_age\": null, \"force_percent\": null, \"grip_state\": null, \"measured\": 0.4, \"nominal_target\": 0.73, \"phase\": \"grasp\", \"position_error\": -0.32999999999999996, \"raw_position\": null, \"reached_goal\": true, \"result_position\": 0.73, \"sample_sequence\": -1, \"stalled\": false, \"start\": 0.4, \"status\": 4, \"target\": 0.73}",
+      "elapsed_seconds": 127.3,
+      "finished_at": "2026-11-07T02:41:52+09:00"
+    },
+    {
+      "number": 26,
+      "obstacle": 3,
+      "target": 7,
+      "category": "좌측 가장자리 / 오른쪽",
+      "started_at": "2026-11-07T02:44:54+09:00",
+      "domain": 177,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 6,
+      "complete_cycle_layer": 6,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 73.749
+        },
+        {
+          "layer": 3,
+          "elapsed": 141.109
+        },
+        {
+          "layer": 4,
+          "elapsed": 179.701
+        },
+        {
+          "layer": 5,
+          "elapsed": 234.279
+        },
+        {
+          "layer": 6,
+          "elapsed": 279.338
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 46.728,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.017,
+      "finished_at": "2026-11-07T02:49:55+09:00"
+    },
+    {
+      "number": 27,
+      "obstacle": 23,
+      "target": 19,
+      "category": "우측 가장자리 / 왼쪽",
+      "started_at": "2026-11-07T02:44:52+09:00",
+      "domain": 178,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 6,
+      "complete_cycle_layer": 6,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 69.199
+        },
+        {
+          "layer": 3,
+          "elapsed": 135.654
+        },
+        {
+          "layer": 4,
+          "elapsed": 174.835
+        },
+        {
+          "layer": 5,
+          "elapsed": 217.119
+        },
+        {
+          "layer": 6,
+          "elapsed": 263.963
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 42.488,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.552,
+      "finished_at": "2026-11-07T02:49:53+09:00"
+    },
+    {
+      "number": 28,
+      "obstacle": 23,
+      "target": 22,
+      "category": "우측 가장자리 / 아래",
+      "started_at": "2026-11-07T02:30:42+09:00",
+      "domain": 179,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 4,
+      "complete_cycle_layer": 4,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 98.167
+        },
+        {
+          "layer": 3,
+          "elapsed": 156.448
+        },
+        {
+          "layer": 4,
+          "elapsed": 214.206
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 67.768,
+      "run_exit_code": 1,
+      "stop_reason": "Actual pick/place motion stopped; current scene preserved; {\"code\": \"JOINT_FEEDBACK_STALE\", \"stage\": \"motion\"}; {\"classification\": \"ARM_ACTION_CANCELED\", \"endpoint_position_tolerance\": 0.001, \"error_code\": 0, \"error_string\": \"\", \"goal_position_tolerance\": 0.001, \"goal_time_seconds\": 5, \"goal_velocity_tolerance\": 0.01, \"joints\": {\"elbow_joint\": {\"actual\": 2.062011081953034, \"error\": -0.010660529138950992, \"target\": 2.072671611091985}, \"shoulder_lift_joint\": {\"actual\": -1.317967678686148, \"error\": -0.02063087297363131, \"target\": -1.2973368057125167}, \"shoulder_pan_joint\": {\"actual\": -0.5620815126031614, \"error\": 4.163534165957383e-05, \"target\": -0.562123147944821}, \"wrist_1_joint\": {\"actual\": -2.313777745113387, \"error\": 0.031291414092072145, \"target\": -2.345069159205459}, \"wrist_2_joint\": {\"actual\": -1.5654074979231862, \"error\": 0.00014221512991152707, \"target\": -1.5655497130530978}, \"wrist_3_joint\": {\"actual\": -0.5520062885633356, \"error\": -0.0001259885627746815, \"target\": -0.5518803000005609}}, \"label\": \"Pickup Source 24 continuous approach and descent\", \"last_feedback\": {\"actual\": {\"elbow_joint\": 2.0526990795651447, \"shoulder_lift_joint\": -1.3342699166862566, \"shoulder_pan_joint\": -0.5620463428641583, \"wrist_1_joint\": -2.2881634590652333, \"wrist_2_joint\": -1.5652944964713928, \"wrist_3_joint\": -0.552111967512266}, \"age_seconds\": 0.302, \"desired\": {\"elbow_joint\": 2.053275531423876, \"shoulder_lift_joint\": -1.3333009884790177, \"shoulder_pan_joint\": -0.5620484866822253, \"wrist_1_joint\": -2.2897088425680843, \"wrist_2_joint\": -1.5653012507659438, \"wrist_3_joint\": -0.5521055421412747}, \"error\": {\"elbow_joint\": 0.0005764518587314527, \"shoulder_lift_joint\": 0.0009689282072389283, \"shoulder_pan_joint\": -2.1438180669575146e-06, \"wrist_1_joint\": -0.0015453835028509388, \"wrist_2_joint\": -6.754294550992412e-06, \"wrist_3_joint\": 6.42537099126983e-06}}, \"path_position_tolerance\": {\"elbow_joint\": 0.1, \"shoulder_lift_joint\": 0.1, \"shoulder_pan_joint\": 0.1, \"wrist_1_joint\": 0.1, \"wrist_2_joint\": 0.1, \"wrist_3_joint\": 0.1}, \"phase\": \"transfer\", \"quiet\": true, \"status\": 5, \"step\": 3}",
+      "elapsed_seconds": 266.217,
+      "finished_at": "2026-11-07T02:35:08+09:00"
+    },
+    {
+      "number": 29,
+      "obstacle": 7,
+      "target": 11,
+      "category": "위치 반전 / 좌→중앙",
+      "started_at": "2026-11-07T02:42:02+09:00",
+      "domain": 176,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 6,
+      "complete_cycle_layer": 6,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 73.989
+        },
+        {
+          "layer": 3,
+          "elapsed": 142.344
+        },
+        {
+          "layer": 4,
+          "elapsed": 184.392
+        },
+        {
+          "layer": 5,
+          "elapsed": 228.731
+        },
+        {
+          "layer": 6,
+          "elapsed": 279.805
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 49.713,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 301.456,
+      "finished_at": "2026-11-07T02:47:04+09:00"
+    },
+    {
+      "number": 30,
+      "obstacle": 12,
+      "target": 11,
+      "category": "위치 반전 / 상→중앙",
+      "started_at": "2026-11-07T02:50:01+09:00",
+      "domain": 177,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 52.22
+        },
+        {
+          "layer": 3,
+          "elapsed": 88.56
+        },
+        {
+          "layer": 4,
+          "elapsed": 122.949
+        },
+        {
+          "layer": 5,
+          "elapsed": 159.258
+        },
+        {
+          "layer": 6,
+          "elapsed": 200.284
+        },
+        {
+          "layer": 7,
+          "elapsed": 233.829
+        },
+        {
+          "layer": 8,
+          "elapsed": 272.073
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 33.118,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.56,
+      "finished_at": "2026-11-07T02:55:02+09:00"
+    },
+    {
+      "number": 31,
+      "obstacle": 10,
+      "target": 11,
+      "category": "위치 반전 / 하→중앙",
+      "started_at": "2026-11-07T02:49:59+09:00",
+      "domain": 178,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 8,
+      "complete_cycle_layer": 8,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 47.157
+        },
+        {
+          "layer": 3,
+          "elapsed": 80.398
+        },
+        {
+          "layer": 4,
+          "elapsed": 119.746
+        },
+        {
+          "layer": 5,
+          "elapsed": 154.715
+        },
+        {
+          "layer": 6,
+          "elapsed": 192.477
+        },
+        {
+          "layer": 7,
+          "elapsed": 228.119
+        },
+        {
+          "layer": 8,
+          "elapsed": 268.207
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": true,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 29.541,
+      "stop_reason": "time_limit_300s",
+      "elapsed_seconds": 300.86,
+      "finished_at": "2026-11-07T02:55:00+09:00"
+    },
+    {
+      "number": 32,
+      "obstacle": 15,
+      "target": 11,
+      "category": "위치 반전 / 우→중앙",
+      "started_at": "2026-11-07T02:39:45+09:00",
+      "domain": 179,
+      "time_limit_seconds": 300.0,
+      "planning_included": true,
+      "highest_layer": 2,
+      "complete_cycle_layer": 2,
+      "placements": [
+        {
+          "layer": 2,
+          "elapsed": 94.442
+        }
+      ],
+      "planning_ok": true,
+      "execution_ok": false,
+      "stage": "run",
+      "mock_hardware": true,
+      "ideal_grasp": true,
+      "rviz_rendered": true,
+      "scene_exit_code": 0,
+      "plan_exit_code": 0,
+      "approval_attempts": 1,
+      "approval_elapsed": 66.419,
+      "run_exit_code": 1,
+      "stop_reason": "Physical goal acceptance failed; exact goal stop was recovered; {\"code\": \"JOINT_FEEDBACK_STALE\", \"stage\": \"goal_acknowledgement\"}",
+      "elapsed_seconds": 162.906,
+      "finished_at": "2026-11-07T02:42:27+09:00"
+    }
+  ]
+}

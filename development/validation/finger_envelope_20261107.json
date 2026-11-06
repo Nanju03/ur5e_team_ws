@@ -1,0 +1,81 @@
+{
+  "cause": "Measured reference .70401 needs lower .69901, outside old .700 certificate",
+  "common_finger_range": [
+    0.69,
+    0.733
+  ],
+  "holding_tolerance": 0.005,
+  "finger_sample_step": 0.005,
+  "policy": "physical_incremental_measured_fingers_v22",
+  "replay_policy": "physical_prevalidated_finger_grid_adaptive_release_v3",
+  "first_release_formula": "min(.70, original_measured_grasp-.010)",
+  "regression_tests": {
+    "passed": 1647,
+    "sandbox_blocked_native_tests": 2,
+    "native_rerun_passed": 11
+  },
+  "hardware_commands_sent": 0,
+  "native_comparisons": [
+    {
+      "layer": 4,
+      "source": 6,
+      "before": {
+        "steps": 14,
+        "samples": 14161,
+        "duration": 19.303949188,
+        "validation_seconds": 4.852518240000791
+      },
+      "after": {
+        "steps": 14,
+        "samples": 16251,
+        "duration": 19.303949188,
+        "validation_seconds": 3.5296594629980973
+      }
+    },
+    {
+      "layer": 5,
+      "source": 16,
+      "before": {
+        "steps": 14,
+        "samples": 11892,
+        "duration": 16.039572380000003,
+        "validation_seconds": 4.094294163001905
+      },
+      "after": {
+        "steps": 14,
+        "samples": 13690,
+        "duration": 16.039572380000003,
+        "validation_seconds": 2.7567293840002094
+      }
+    }
+  ],
+  "missing_finger_check": {
+    "passed": true,
+    "robot_commands_sent": 0,
+    "checks": [
+      {
+        "role": "carry",
+        "missing_finger": 0.689,
+        "samples": 755,
+        "seconds": 0.11056259999895701
+      },
+      {
+        "role": "place",
+        "missing_finger": 0.689,
+        "samples": 30,
+        "seconds": 0.013319063000380993
+      }
+    ]
+  },
+  "limitations": "Sampled model checks, no real hardware validation; timing measurements were not an isolated benchmark",
+  "logging_followup": {
+    "related_tests_passed": 278,
+    "additional_regression_cases": 2,
+    "changed_motion_or_collision_policy": false,
+    "fields": [
+      "collision_rechecks",
+      "additional_finger_samples",
+      "additional_finger_validation_seconds"
+    ]
+  }
+}

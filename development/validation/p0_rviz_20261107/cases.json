@@ -1,0 +1,194 @@
+[
+  {
+    "number": 1,
+    "obstacle": 11,
+    "target": 8,
+    "category": "중앙 / 좌상"
+  },
+  {
+    "number": 2,
+    "obstacle": 11,
+    "target": 7,
+    "category": "중앙 / 좌"
+  },
+  {
+    "number": 3,
+    "obstacle": 11,
+    "target": 6,
+    "category": "중앙 / 좌하"
+  },
+  {
+    "number": 4,
+    "obstacle": 11,
+    "target": 12,
+    "category": "중앙 / 상"
+  },
+  {
+    "number": 5,
+    "obstacle": 11,
+    "target": 10,
+    "category": "중앙 / 하"
+  },
+  {
+    "number": 6,
+    "obstacle": 11,
+    "target": 16,
+    "category": "중앙 / 우상"
+  },
+  {
+    "number": 7,
+    "obstacle": 11,
+    "target": 15,
+    "category": "중앙 / 우"
+  },
+  {
+    "number": 8,
+    "obstacle": 11,
+    "target": 14,
+    "category": "중앙 / 우하"
+  },
+  {
+    "number": 9,
+    "obstacle": 4,
+    "target": 3,
+    "category": "좌상 모서리 / 아래"
+  },
+  {
+    "number": 10,
+    "obstacle": 4,
+    "target": 8,
+    "category": "좌상 모서리 / 오른쪽"
+  },
+  {
+    "number": 11,
+    "obstacle": 4,
+    "target": 7,
+    "category": "좌상 모서리 / 대각선"
+  },
+  {
+    "number": 12,
+    "obstacle": 24,
+    "target": 20,
+    "category": "우상 모서리 / 왼쪽"
+  },
+  {
+    "number": 13,
+    "obstacle": 24,
+    "target": 19,
+    "category": "우상 모서리 / 대각선"
+  },
+  {
+    "number": 14,
+    "obstacle": 24,
+    "target": 23,
+    "category": "우상 모서리 / 아래"
+  },
+  {
+    "number": 15,
+    "obstacle": 1,
+    "target": 2,
+    "category": "좌하 모서리 / 위"
+  },
+  {
+    "number": 16,
+    "obstacle": 1,
+    "target": 6,
+    "category": "좌하 모서리 / 대각선"
+  },
+  {
+    "number": 17,
+    "obstacle": 1,
+    "target": 5,
+    "category": "좌하 모서리 / 오른쪽"
+  },
+  {
+    "number": 18,
+    "obstacle": 21,
+    "target": 18,
+    "category": "우하 모서리 / 대각선"
+  },
+  {
+    "number": 19,
+    "obstacle": 21,
+    "target": 17,
+    "category": "우하 모서리 / 왼쪽"
+  },
+  {
+    "number": 20,
+    "obstacle": 21,
+    "target": 22,
+    "category": "우하 모서리 / 위"
+  },
+  {
+    "number": 21,
+    "obstacle": 12,
+    "target": 8,
+    "category": "상단 가장자리 / 왼쪽"
+  },
+  {
+    "number": 22,
+    "obstacle": 12,
+    "target": 16,
+    "category": "상단 가장자리 / 오른쪽"
+  },
+  {
+    "number": 23,
+    "obstacle": 9,
+    "target": 5,
+    "category": "하단 가장자리 / 왼쪽"
+  },
+  {
+    "number": 24,
+    "obstacle": 9,
+    "target": 10,
+    "category": "하단 가장자리 / 위"
+  },
+  {
+    "number": 25,
+    "obstacle": 3,
+    "target": 2,
+    "category": "좌측 가장자리 / 아래"
+  },
+  {
+    "number": 26,
+    "obstacle": 3,
+    "target": 7,
+    "category": "좌측 가장자리 / 오른쪽"
+  },
+  {
+    "number": 27,
+    "obstacle": 23,
+    "target": 19,
+    "category": "우측 가장자리 / 왼쪽"
+  },
+  {
+    "number": 28,
+    "obstacle": 23,
+    "target": 22,
+    "category": "우측 가장자리 / 아래"
+  },
+  {
+    "number": 29,
+    "obstacle": 7,
+    "target": 11,
+    "category": "위치 반전 / 좌→중앙"
+  },
+  {
+    "number": 30,
+    "obstacle": 12,
+    "target": 11,
+    "category": "위치 반전 / 상→중앙"
+  },
+  {
+    "number": 31,
+    "obstacle": 10,
+    "target": 11,
+    "category": "위치 반전 / 하→중앙"
+  },
+  {
+    "number": 32,
+    "obstacle": 15,
+    "target": 11,
+    "category": "위치 반전 / 우→중앙"
+  }
+]

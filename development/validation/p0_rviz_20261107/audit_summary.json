@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-11-07T02:57:28.690618+09:00",
+  "cases_checked": 32,
+  "case_ids_and_layouts_match": true,
+  "source_pdf_unchanged": true,
+  "per_case_and_aggregate_results_match": true,
+  "scored_placements_within_300_seconds": true,
+  "latest_scored_placement_seconds": 292.332,
+  "independent_log_and_parameter_audit": "Passed all32; PLACED and INCREMENTAL_PROGRESS match counts; scene/plan/run layouts and foundation match",
+  "all_campaign_workers_exit_code_zero": true,
+  "report_pdf_pages": 4,
+  "report_visual_inspection": "Passed; Korean text and all32 table rows visible",
+  "artifact_sha256": {
+    "results.json": "24b62ef1cf5b97f679aab8d964b40320a96f554cf9739cacb9f2cb71776e1c8a",
+    "P0_32개_RViz_5분_시험결과.pdf": "eebfcd0b14e20745c334245b9abb0b271ab4c0565d551b8c6a4cc2cc4052bc13",
+    "P0_32개_결과.csv": "1b4f5dfe1bff48ed32defa3c9b5a68f0f8af9aab46d3d88a25c2b0591186fa52",
+    "P0_중단항목.csv": "3f8f6ddc11770390d9173e36a960887acd7cf64b78b2116404a317c9f4397a7c"
+  }
+}
