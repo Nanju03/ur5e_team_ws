@@ -38,6 +38,7 @@
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/robot_state/cartesian_interpolator.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
@@ -47,6 +48,9 @@
 #include <moveit_msgs/srv/get_planning_scene.hpp>
 #include <rcl_interfaces/msg/parameter_type.hpp>
 #include <rcl_interfaces/srv/get_parameters.hpp>
+#include <rcl/arguments.h>
+#include <rcl/remap.h>
+#include <rclcpp/parameter_map.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <rclcpp/serialization.hpp>
@@ -120,6 +124,52 @@ struct Lock {
   }
   ~Lock(){if(fd>=0)close(fd);}
 };
+bool offlinePlanArguments(int argc,char** argv) {
+  // Parse parameter files/CLI precedence without creating a ROS context or
+  // participant. Ordinary duplicates must fail even when DDS cannot start.
+  auto arguments=rcl_get_zero_initialized_arguments();
+  const auto allocator=rcl_get_default_allocator();
+  if(rcl_parse_arguments(argc,argv,allocator,&arguments)!=RCL_RET_OK)
+    throw std::runtime_error("Cannot parse stacking planner arguments");
+  struct ArgumentGuard {
+    rcl_arguments_t* arguments;
+    ~ArgumentGuard(){const auto result=rcl_arguments_fini(arguments);(void)result;}
+  } argument_guard{&arguments};
+  rcl_params_t* raw=nullptr;
+  if(rcl_arguments_get_param_overrides(&arguments,&raw)!=RCL_RET_OK)
+    throw std::runtime_error("Cannot parse stacking planner parameter overrides");
+  std::unique_ptr<rcl_params_t,decltype(&rcl_yaml_node_struct_fini)> parameters(raw,rcl_yaml_node_struct_fini);
+  if(!parameters)return false;
+  char* renamed=nullptr;
+  if(rcl_remap_node_name(&arguments,nullptr,"ur5e_a3_stack",allocator,&renamed)!=RCL_RET_OK)
+    throw std::runtime_error("Cannot resolve stacking planner node name");
+  std::string name=renamed?renamed:"ur5e_a3_stack";
+  if(renamed)allocator.deallocate(renamed,allocator.state);
+  char* relocated=nullptr;
+  if(rcl_remap_node_namespace(&arguments,nullptr,name.c_str(),allocator,&relocated)!=RCL_RET_OK)
+    throw std::runtime_error("Cannot resolve stacking planner namespace");
+  std::string space=relocated?relocated:"/";
+  if(relocated)allocator.deallocate(relocated,allocator.state);
+  if(space.empty()||space.front()!='/')space='/'+space;
+  if(space.back()!='/')space+='/';
+  const std::string fully_qualified=space+name;
+  const auto matching=rclcpp::parameter_map_from(parameters.get(),fully_qualified.c_str());
+  std::map<std::string,rclcpp::Parameter> resolved;
+  for(const auto& entry:matching)for(const auto& value:entry.second)resolved[value.get_name()]=value;
+  auto stringValue=[&](const std::string& key) {
+    auto found=resolved.find(key);
+    return found!=resolved.end()&&found->second.get_type()==rclcpp::ParameterType::PARAMETER_STRING?
+      found->second.as_string():std::string();
+  };
+  auto trueValue=[&](const std::string& key) {
+    auto found=resolved.find(key);
+    return found!=resolved.end()&&found->second.get_type()==rclcpp::ParameterType::PARAMETER_BOOL&&found->second.as_bool();
+  };
+  return stringValue("stack_mode")=="plan"&&trueValue("physical_stack_task")&&trueValue("incremental_stack")&&
+    !stringValue("offline_planning_scene_file").empty()&&!stringValue("offline_robot_state_file").empty()&&
+    !stringValue("recipe_manifest_file").empty()&&!trueValue("empty_hand_test")&&
+    !trueValue("plate_alignment_test")&&!trueValue("empty_xy_scan");
+}
 struct Step {
   std::string label;
   std::string phase;
@@ -152,6 +202,11 @@ public:
     mode_=parameter<std::string>(node_,"stack_mode","scene");
     physical_stack_=parameter<bool>(node_,"physical_stack_task",false);
     incremental_=parameter<bool>(node_,"incremental_stack",false)&&physical_stack_&&mode_=="plan";
+    offline_scene_file_=parameter<std::string>(node_,"offline_planning_scene_file","");
+    offline_state_file_=parameter<std::string>(node_,"offline_robot_state_file","");
+    offline_=!offline_scene_file_.empty()||!offline_state_file_.empty();
+    if(offline_&&(!incremental_||offline_scene_file_.empty()||offline_state_file_.empty()))
+      throw std::runtime_error("Offline planning requires a physical incremental plan and both scene/state snapshots");
     post_place_retreat_clearance_=parameter<double>(node_,"post_place_retreat_clearance",.050);
     incremental_pickup_clearance_=parameter<double>(node_,"incremental_pickup_approach_clearance",.080);
     incremental_transfer_clearance_=parameter<double>(node_,"incremental_transfer_clearance",.050);
@@ -212,6 +267,8 @@ public:
     recipe_file_=parameter<std::string>(node_,"recipe_manifest_file","");
     if(!recipe_file_.empty()&&(mode_!="plan"||empty_hand_test_||plate_alignment_||empty_xy_scan_))
       throw std::runtime_error("recipe_manifest_file requires a full stacking plan; no execution is performed by this exporter");
+    if(offline_&&(recipe_file_.empty()||empty_hand_test_||plate_alignment_||empty_xy_scan_))
+      throw std::runtime_error("Offline planning requires a full one-block recipe output");
     archive_directory_=parameter<std::string>(node_,"execution_archive_directory","");
     if(!archive_directory_.empty()&&(mode_!="run"||simulation_backend_!="gazebo"||empty_hand_test_||plate_alignment_||empty_xy_scan_))
       throw std::runtime_error("Execution recording requires a full Gazebo stacking run");
@@ -320,6 +377,10 @@ public:
       throw std::runtime_error("The empty-hand XY scan requires exactly 24 cells");
     if(empty_xy_scan_&&!plate_alignment_&&obstacles_.empty())
       throw std::runtime_error("The empty-hand XY scan requires at least one selected obstacle");
+    // The look-ahead worker consumes immutable local snapshots. In particular
+    // it must never discover controllers, subscribe to measured joints, expose
+    // a Stop service, publish previews or mutate the executing scene.
+    if(offline_)return;
     get_=node_->create_client<moveit_msgs::srv::GetPlanningScene>("/get_planning_scene");
     apply_=node_->create_client<moveit_msgs::srv::ApplyPlanningScene>("/apply_planning_scene");
     display_=node_->create_publisher<moveit_msgs::msg::DisplayTrajectory>("/display_planned_path",rclcpp::QoS(1).transient_local());
@@ -354,31 +415,41 @@ public:
     if(executing_.load())try {if(auto* arm=arm_stop_.load())arm->stop(); if(auto* hand=hand_stop_.load())hand->stop();}catch(const std::exception&){}
   }
   bool run() {
-    arm_=std::make_unique<MGI>(node_,group_,nullptr,rclcpp::Duration::from_seconds(15));
-    arm_stop_=arm_.get();
-    model_=arm_->getRobotModel(); arm_group_=model_->getJointModelGroup(group_);
-    auto parameters=node_->create_client<rcl_interfaces::srv::GetParameters>("/robot_state_publisher/get_parameters");
-    auto request=std::make_shared<rcl_interfaces::srv::GetParameters::Request>();request->names={"robot_description"};
-    const auto description=callService(parameters,request,std::chrono::seconds(5));
-    if(description->values.size()!=1 || description->values.front().type!=rcl_interfaces::msg::ParameterType::PARAMETER_STRING ||
-       description->values.front().string_value.empty())
-      throw std::runtime_error("Robot model publisher returned an invalid robot_description string; NOTHING executed");
-    const auto& published_description=description->values.front().string_value;
-    const auto expected_description=node_->get_parameter("robot_description").as_string();
-    if(published_description!=expected_description)
-      throw std::runtime_error("GUI and MoveIt robot models differ (publisher bytes="+std::to_string(published_description.size())+
-        ", MoveIt bytes="+std::to_string(expected_description.size())+"). Restart MoveIt/RViz with the same riser option; NOTHING executed");
+    if(offline_) {
+      for(const auto& name:{"robot_description","robot_description_semantic"})
+        if(!node_->has_parameter(name)||node_->get_parameter(name).as_string().empty())
+          throw std::runtime_error(std::string("Offline planning requires local ")+name);
+      offline_model_loader_=std::make_unique<robot_model_loader::RobotModelLoader>(node_,"robot_description",true);
+      model_=offline_model_loader_->getModel();
+      if(!model_)throw std::runtime_error("Offline robot model could not be loaded");
+    } else {
+      arm_=std::make_unique<MGI>(node_,group_,nullptr,rclcpp::Duration::from_seconds(15));
+      arm_stop_=arm_.get();
+      model_=arm_->getRobotModel();
+      auto parameters=node_->create_client<rcl_interfaces::srv::GetParameters>("/robot_state_publisher/get_parameters");
+      auto request=std::make_shared<rcl_interfaces::srv::GetParameters::Request>();request->names={"robot_description"};
+      const auto description=callService(parameters,request,std::chrono::seconds(5));
+      if(description->values.size()!=1 || description->values.front().type!=rcl_interfaces::msg::ParameterType::PARAMETER_STRING ||
+         description->values.front().string_value.empty())
+        throw std::runtime_error("Robot model publisher returned an invalid robot_description string; NOTHING executed");
+      const auto& published_description=description->values.front().string_value;
+      const auto expected_description=node_->get_parameter("robot_description").as_string();
+      if(published_description!=expected_description)
+        throw std::runtime_error("GUI and MoveIt robot models differ (publisher bytes="+std::to_string(published_description.size())+
+          ", MoveIt bytes="+std::to_string(expected_description.size())+"). Restart MoveIt/RViz with the same riser option; NOTHING executed");
+    }
+    arm_group_=model_->getJointModelGroup(group_);
     gripper_group_=model_->getJointModelGroup(hand_group_);
     for(const auto& link:{frame_,tip_,tcp_,approach_,table_}) if(!model_->getLinkModel(link))throw std::runtime_error("Missing model link: "+link);
     if(!arm_group_ || !gripper_group_ || gripper_group_->getActiveJointModelNames()!=std::vector<std::string>{hand_joint_})
       throw std::runtime_error("Arm/gripper group does not match the configuration");
-    auto measured=measuredState(10.);
+    auto measured=offline_?offlineState():measuredState(10.);
     measured->update();
     std::ostringstream measured_joints;
     for(const auto& name:arm_group_->getActiveJointModelNames())measured_joints<<name<<'='<<std::setprecision(9)<<measured->getVariablePosition(name)<<' ';
     measured_joints<<hand_joint_<<'='<<measured->getVariablePosition(hand_joint_);
     const T measured_tcp=measured->getGlobalLinkTransform(frame_).inverse()*measured->getGlobalLinkTransform(tcp_);
-    RCLCPP_INFO(logger_,"STACK_MEASURED_START tcp=%.9f,%.9f,%.9f joints=%s",measured_tcp.translation().x(),
+    RCLCPP_INFO(logger_,"%s tcp=%.9f,%.9f,%.9f joints=%s",offline_?"STACK_PREDICTED_START":"STACK_MEASURED_START",measured_tcp.translation().x(),
       measured_tcp.translation().y(),measured_tcp.translation().z(),measured_joints.str().c_str());
     if(empty_hand_test_) {
       frozen_hand_position_=measured->getVariablePosition(hand_joint_);
@@ -722,7 +793,9 @@ private:
     scene_->getPlanningSceneMsg(recipe_initial_scene_);
     rearrangement_scene_=planning_scene::PlanningScene::clone(scene_);
     initialisePipeline();
-    hand_=std::make_unique<MGI>(node_,hand_group_,nullptr,rclcpp::Duration::from_seconds(15));hand_stop_=hand_.get();
+    if(!offline_) {
+      hand_=std::make_unique<MGI>(node_,hand_group_,nullptr,rclcpp::Duration::from_seconds(15));hand_stop_=hand_.get();
+    }
     for(int source:sources) {
       checkStop();scene_=planning_scene::PlanningScene::clone(rearrangement_scene_);steps_.clear();
       placement_transit_check_=placement_crossing_=side_hover_check_=false;
@@ -922,12 +995,51 @@ private:
   moveit_msgs::msg::PlanningScene diff()const {
     moveit_msgs::msg::PlanningScene out;out.is_diff=true;out.robot_state.is_diff=true;return out;
   }
+  template<class Message> Message readOfflineMessage(const std::string& file)const {
+    std::ifstream stream(file,std::ios::binary|std::ios::ate);
+    const auto length=stream.tellg();
+    if(!stream||length<=0||length>64*1024*1024)
+      throw std::runtime_error("Invalid offline snapshot size: "+file);
+    rclcpp::SerializedMessage serialized(static_cast<std::size_t>(length));
+    auto& bytes=serialized.get_rcl_serialized_message();
+    stream.seekg(0);stream.read(reinterpret_cast<char*>(bytes.buffer),length);
+    if(!stream)throw std::runtime_error("Cannot read offline snapshot: "+file);
+    bytes.buffer_length=static_cast<std::size_t>(length);
+    rclcpp::Serialization<Message> serializer;Message message;
+    serializer.deserialize_message(&serialized,&message);return message;
+  }
+  moveit::core::RobotStatePtr offlineState()const {
+    const auto message=readOfflineMessage<moveit_msgs::msg::RobotState>(offline_state_file_);
+    if(message.is_diff||!message.attached_collision_objects.empty()||
+       message.joint_state.name.size()!=message.joint_state.position.size())
+      throw std::runtime_error("Offline start must be a complete empty-hand RobotState");
+    std::set<std::string> names;
+    for(std::size_t i=0;i<message.joint_state.name.size();++i)
+      if(!names.insert(message.joint_state.name[i]).second||!std::isfinite(message.joint_state.position[i]))
+        throw std::runtime_error("Offline start has duplicate or nonfinite joints");
+    auto required=arm_group_->getActiveJointModelNames();required.push_back(hand_joint_);
+    for(const auto& name:required)if(!names.count(name))
+      throw std::runtime_error("Offline start is missing joint: "+name);
+    auto state=std::make_shared<State>(model_);state->setToDefaultValues();
+    moveit::core::robotStateMsgToRobotState(message,*state);state->update();
+    if(!state->satisfiesBounds(arm_group_)||!state->satisfiesBounds(gripper_group_))
+      throw std::runtime_error("Offline start violates arm or gripper joint bounds");
+    return state;
+  }
   planning_scene::PlanningScenePtr readScene() {
+    if(offline_) {
+      const auto snapshot=readOfflineMessage<moveit_msgs::msg::PlanningScene>(offline_scene_file_);
+      if(snapshot.is_diff||snapshot.robot_state.is_diff)
+        throw std::runtime_error("Offline planning requires a complete PlanningScene snapshot");
+      auto scene=std::make_shared<planning_scene::PlanningScene>(model_);
+      scene->setPlanningSceneMsg(snapshot);return scene;
+    }
     auto request=std::make_shared<moveit_msgs::srv::GetPlanningScene::Request>();request->components.components=1023;
     const auto response=callService(get_,request,std::chrono::seconds(10));
     auto scene=std::make_shared<planning_scene::PlanningScene>(model_);scene->setPlanningSceneMsg(response->scene);return scene;
   }
   void apply(const moveit_msgs::msg::PlanningScene& update) {
+    if(offline_)throw std::runtime_error("Offline planner cannot write a live planning scene");
     checkStop();
     auto request=std::make_shared<moveit_msgs::srv::ApplyPlanningScene::Request>();request->scene=update;
     const auto response=callService(apply_,request,std::chrono::seconds(10));
@@ -2307,7 +2419,7 @@ private:
       RCLCPP_INFO(logger_,"STACK_PATH_SAVED bytes=%zu",bytes.buffer_length);
     }
     planned_display_=display;
-    display_->publish(display);
+    if(display_)display_->publish(display);
   }
   template<class Message> void writeRecipeMessage(const std::filesystem::path& file,const Message& message)const {
     rclcpp::SerializedMessage serialized;rclcpp::Serialization<Message> serializer;
@@ -2870,6 +2982,9 @@ private:
   bool placement_transit_check_=false,placement_crossing_=false;
   bool split_speeds_=true,staged_release_=true,physical_stack_=false;
   bool incremental_=false;
+  bool offline_=false;
+  std::string offline_scene_file_,offline_state_file_;
+  std::unique_ptr<robot_model_loader::RobotModelLoader> offline_model_loader_;
   bool collecting_motion_=false;
   std::string motion_role_;
   int motion_layer_=0,incremental_fast_layers_=10;
@@ -2921,9 +3036,20 @@ int main(int argc,char** argv) {
   // failure used to race executor.cancel() against the spinner entering spin(),
   // leaving a failed scene/planner process alive while its caller waited.
   std::unique_ptr<Lock> lock;
-  try{lock=std::make_unique<Lock>();}
+  bool offline_arguments=false;
+  try{offline_arguments=offlinePlanArguments(argc,argv);if(!offline_arguments)lock=std::make_unique<Lock>();}
   catch(const std::exception& error){std::cerr<<"STACK_ERROR "<<error.what()<<std::endl;return 1;}
   rclcpp::init(argc,argv);auto node=rclcpp::Node::make_shared("ur5e_a3_stack",rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true));
+  // Defend against any difference between the pre-context argument resolver
+  // and Node parameter handling. Never construct live endpoints without a lock.
+  if(offline_arguments&&
+     (parameter<std::string>(node,"offline_planning_scene_file","").empty()||
+      parameter<std::string>(node,"offline_robot_state_file","").empty()||
+      parameter<std::string>(node,"stack_mode","scene")!="plan"||
+      !parameter<bool>(node,"physical_stack_task",false)||!parameter<bool>(node,"incremental_stack",false))) {
+    std::cerr<<"STACK_ERROR Offline planner arguments changed during ROS initialization"<<std::endl;
+    rclcpp::shutdown();return 1;
+  }
   rclcpp::executors::SingleThreadedExecutor executor;executor.add_node(node);std::thread spinner([&]{executor.spin();});
   int result=1;std::unique_ptr<StackTask> task;
   try{task=std::make_unique<StackTask>(node);result=task->run()?0:1;}

@@ -1658,6 +1658,9 @@ class PhysicalStackTask(AirTask):
                 PhysicalStackTask.approve_continuous_recipe(self, metadata, recipe, steps, expected_scene)
             else:
                 approval(metadata, recipe, steps, expected_scene)
+        ready = getattr(self, 'on_recipe_execution_ready', None)
+        if ready is not None:
+            ready(metadata, recipe)
         motion_index, completed = 0, 0
         for step in steps:
             self.replay_checkpoint(metadata, step, expected_scene)

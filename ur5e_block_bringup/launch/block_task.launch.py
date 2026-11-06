@@ -69,6 +69,7 @@ def start(context):
             side_entry_clearance=.010,
             vertical_placement_layers=19, placement_approach_clearance=.12,
             incremental_stack=incremental, post_place_retreat_clearance=.050,
+            incremental_prefetch=LaunchConfiguration('incremental_prefetch', default='true').perform(context) == 'true',
             incremental_pickup_approach_clearance=.080,
             incremental_transfer_clearance=.050,
             trajectory_file=value('trajectory_file'),
@@ -153,6 +154,7 @@ def generate_launch_description():
         DeclareLaunchArgument('allow_mock_hardware', default_value='false', choices=['true','false']),
         DeclareLaunchArgument('execution_mode', default_value='step', choices=['step','continuous']),
         DeclareLaunchArgument('incremental_stack', default_value='true', choices=['true','false']),
+        DeclareLaunchArgument('incremental_prefetch', default_value='true', choices=['true','false']),
         DeclareLaunchArgument('preparation_id', default_value=''),
         OpaqueFunction(function=start),
     ])
