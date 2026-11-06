@@ -3,13 +3,13 @@
 Ubuntu 22.04 / ROS 2 Humble의 **UR5e + DH AG95 블록 적재 프로젝트**입니다.
 실물 제어, Gazebo 접촉 시뮬레이션, RViz·GenericSystem, 배치 GUI, 성공 궤적 기록과 이웃 대각선 60가지 자동 시험을 포함합니다.
 
-팀 공유 저장소: **Nanju03/ur5e_team_ws (비공개)**.
+팀 공유 저장소: **[Nanju03/ur5e_team_ws](https://github.com/Nanju03/ur5e_team_ws) (공개)**.
 원본은 [gamsaon/ur5e](https://github.com/gamsaon/ur5e), 기준 커밋은 `473c8328641719649939720dfcc15e8356d7fc82`입니다.
 원본 UR·DH·serial 소스와 라이선스는 각 디렉터리에 보존합니다. Git 서브모듈이나 다른 개인 작업공간은 필요하지 않습니다.
 
 ## 팀원 설치
 
-저장소 초대를 수락하고 자신의 GitHub 인증으로 소스를 받습니다.
+공개 저장소이므로 초대나 로그인 없이 소스를 받을 수 있습니다. 변경 사항을 올리려면 GitHub 인증과 쓰기 권한이 필요합니다.
 
 ```bash
 mkdir -p ~/ur5e_team_ws/src

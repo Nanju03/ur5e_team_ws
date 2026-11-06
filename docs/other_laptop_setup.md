@@ -8,7 +8,8 @@ Ubuntu 22.04와 ROS 2 Humble을 사용합니다. 이 저장소의 UR·DH·serial
 
 ## 1. 소스 받기
 
-비공개 저장소에 팀원의 GitHub 계정이 초대되어 있어야 합니다. 초대를 수락하고 자신의 인증으로 clone합니다.
+공개 저장소이므로 초대나 GitHub 로그인 없이 아래 명령으로 소스를 받습니다.
+변경 사항을 push하려는 팀원에게만 GitHub 인증과 저장소 쓰기 권한이 필요합니다.
 
 ```bash
 mkdir -p ~/ur5e_team_ws/src
