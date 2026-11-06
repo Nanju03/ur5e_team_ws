@@ -15,6 +15,7 @@
 #include <moveit_msgs/msg/planning_scene.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/serialization.hpp>
+#include "bounded_surface_contacts.hpp"
 
 namespace {
 constexpr std::uint32_t MAX_SCENE=100*1024*1024,MAX_STATES=8192;
@@ -47,6 +48,8 @@ int main(int argc,char** argv) {
     auto node=std::make_shared<rclcpp::Node>("physical_collision_checker",options);
     robot_model_loader::RobotModelLoader loader(node,"robot_description",false);
     const auto model=loader.getModel();
+    const bool bounded_contacts=node->has_parameter("bounded_surface_contacts")&&
+      node->get_parameter("bounded_surface_contacts").as_bool();
     if(!model)throw std::runtime_error("Checker model unavailable");
     for(const auto& name:JOINTS)model->getVariableIndex(name);  // throws on a model mismatch
     std::cout<<"{\"ready\":true,\"protocol\":1}"<<std::endl;
@@ -71,6 +74,7 @@ int main(int argc,char** argv) {
           throw std::runtime_error("Checker scene/model mismatch");
         scene=std::make_shared<planning_scene::PlanningScene>(model);
         if(!scene->setPlanningSceneMsg(message))throw std::runtime_error("Checker scene rejected");
+        if(bounded_contacts)incremental_motion::boundSurfaceContacts(*scene,scene->getAllowedCollisionMatrixNonConst());
         cached=std::move(data);cached_size=size;
       }
       moveit::core::RobotState state(scene->getCurrentState());
@@ -89,7 +93,20 @@ int main(int argc,char** argv) {
         }
       }
       if(valid)std::cout<<"{\"ok\":true,\"checked\":"<<count<<"}"<<std::endl;
-      else std::cout<<"{\"ok\":false,\"checked\":"<<failed<<",\"invalid_index\":"<<failed<<"}"<<std::endl;
+      else {
+        // Collect contacts only on failure. Successful batches retain the
+        // exact same one-check-per-state fast path.
+        collision_detection::CollisionRequest request;collision_detection::CollisionResult result;
+        request.contacts=true;request.max_contacts=8;request.max_contacts_per_pair=1;
+        scene->checkCollision(request,result,state);
+        std::cout<<"{\"ok\":false,\"checked\":"<<failed<<",\"invalid_index\":"<<failed
+          <<",\"bounds\":"<<(state.satisfiesBounds()?"true":"false")<<",\"contacts\":[";
+        bool comma=false;for(const auto& entry:result.contacts) {
+          if(comma)std::cout<<',';comma=true;
+          std::cout<<'['<<quoted(entry.first.first)<<','<<quoted(entry.first.second)<<']';
+        }
+        std::cout<<"]}"<<std::endl;
+      }
     }
     rclcpp::shutdown();return 0;
   }catch(const std::exception& error) {

@@ -11,10 +11,11 @@ from pathlib import Path
 import re
 import shutil
 import uuid
+from .physical_motion import HOLDING_FINGER_LOWER, HOLDING_FINGER_UPPER
 
-POLICY = 'physical_prevalidated_finger_grid_v2'
-HOLDING_LOWER = .70
-HOLDING_UPPER = .733
+POLICY = 'physical_prevalidated_finger_grid_adaptive_release_v3'
+HOLDING_LOWER = HOLDING_FINGER_LOWER
+HOLDING_UPPER = HOLDING_FINGER_UPPER
 FINGER_STEP = .005
 EMPTY_START_TOLERANCE = .015
 EMPTY_MOTION_TOLERANCE = .003
@@ -34,7 +35,7 @@ def finger_range(step, holding, bounds=None):
     """Cover accepted measured starts plus the existing moving hand watchdog.
 
     Held paths retain the original measured-anchor watchdog as well. An anchor
-    whose allowed interval extends below .70 requires a different prepared path.
+    whose allowed interval extends beyond the grid needs local extension checks.
     Finger commands cover the entire opening/closing sweep, including endpoint
     error. These are discrete .005rad geometry samples, as in live validation.
     """
@@ -52,6 +53,10 @@ def finger_range(step, holding, bounds=None):
         target = step['hand_target']
         low = min(low, target-EMPTY_MOTION_TOLERANCE)
         high = max(high, target+EMPTY_MOTION_TOLERANCE)
+        if step['phase'] == 'release_first':
+            # A measured grasp can be more open than 0.70. Cover every first
+            # opening target down to the already reviewed 0.60 clearance pose.
+            low = min(low, .60-EMPTY_MOTION_TOLERANCE)
     if bounds is not None:
         low, high = max(low, bounds[0]), min(high, bounds[1])
     return low, high
@@ -67,10 +72,13 @@ def finger_shapes(step, holding, bounds):
 
 
 def motion_context(step):
-    return sha(json.dumps({key: step.get(key) for key in
+    context = {key: step.get(key) for key in
         ('index', 'kind', 'phase', 'start_joints', 'end_joints', 'hand_target',
-         'velocity_scaling', 'acceleration_scaling')},
-        sort_keys=True, allow_nan=False).encode())
+         'velocity_scaling', 'acceleration_scaling')}
+    for key in ('motion_role', 'surface_contact_policy'):
+        if key in step:
+            context[key] = step[key]
+    return sha(json.dumps(context, sort_keys=True, allow_nan=False).encode())
 
 
 def holding_steps(steps):
@@ -139,10 +147,14 @@ def initial_hand_matches(recipe, actual, bounds):
 
 
 def context_key(metadata):
-    return sha(json.dumps({key: metadata.get(key) for key in
+    context = {key: metadata.get(key) for key in
         ('input_sha256', 'model_sha256', 'semantic_sha256', 'hardware_class',
          'scene_hash_policy', 'recipe_policy', 'replay_policy', 'grasp_policy',
-         'arm_execution_profile', 'finger_joint_bounds')}, sort_keys=True, allow_nan=False).encode())
+         'arm_execution_profile', 'finger_joint_bounds')}
+    for key in ('incremental_motion_profile', 'surface_contact_policy'):
+        if key in metadata:
+            context[key] = metadata[key]
+    return sha(json.dumps(context, sort_keys=True, allow_nan=False).encode())
 
 
 def read_package(directory, recipe_name='recipe.json'):

@@ -110,8 +110,11 @@ def model_sdf(model, objects, contact_hz):
 
 
 def main():
-    if os.environ.get('ROS_DOMAIN_ID') != '44' or os.environ.get('ROS_LOCALHOST_ONLY') != '1':
-        print('STACK_ERROR Gazebo layout requires localhost ROS domain 44', flush=True)
+    from ur5e_block_bringup.gazebo_session import session_from_environment
+    try:
+        session = session_from_environment()
+    except ValueError as error:
+        print('STACK_ERROR '+str(error), flush=True)
         return 1
     import rclpy
     from rclpy.qos import qos_profile_sensor_data
@@ -139,7 +142,7 @@ def main():
     code = 0
     lock = None
     try:
-        lock = os.open('/tmp/ur5e_stack_44.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
+        lock = os.open(f'/tmp/ur5e_stack_{session.domain}.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
         try:
             fcntl.flock(lock, fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:

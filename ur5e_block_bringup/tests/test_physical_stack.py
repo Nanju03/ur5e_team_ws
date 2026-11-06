@@ -4,7 +4,7 @@ import copy
 import json
 import math
 from pathlib import Path
-from types import SimpleNamespace
+from types import SimpleNamespace, MethodType
 from unittest.mock import Mock
 
 import pytest
@@ -23,10 +23,10 @@ from ur5e_block_bringup.air_task import AirTask
 def recipe():
     result = dict(schema=1, joint_names=physical.JOINTS, initial_joints=[0]*6+[.4],
                   initial_scene_file='initial.cdr', initial_state_file='state.cdr',
-                  approach_acceleration_scaling=.05, transfer_acceleration_scaling=1.,
-                  physical_contact_clearance=.04,
-                  physical_approach_clearance=.04, side_entry_clearance=.010,
-                  descent_velocity_scaling=.20, descent_acceleration_scaling=.20,
+                  approach_acceleration_scaling=.10, transfer_acceleration_scaling=1.,
+                  physical_contact_clearance=.02,
+                  physical_approach_clearance=.02, side_entry_clearance=.010,
+                  descent_velocity_scaling=.50, descent_acceleration_scaling=.50,
                   placement_policy='raised_tower_hover_setdown_v2', placement_mode='side',
                   vertical_placement_layers=19, placement_approach_clearance=.12,
                   target_cell=11, foundation_layers=1, moves=1, layers=2, steps=[],
@@ -70,8 +70,8 @@ def test_complete_recipe_requires_grasp_and_two_stationary_releases_before_retre
     assert physical.validate_recipe(value) == value['steps']
     assert value['steps'][4]['velocity_scaling'] == 1.
     assert value['steps'][-1]['velocity_scaling'] == 1.
-    assert value['steps'][1]['velocity_scaling'] == .05
-    assert value['steps'][1]['acceleration_scaling'] == .05
+    assert value['steps'][1]['velocity_scaling'] == .10
+    assert value['steps'][1]['acceleration_scaling'] == .10
     assert value['steps'][4]['acceleration_scaling'] == 1.
     assert value['steps'][-1]['acceleration_scaling'] == 1.
 
@@ -405,8 +405,10 @@ def test_planning_cannot_clear_existing_geometry_while_gripper_is_not_empty(monk
     clear.assert_not_called()
 
 
-def test_validation_failure_restores_initial_scene_even_when_stopped(tmp_path, monkeypatch):
-    value = recipe()
+@pytest.mark.parametrize('incremental', [False, True])
+def test_validation_failure_preserves_live_scene_even_when_stopped(tmp_path, monkeypatch, incremental):
+    from test_incremental_stack import one_block
+    value = one_block() if incremental else recipe()
     path = tmp_path/'recipe.json'
     path.with_name(path.name+'.raw.json').write_text(json.dumps(value))
     initial, before, after = PlanningScene(), PlanningScene(), PlanningScene()
@@ -422,14 +424,20 @@ def test_validation_failure_restores_initial_scene_even_when_stopped(tmp_path, m
     monkeypatch.setattr(physical, 'scene_fingerprint', lambda _: 'scene')
     task.scene = lambda: before
     task.model, task.semantic = '<robot/>', '<semantic/>'
+    task.validation_worker = MethodType(physical.PhysicalStackTask.validation_worker, task)
+    task.release_validation_worker = MethodType(physical.PhysicalStackTask.release_validation_worker, task)
     worker = SimpleNamespace(validate=Mock(side_effect=RuntimeError('collision')), close=Mock())
     task.certify_motion = lambda checker, scene, step, trajectory, holding: checker.validate(scene, [])
     monkeypatch.setattr(physical, 'CollisionWorker', Mock(return_value=worker))
     with pytest.raises(RuntimeError, match='collision'):
         physical.PhysicalStackTask.plan(task)
     worker.close.assert_called_once()
-    assert task.apply_snapshot.call_args.args[0] is initial
-    assert task.apply_snapshot.call_args.kwargs == {'cancel': False}
+    if incremental:
+        task.apply_snapshot.assert_not_called()
+        assert physical.CollisionWorker.call_args.args[0]['bounded_surface_contacts'] is True
+    else:
+        assert task.apply_snapshot.call_args.args[0] is initial
+        assert task.apply_snapshot.call_args.kwargs == {'cancel': False}
 
 
 def test_stop_cannot_overtake_an_inflight_scene_write_with_restoration(monkeypatch):
@@ -1127,7 +1135,8 @@ def test_release_first_checks_the_entire_held_and_opening_sweep(monkeypatch):
     task.scene = lambda: 'same'
     physical.PhysicalStackTask.live_hand_validation(task, step, trajectory, 'same')
     samples = task.validate_samples.call_args.args[0]
-    assert min(q[-1] for _, q in samples) == .7
+    assert min(q[-1] for _, q in samples) == pytest.approx(
+        physical.PhysicalStackTask.first_release_target(task)-.003)
     assert max(q[-1] for _, q in samples) == .733
     assert task.holding_context_verified(step, trajectory, 'same')
 

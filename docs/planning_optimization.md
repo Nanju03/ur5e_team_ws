@@ -1,9 +1,16 @@
-# 실물 경로 계획·이동 최적화 (2026-11-05)
+# 실물 경로 계획·이동 최적화 (2026-11-06)
 
 [실물 사용법](real_robot.md) · [기존 시간 분석](speed_and_timing.md) · [저장 경로 빠른 실행](saved_physical_replay.md) · [v15 높이·하강 속도](side_hover_and_descent.md)
 
 적용 대상은 실물 집기·쌓기의 `physical_plan/physical_run`이다.
 Gazebo 물성·속도와 블록 없는 팔 시운전·초기 자세 복구의 저속 설정은 별도다.
+
+## 한 블록씩 계획·실행하기
+
+실물 GUI는 이제 다음 한 블록만 계획·검사하고 실행한 뒤 현재 탑 상태에서 반복한다.
+최종층까지 모두 검증하기 전에 첫 블록을 시작할 수 있지만, 블록 사이에는 새 경로 계산 시간이 남는다.
+놓은 뒤에는 빈 그리퍼 최저점 기준 탑 위 50mm까지 후퇴한다. 시간 제한에 따른 자동 종료는 없다.
+실행 승인 범위와 중간 배치 재개 방법은 [한 블록 반복 안내](incremental_stacking.md)를 확인한다.
 
 ## ④가 오래 걸렸던 이유
 
@@ -48,20 +55,38 @@ OMPL/IK 재시도에는 `STACK_APPROACH_RETRY`, `STACK_REARRANGEMENT_RETRY`를 �
 
 ## 실물 속도·가속도
 
+**기본 한 블록 반복 모드(v22)**는 아래 배율을 사용한다. 접근·하강을 한 명령으로,
+잡은 뒤 상승·운반·놓기 직전 접근을 한 명령으로 묶는다. 최종 놓기와 후퇴를 합해 팔 명령은 블록당 네 개다.
+
+| 동작 | 15층까지 속도 / 가속도 | 16층부터 속도 / 가속도 |
+| --- | --- | --- |
+| 빈 그리퍼 접근·집기 하강 | 1.00 / 1.00 | 1.00 / 1.00 |
+| 잡은 뒤 운반·놓기 직전 접근 | 1.00 / 1.00 | 0.50 / 0.30 |
+| 최종 20mm 저속 놓기 | 0.10 / 0.10 | 0.10 / 0.10 |
+| 탑 위 50mm 후퇴 | 1.00 / 1.00 | 0.50 / 0.30 |
+
+설정은 `physical_motion.py`의 `FAST_LAYERS`, `PICKUP_SPEED`, `LOW_TOWER_SPEED`,
+`HIGH_TOWER_SPEED`와 `ARM_SPEEDS['approach']`에서 바꾼다. 자세는 19층까지 수직, 20층부터 측면이다.
+검사에서는 기존 손가락·손목 표본을 유지하고, 장면 서버의 반복 쓰기·읽기를 로컬 검사로 대체한다.
+
+체크를 해제한 **전체 경로 모드(v18)**의 배율은 다음과 같다.
+
 | 구간 | phase | 속도 배율 | 가속도 배율 |
 | --- | --- | --- | --- |
-| 최종 접촉 구간 밖 수직 하강 | `descent_fast` | 0.20 | 0.20 |
-| 집기·놓기 마지막 40mm 이상, 수평 삽입·짧은 내려놓기 | `approach` | 0.05 | 0.05 |
-| 집은 직후·놓은 직후 처음 40mm 이탈 | `contact` | 0.05 | 0.05 |
+| 최종 접촉 구간 밖 수직 하강 | `descent_fast` | 0.50 | 0.50 |
+| 집기·놓기 마지막 20mm 이상, 수평 삽입·짧은 내려놓기 | `approach` | 0.10 | 0.10 |
+| 집은 직후·놓은 직후 처음 20mm 이탈 | `contact` | 0.10 | 0.10 |
 | 이후 상승·후퇴, 운반·재정렬 | `lift` / `retreat` / `transfer` | 1.00 | 1.00 |
 
-하강·이탈 거리가 40mm 이하면 해당 구간 전체를 저속으로 처리한다. 20층부터는 받침보다 10mm 높게 수평 정렬한 뒤 수직으로 내려놓는다.
-그리퍼 0.40 → 잡기 0.73, 놓기 0.70 → 0.60은 기존 값이다.
+하강·이탈 거리가 20mm 이하면 해당 구간 전체를 접촉 속도로 처리한다. Cartesian 점 간격 때문에 마지막 저속 하강은 20mm보다 조금 길 수 있다.
+기존 40mm·접촉 0.05·하강 0.20에서 접촉 구간을 줄이고 배율을 올렸다. 20층부터는 받침보다 10mm 높게 수평 정렬한 뒤 수직으로 내려놓는다.
+그리퍼는 0.40 → 잡기 0.73, 놓기는 실측 파지각 기반 1차 열림(최대 0.70) → 0.60이다.
 손가락 동작 중 팔 정지와 각 명령 시작·끝 정지 조건도 유지한다.
 
 **1.00은 설정된 관절 한도의 100%이며 무제한 속도나 물리적 최고 성능을 뜻하지 않는다.**
 MoveIt 시간화와 실제 제어기 quintic의 최대 속도·가속도를 확인하고 필요하면 시간을 늘린다.
-현재 실물 모델의 가속도 기준은 관절별 1rad/s²이므로 빠른 이동의 한도는 1rad/s²이다.
+배율의 유효 범위는 `(0, 1]`이다. 현재 정책은 위 표의 구간별 값을 검증하며, 모델의 관절 속도·가속도 한도를 넘기는 값은 허용하지 않는다.
+현재 실물 모델의 가속도 기준은 관절별 1rad/s²이므로 접촉은 0.10rad/s², 빠른 하강은 0.50rad/s², 운반은 1rad/s² 한도다.
 URDF·MoveIt 한도와 펜던트 속도 슬라이더·로봇 측 제한도 적용된다.
 [MoveIt 시간화 설명](https://moveit.picknik.ai/humble/doc/examples/time_parameterization/time_parameterization_tutorial.html),
 [UR 제어기 설명](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_robot_driver/ur_robot_driver/doc/usage/controllers.html).
@@ -74,14 +99,20 @@ GUI의 **팔 시운전 속도 (최대 0.05)**는 블록 없는 시운전용이�
 
 | 파일 | 역할 |
 | --- | --- |
-| `ur5e_block_bringup/launch/block_task.launch.py` | 접근 0.05·운반 1.00, 이탈 40mm |
-| `ur5e_block_bringup/ur5e_block_bringup/physical_stack.py` | `ARM_SPEEDS`, `CONTACT_CLEARANCE`, 시간화·시작 상태 검증 |
+| `ur5e_block_bringup/ur5e_block_bringup/physical_motion.py` | 접촉·접근 20mm, 속도·가속도 0.10/0.50/1.00 공통 정책 |
+| `ur5e_block_bringup/launch/block_task.launch.py` | 공통 정책을 실물 계획·실행에 적용 |
+| `ur5e_block_bringup/ur5e_block_bringup/physical_stack.py` | 공통 정책에 맞는 단계별 배율, 시간화·시작 상태 검증 |
+| `ur5e_a3_grid/scripts/stack_gui.py` | 공통 정책으로 배치 저장·실행 안내 |
 | `ur5e_a3_grid/src/stack_blocks.cpp` | 저속 이탈·고속 이동 분리, 우회 경로 생성 |
 | `ur5e_block_bringup/ur5e_block_bringup/collision_worker.py` | 로컬 검사 IPC·중지·타임아웃 |
 | `ur5e_a3_grid/src/physical_collision_checker.cpp` | 오프라인 MoveIt 형상 검사 |
 
-배율을 바꾸면 계획기·검증기·GUI를 같은 프로필로 맞추고 `RECIPE_POLICY`를 변경한다.
+Python 배율은 `physical_motion.py` 한 곳에서 바꾸며 launch·검증기·GUI가 함께 사용한다.
+접촉 여유를 바꾸면 C++의 20mm 검증 조건도 함께 바꿔야 한다. 변경 시 전체 경로와 한 블록 반복의 저장 정책 버전을 갱신한다.
 공통 YAML만 수정하면 실물 런치의 값이 우선한다.
+
+한 블록 v21은 직선·장애물 상단을 넘는 짧은 경로를 모든 높이·회전 후보에서 먼저 시도한다.
+그 뒤에만 플레이트 바깥으로 나갈 수 있는 측면 경유와 일반 탐색을 사용한다.
 
 ## 적용
 
@@ -93,7 +124,11 @@ cd ~/ur5e_team_ws
 ./start_block_real_gui.sh
 ```
 
-현재 정책은 `physical_nearest_target_buffer_v16`이다. 목표 가까운 임시 받침을 우선 선택하며 v15의 높이·속도는 유지한다. 기존 v13/v14/v15 자료는 보존하고 새 기준은 ④에서 다시 계획한다. [임시 적재 기준](near_target_buffer.md)을 확인한다.
+현재 전체 경로 정책은 `physical_nearest_target_buffer_v18`, 한 블록 반복 정책은 `physical_incremental_measured_fingers_v22`이다.
+한 블록 모드는 집기 접근·하강과 잡은 뒤 상승·운반·놓기 직전 접근을 각각 하나의 연속 명령으로 수행한다.
+낮은 측면 경유점과 두 번째 상승을 없애고, 기본 탑 위 50mm에서 직접 이동한다.
+검사 표본 간격이나 손가락·손목 범위는 유지하며, 경로·정지 경계·장면 변경 수를 줄인다.
+기존 한 블록 v21 이하 자료는 보존하고 새 기준으로 ④에서 다시 계획한다. [임시 적재 기준](near_target_buffer.md)을 확인한다.
 드라이버를 고속 코드 적용만을 위해 재연결할 필요는 없다.
 
 `GRIPPER_SENSOR_STALE`로 중단된 경우에는 [센서 지연 중단 안내](gripper_feedback_stop.md)를 먼저 따른다.
@@ -105,7 +140,7 @@ cd ~/ur5e_team_ws
 구현되어 있다. ④는 배치·모델·보정·속도 정책과 초기 장면·시작 자세가 일치하는
 `physical_path_library` 자료를 먼저 찾는다. 찾으면 탐색·시간화·충돌 재검사를 생략하고
 새 검토 세션을 만든다. 없으면 새 경로를 계획·사전 검사해 자동 보관한다.
-⑤는 저장된 궤적·그리퍼 명령·장면 이벤트를 사용하며 경로 표본을 재검사하지 않는다.
+⑤는 저장된 궤적·장면 이벤트를 사용한다. 실측 파지 범위가 사전 검사에 포함되면 경로 표본을 재검사하지 않으며, 벗어나면 부족한 손가락 형상만 정지 상태에서 추가 검사한다. 1차 열림 목표도 실측 파지각에 맞춘다.
 
 장기 보관 자료와 1시간 유효한 실행 검토 세션을 구분한다. 실행 때에는 파일 무결성,
 현재 배치·장면·제어기·센서·시작 자세와 사전 검사한 손가락 범위를 확인한다.

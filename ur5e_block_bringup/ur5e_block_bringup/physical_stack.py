@@ -43,20 +43,20 @@ from .air_task import (AirTask, ARM, HAND, CONTROLLER, MAX_FILE_BYTES,
 from .air_scene import scene_fingerprint as strict_scene_fingerprint
 from .air_trajectory import sample_trajectory, trajectory_metrics
 from .physical_held import clear_held_fault, read_held_fault, write_held_fault
+from .physical_motion import (ARM_SPEEDS, CONTACT_CLEARANCE, APPROACH_CLEARANCE,
+                              incremental_arm_scaling)
+from .incremental_state import ROUTING_POLICY as INCREMENTAL_ROUTING_POLICY
 from .collision_worker import CollisionWorker
 from . import physical_replay as replay
 from rosidl_runtime_py.convert import message_to_ordereddict
 
 JOINTS = ARM+[HAND]
 HAND_TARGETS = {'open': .4, 'grasp': .73, 'release_first': .70, 'release_clearance': .60}
-ARM_SPEEDS = {'approach': .05, 'contact': .05, 'descent_fast': .20, 'lift': 1., 'retreat': 1., 'transfer': 1.}
-CONTACT_CLEARANCE = .04
-APPROACH_CLEARANCE = .04
 SIDE_ENTRY_CLEARANCE = .010
 REVIEW_TTL = 3600.
 HAND_START_TOLERANCE = .015
 SCENE_HASH_POLICY = 'physical_mesh_digest_pose_round12_v2'
-RECIPE_POLICY = 'physical_nearest_target_buffer_v16'
+RECIPE_POLICY = 'physical_nearest_target_buffer_v18'
 BUFFER_SELECTION_POLICY = 'nearest_target_feasible_v1'
 PREPARABLE_POLICIES = (RECIPE_POLICY,)
 GRASP_POLICY = 'command_completion'
@@ -284,25 +284,29 @@ def validate_recipe(recipe):
     if recipe.get('side_entry_clearance') != SIDE_ENTRY_CLEARANCE:
         raise ValueError('Physical side placement requires the reviewed 10mm hover and vertical setdown')
     if recipe.get('physical_approach_clearance') != APPROACH_CLEARANCE:
-        raise ValueError('Physical descent requires the reviewed final 40mm slow approach')
+        raise ValueError(f'Physical descent requires the reviewed final {APPROACH_CLEARANCE*1000:g}mm slow approach')
     if any(recipe.get(key) != ARM_SPEEDS['descent_fast'] for key in ('descent_velocity_scaling', 'descent_acceleration_scaling')):
-        raise ValueError('Physical fast descent requires reviewed 0.20 velocity and acceleration')
+        raise ValueError(f'Physical fast descent requires reviewed {ARM_SPEEDS["descent_fast"]:.2f} velocity and acceleration')
     if recipe.get('physical_contact_clearance') != CONTACT_CLEARANCE:
-        raise ValueError('Physical recipe needs the reviewed 40mm contact clearance')
-    for key, expected_scaling in [('approach_acceleration_scaling', .05), ('transfer_acceleration_scaling', 1.)]:
+        raise ValueError(f'Physical recipe needs the reviewed {CONTACT_CLEARANCE*1000:g}mm contact clearance')
+    for key, expected_scaling in [('approach_acceleration_scaling', ARM_SPEEDS['approach']),
+                                  ('transfer_acceleration_scaling', ARM_SPEEDS['transfer'])]:
         scaling = recipe.get(key)
         if (isinstance(scaling, bool) or not isinstance(scaling, (int, float))
                 or not math.isfinite(scaling) or abs(scaling-expected_scaling) > 1e-9):
-            raise ValueError('Physical recipe needs reviewed phase acceleration scaling 0.05/1.00')
+            raise ValueError(f'Physical recipe needs reviewed phase acceleration scaling '
+                             f'{ARM_SPEEDS["approach"]:.2f}/{ARM_SPEEDS["transfer"]:.2f}')
+    incremental = recipe.get('routing_policy') == INCREMENTAL_ROUTING_POLICY
     if (type(recipe.get('target_cell')) is not int or not 1 <= recipe['target_cell'] <= 100
             or type(recipe.get('moves')) is not int or recipe['moves'] < 1
-            or type(recipe.get('foundation_layers')) is not int or recipe['foundation_layers'] != 1
+            or type(recipe.get('foundation_layers')) is not int
+            or not (1 <= recipe['foundation_layers'] <= 99 if incremental else recipe['foundation_layers'] == 1)
             or type(recipe.get('layers')) is not int):
         raise ValueError('Physical stacking requires one existing foundation block and integer counts')
     sources = recipe.get('source_cells')
     if recipe.get('buffer_selection_policy') != BUFFER_SELECTION_POLICY:
         raise ValueError('Physical recipe requires nearest-target feasible temporary supports')
-    if (recipe.get('routing_policy') != 'open_gripper_buffer_v1'
+    if (recipe.get('routing_policy') not in ('open_gripper_buffer_v1', INCREMENTAL_ROUTING_POLICY)
             or not isinstance(sources, list) or len(sources) != recipe['moves']
             or any(type(cell) is not int or not 1 <= cell <= 100 or cell == recipe['target_cell'] for cell in sources)
             or len(set(sources)) != len(sources)
@@ -313,6 +317,10 @@ def validate_recipe(recipe):
         raise ValueError('Physical recipe requires the open-gripper buffer routing policy and consistent transport counts')
     towers = {cell: [cell] for cell in sources}
     towers[recipe['target_cell']] = [recipe['target_cell']]
+    incremental_after = None
+    if incremental:
+        from .incremental_state import recipe_layout
+        towers, incremental_after = recipe_layout(recipe)
     buffered, finished = set(), set()
     temporary_places = 0
     expected = recipe['initial_joints']
@@ -331,17 +339,19 @@ def validate_recipe(recipe):
         kind, phase = step.get('kind'), step.get('phase')
         if kind == 'arm':
             velocity, acceleration = step.get('velocity_scaling'), step.get('acceleration_scaling')
+            expected_velocity, expected_acceleration = (incremental_arm_scaling(step.get('motion_role'), recipe['layers'])
+                if incremental else (ARM_SPEEDS.get(phase),)*2)
             if (phase not in ARM_SPEEDS or isinstance(velocity, bool) or not isinstance(velocity, (int, float))
-                    or not math.isfinite(velocity) or abs(velocity-ARM_SPEEDS[phase]) > 1e-9):
+                    or not math.isfinite(velocity) or abs(velocity-expected_velocity) > 1e-9):
                 raise ValueError('Arm phase does not use the reviewed contact/transfer speed scaling')
             if (isinstance(acceleration, bool) or not isinstance(acceleration, (int, float))
-                    or not math.isfinite(acceleration) or abs(acceleration-ARM_SPEEDS[phase]) > 1e-9):
+                    or not math.isfinite(acceleration) or abs(acceleration-expected_acceleration) > 1e-9):
                 raise ValueError('Physical arm acceleration must match its reviewed contact/transfer phase speed')
             if release_stage or (carrying and not attached):
                 raise ValueError('Arm motion precedes attachment or the completed 0.70 -> 0.60 release')
             if abs(start[-1]-end[-1]) > 1e-9:
                 raise ValueError('Arm motion must hold the gripper shape')
-            if phase == 'approach' and not carrying and abs(start[-1]-HAND_TARGETS['open']) > 1e-8:
+            if phase in ('approach','descent_fast') and not carrying and abs(start[-1]-HAND_TARGETS['open']) > 1e-8:
                 raise ValueError('Pickup approach must keep the gripper open at 0.40rad')
         elif kind == 'hand':
             target = step.get('hand_target')
@@ -409,6 +419,11 @@ def validate_recipe(recipe):
     if (recipe['transport_moves'] != grasps or recipe['buffer_moves'] != temporary_places
             or len(finished) != recipe['moves'] or recipe['layers'] != len(finished)+recipe['foundation_layers']):
         raise ValueError('Physical recipe block/layer counts differ')
+    if incremental_after is not None:
+        if (towers[recipe['target_cell']] != incremental_after['target_blocks']
+                or sorted(cell for cell, tower in towers.items() if cell != recipe['target_cell'] and tower)
+                != incremental_after['remaining_sources']):
+            raise ValueError('Executed incremental layout differs from its declared next state')
     return steps
 
 
@@ -420,6 +435,9 @@ def trajectory_duration(trajectory):
 
 
 class PhysicalStackTask(AirTask):
+    def recipe_policy(self):
+        return RECIPE_POLICY
+
     def motion_execution_profile(self):
         """Dispatch the sealed physical-stack thresholds, separately from recovery."""
         return arm_execution_profile()
@@ -543,6 +561,20 @@ class PhysicalStackTask(AirTask):
         if reference is None or not math.isfinite(reference):
             return None
         return (reference-HAND_HOLD_TOLERANCE, HAND_TARGETS['grasp']+HAND_COMMAND_TOLERANCE)
+
+    def first_release_target(self):
+        interval = self.holding_interval()
+        if interval is None:
+            raise RuntimeError('놓기 전에 실제 파지 각도를 확인하지 못했습니다.')
+        target = min(HAND_TARGETS['release_first'], interval[0]-.005)
+        if target < HAND_TARGETS['release_clearance']:
+            raise RuntimeError('현재 파지 각도에서는 검증된 0.60rad 범위 안의 열림을 보장할 수 없습니다.')
+        return target
+
+    def released_start_matches(self, step):
+        target = getattr(self, 'last_first_release_target', None)
+        return (self.release_stage in (1, 2) and step['phase'] in ('place', 'release_clearance')
+                and target is not None and abs(self.values.get(HAND, math.inf)-target) <= .003)
 
     def holding_context_key(self, step, trajectory, scene_hash):
         interval = self.holding_interval()
@@ -1037,7 +1069,11 @@ class PhysicalStackTask(AirTask):
         if len(path)*len(fingers) > 1_000_000:
             raise RuntimeError('Prevalidated physical finger grid exceeds the bounded workload')
         samples = [(stamp, values[:6]+[hand]) for stamp, values in path for hand in fingers]
-        checked = worker.validate(scene, samples)
+        try:
+            checked = worker.validate(scene, samples)
+        except RuntimeError as error:
+            raise RuntimeError(f'충돌 검사 실패: step={step.get("index")} phase={step.get("phase")} '
+                               f'label={step.get("label")}: {error}') from error
         if checked != len(samples):
             raise RuntimeError('Offline checker did not acknowledge the complete finger grid')
         step['collision_certificate'] = dict(
@@ -1059,7 +1095,8 @@ class PhysicalStackTask(AirTask):
     def package_context(self, inputs, hardware):
         return dict(input_sha256=inputs, hardware_class=hardware,
                     model_sha256=digest(self.model.encode()), semantic_sha256=digest(self.semantic.encode()),
-                    scene_hash_policy=SCENE_HASH_POLICY, recipe_policy=RECIPE_POLICY,
+                    scene_hash_policy=SCENE_HASH_POLICY,
+                    recipe_policy=getattr(self, 'recipe_policy', lambda: RECIPE_POLICY)(),
                     replay_policy=replay.POLICY, grasp_policy=GRASP_POLICY,
                     arm_execution_profile=arm_execution_profile(), finger_joint_bounds=list(self.bounds[HAND]))
 
@@ -1165,6 +1202,15 @@ class PhysicalStackTask(AirTask):
         print('STACK_REPLAY_SAVED '+json.dumps(dict(path=str(destination), samples=samples,
               seconds=round(time.monotonic()-began, 3), robot_commands=0)), flush=True)
 
+    def validation_worker(self, bounded_contacts):
+        return CollisionWorker(
+            {'robot_description': self.model, 'robot_description_semantic': self.semantic,
+             'bounded_surface_contacts': bounded_contacts},
+            self.path.parent, lambda: (self.check_stop(), rclpy.spin_once(self, timeout_sec=0.)))
+
+    def release_validation_worker(self, worker):
+        worker.close()
+
     def plan(self):
         plan_began = time.monotonic()
         self.spin_until(self.fresh)
@@ -1202,19 +1248,23 @@ class PhysicalStackTask(AirTask):
         recipe['grasp_policy'] = GRASP_POLICY
         steps = validate_recipe(recipe)
         initial = self.read_message(recipe['initial_scene_file'], PlanningScene)
+        local_snapshots = recipe.get('routing_policy') == INCREMENTAL_ROUTING_POLICY
+        if local_snapshots and scene_fingerprint(self.scene()) != scene_fingerprint(initial):
+            raise RuntimeError('현재 장면이 한 블록 계획 시작 장면과 다릅니다.')
         hashes, samples_checked, duration = {}, 0, 0.
         worker = None
         validation_began = time.monotonic()
         try:
-            worker = CollisionWorker(
-                {'robot_description': self.model, 'robot_description_semantic': self.semantic},
-                self.path.parent, lambda: (self.check_stop(), rclpy.spin_once(self, timeout_sec=0.)))
+            worker = self.validation_worker(local_snapshots)
             for step, holding in replay.holding_steps(steps):
                 self.check_stop()
                 before = self.read_message(step['scene_before_file'], PlanningScene)
                 after = self.read_message(step['scene_after_file'], PlanningScene)
-                self.apply_snapshot(before)
-                applied_before = self.scene()
+                if local_snapshots:
+                    applied_before = before
+                else:
+                    self.apply_snapshot(before)
+                    applied_before = self.scene()
                 step['scene_before_sha256'] = scene_fingerprint(applied_before)
                 if step['kind'] != 'scene':
                     trajectory = self.read_message(step['file'], RobotTrajectory)
@@ -1227,8 +1277,11 @@ class PhysicalStackTask(AirTask):
                     samples_checked += self.certify_motion(worker, applied_before, step, trajectory, holding)
                     step['duration'] = trajectory_duration(trajectory)
                     duration += step['duration']
-                self.apply_snapshot(after)
-                step['scene_after_sha256'] = scene_fingerprint(self.scene())
+                if local_snapshots:
+                    step['scene_after_sha256'] = scene_fingerprint(after)
+                else:
+                    self.apply_snapshot(after)
+                    step['scene_after_sha256'] = scene_fingerprint(self.scene())
                 if step['index'] % 10 == 0:
                     print(f'STACK_PHYSICAL_VALIDATING step={step["index"]} total={len(steps)} samples={samples_checked}', flush=True)
         finally:
@@ -1236,9 +1289,10 @@ class PhysicalStackTask(AirTask):
             # future attachment/tower scene. No robot commands are sent here.
             try:
                 if worker is not None:
-                    worker.close()
+                    self.release_validation_worker(worker)
             finally:
-                self.apply_snapshot(initial, cancel=False)
+                if not local_snapshots:
+                    self.apply_snapshot(initial, cancel=False)
         validation_seconds = time.monotonic()-validation_began
         print(f'STACK_PLAN_TIMING stage=collision_validation backend=local_cpp seconds={validation_seconds:.3f} samples={samples_checked}', flush=True)
         self.check_stop()
@@ -1314,7 +1368,8 @@ class PhysicalStackTask(AirTask):
             raise RuntimeError('이 파일은 검증된 실제 집기·쌓기 경로가 아닙니다.')
         if metadata.get('scene_hash_policy') != SCENE_HASH_POLICY:
             raise RuntimeError('충돌 장면 검증 형식이 바뀌었습니다. 실제 집기·쌓기 경로를 다시 계획하세요.')
-        accepted = PREPARABLE_POLICIES if preparing else (RECIPE_POLICY,)
+        policy = getattr(self, 'recipe_policy', lambda: RECIPE_POLICY)()
+        accepted = PREPARABLE_POLICIES if preparing and policy == RECIPE_POLICY else (policy,)
         if metadata.get('recipe_policy') not in accepted:
             raise RuntimeError('임시 적재 우선순위·진입 높이·속도 정책이 바뀌었습니다. 이전 저장 경로는 보존하고 ④에서 다시 계획하세요.')
         if metadata.get('grasp_policy') != GRASP_POLICY:
@@ -1381,12 +1436,13 @@ class PhysicalStackTask(AirTask):
                         and step['collision_certificate']['finger_range'][0] <= self.values[HAND]
                             <= step['collision_certificate']['finger_range'][1])
         if (not (self.carrying and not self.release_stage) and not initial_open
+                and not PhysicalStackTask.released_start_matches(self, step)
                 and abs(self.values[HAND]-step['start_joints'][-1]) > HAND_START_TOLERANCE):
             raise RuntimeError('그리퍼가 검토한 집기·쌓기 시작 위치에서 바뀌었습니다.')
         if not self.holding_ok():
             raise RuntimeError('그리퍼 실제 형상이 검토한 충돌 검사 범위와 다릅니다.')
-        if step['phase'] == 'release_first' and self.values[HAND] <= HAND_TARGETS['release_first']+.001:
-            raise RuntimeError('현재 잡힘 위치에서는 0.70이 열림 동작인지 확인할 수 없습니다. 팔은 정지합니다.')
+        if step['phase'] == 'release_first':
+            PhysicalStackTask.first_release_target(self)
         self.check_stop()
 
     def replay_checkpoint(self, metadata, step, expected_scene):
@@ -1409,12 +1465,13 @@ class PhysicalStackTask(AirTask):
                         and step['collision_certificate']['finger_range'][0] <= self.values[HAND]
                             <= step['collision_certificate']['finger_range'][1])
         if (not (self.carrying and not self.release_stage) and not initial_open
+                and not PhysicalStackTask.released_start_matches(self, step)
                 and abs(self.values.get(HAND, math.inf)-step['start_joints'][-1]) > HAND_START_TOLERANCE):
             raise RuntimeError('그리퍼가 저장 경로의 시작 자세와 다릅니다.')
         if not self.holding_ok():
             raise RuntimeError('그리퍼 형상이 검토 범위를 벗어났습니다.')
-        if step['phase'] == 'release_first' and self.values[HAND] <= HAND_TARGETS['release_first']+.001:
-            raise RuntimeError('현재 잡힘 위치에서는 0.70이 열림 동작인지 확인할 수 없습니다.')
+        if step['phase'] == 'release_first':
+            PhysicalStackTask.first_release_target(self)
         self.check_stop()
 
     def bind_certified_motion(self, step, trajectory, expected_scene):
@@ -1426,9 +1483,21 @@ class PhysicalStackTask(AirTask):
         low, high = cert['finger_range']
         if self.carrying and not self.release_stage:
             interval = self.holding_interval()
-            if (not self.holding_ok() or interval is None
-                    or not low <= interval[0] <= interval[1] <= high):
-                raise RuntimeError('실측 잡힘 범위가 저장 경로의 사전 검증 범위 밖입니다. 경로 준비를 다시 수행하세요.')
+            if not self.holding_ok() or interval is None:
+                raise RuntimeError('실제 파지 각도·센서 상태가 안정적이지 않습니다. 팔은 정지합니다.')
+            if not low <= interval[0] <= interval[1] <= high:
+                if self.holding_context_verified(step, trajectory, expected_scene):
+                    return
+                measured = self.values.get(HAND)
+                active = getattr(self, 'active_recipe', None) or {}
+                print('STACK_FINGER_EXTENSION_REQUIRED '+json.dumps(dict(
+                    step=step['index'], label=step.get('label'), layer=active.get('layers'),
+                    source_cells=active.get('source_cells'), measured=measured,
+                    holding_reference=getattr(self, 'holding_reference', None),
+                    required_range=interval, certified_range=[low, high],
+                    hold_tolerance=HAND_HOLD_TOLERANCE), sort_keys=True), flush=True)
+                PhysicalStackTask.extend_measured_fingers(self, step, trajectory, expected_scene)
+                return
             self.verified_holding_context = dict(
                 key=self.holding_context_key(step, trajectory, expected_scene), interval=interval,
                 scene=expected_scene, step=step['index'], samples=cert['checked_samples'], source='saved_certificate')
@@ -1440,6 +1509,68 @@ class PhysicalStackTask(AirTask):
             required_high = min(self.bounds[HAND][1], actual+margin)
             if not low-1e-12 <= required_low <= required_high <= high+1e-12:
                 raise RuntimeError('실측 그리퍼가 저장 경로의 사전 검증 범위 밖입니다.')
+
+    def extend_measured_fingers(self, step, trajectory, expected_scene):
+        """Check only the missing finger grid, keeping the sealed arm path."""
+        if self.holding_context_verified(step, trajectory, expected_scene):
+            return
+        began = time.monotonic()
+        PhysicalStackTask.first_release_target(self)  # Reject an unusable grasp before lifting.
+        interval = self.holding_interval()
+        before = [self.values[name] for name in JOINTS]
+        key = self.holding_context_key(step, trajectory, expected_scene)
+        cert_low, cert_high = step['collision_certificate']['finger_range']
+        low, high = interval
+        if not self.bounds[HAND][0] <= low <= high <= self.bounds[HAND][1]:
+            raise RuntimeError('실측 파지 검사 범위가 그리퍼 관절 한계를 벗어납니다.')
+        fingers = []
+        if low < cert_low:
+            count = max(1, math.ceil((cert_low-low)/replay.FINGER_STEP))
+            fingers.extend(low+(cert_low-low)*i/count for i in range(count))
+        if high > cert_high:
+            count = max(1, math.ceil((high-cert_high)/replay.FINGER_STEP))
+            fingers.extend(cert_high+(high-cert_high)*i/count for i in range(1,count+1))
+        if not fingers:
+            raise RuntimeError('추가 파지 형상 표본을 생성하지 못했습니다.')
+        path = (self.tracking_motion_samples(step, trajectory) if step['kind']=='arm'
+                else [(0.,step['start_joints'])])
+        if len(path)*len(fingers) > 1_000_000:
+            raise RuntimeError('추가 파지 형상 검사의 표본 수가 한계를 넘었습니다.')
+        scene = self.read_message(step['scene_before_file'], PlanningScene)
+        if scene_fingerprint(scene) != expected_scene:
+            raise RuntimeError('추가 파지 검사 장면이 저장 경로와 다릅니다.')
+        def stationary():
+            self.check_stop()
+            if (not self.fresh() or not self.sensor_fresh() or not self.holding_ok()
+                    or self.holding_interval() != interval
+                    or any(abs(self.values[name]-q) > START_TOLERANCE for name,q in zip(ARM,before))):
+                raise RuntimeError('추가 파지 형상 검사 중 팔·손가락 상태가 바뀌었습니다.')
+        stationary()
+        active = getattr(self,'active_recipe',None) or {}
+        worker = self.validation_worker(active.get('routing_policy') == INCREMENTAL_ROUTING_POLICY)
+        original_poll = worker.poll
+        def poll():
+            original_poll()
+            queries = getattr(self,'replay_queries',None)
+            if queries:self.poll_flight_queries(queries)
+            stationary()
+        worker.poll = poll
+        try:
+            samples = [(stamp,q[:6]+[finger]) for stamp,q in path for finger in fingers]
+            checked = worker.validate(scene,samples)
+            if checked != len(samples):
+                raise RuntimeError('추가 파지 형상 검사가 모든 표본을 확인하지 못했습니다.')
+            stationary()
+            validation_seconds = time.monotonic()-began
+            self.verified_holding_context = dict(key=key,interval=interval,scene=expected_scene,
+                step=step['index'],samples=checked,validation_seconds=validation_seconds,
+                source='local_cpp_finger_extension')
+            print('STACK_FINGER_EXTENSION_VALIDATED '+json.dumps(dict(step=step['index'],
+                measured=self.values[HAND],required_range=interval,previous_range=[cert_low,cert_high],
+                added_fingers=fingers,samples=checked,seconds=round(validation_seconds,3))),flush=True)
+        finally:
+            worker.poll = original_poll
+            self.release_validation_worker(worker)
 
     def live_arm_validation(self, step, trajectory, expected_scene):
         if scene_fingerprint(self.scene()) != expected_scene:
@@ -1461,7 +1592,9 @@ class PhysicalStackTask(AirTask):
         interval = self.holding_interval()
         low, high = interval
         if step['kind'] == 'hand':
-            low, high = min(low, step['hand_target']), max(high, step['hand_target'])
+            target = (PhysicalStackTask.first_release_target(self) if step['phase']=='release_first'
+                      else step['hand_target'])
+            low, high = min(low, target-.003), max(high, target+.003)
         count = max(1, math.ceil((high-low)/HAND_ENVELOPE_STEP))
         fingers = sorted(set([low+(high-low)*i/count for i in range(count+1)] +
                              [self.values[HAND], self.holding_reference, HAND_TARGETS['grasp']]))
@@ -1499,6 +1632,12 @@ class PhysicalStackTask(AirTask):
         if scene_fingerprint(self.scene()) != expected_scene:
             raise RuntimeError('Live scene changed during finger validation')
 
+    def approve_continuous_recipe(self, metadata, recipe, steps, expected_scene):
+        approval_metadata = dict(metadata, gripper_position=self.values[HAND])
+        self.await_approval(lambda: self.recipe_display(recipe, steps), approval_metadata, None, 1, 1,
+                            f'실제 집기·쌓기 전체 경로 · 블록 {recipe["moves"]}개 · 임시 적재 {recipe["buffer_moves"]}회',
+                            context=lambda *_: self.replay_checkpoint(metadata, steps[0], expected_scene))
+
     def execute(self):
         began = time.monotonic()
         self.acquire_stack_lock()
@@ -1514,10 +1653,11 @@ class PhysicalStackTask(AirTask):
               collision_rechecks=0, startup_seconds=round(time.monotonic()-began, 3))), flush=True)
         motions = [step for step in steps if step['kind'] != 'scene']
         if self.execution_mode == 'continuous':
-            approval_metadata = dict(metadata, gripper_position=self.values[HAND])
-            self.await_approval(lambda: self.recipe_display(recipe, steps), approval_metadata, None, 1, 1,
-                                f'실제 집기·쌓기 전체 경로 · 블록 {recipe["moves"]}개 · 임시 적재 {recipe["buffer_moves"]}회',
-                                context=lambda *_: self.replay_checkpoint(metadata, steps[0], expected_scene))
+            approval = getattr(self, 'approve_continuous_recipe', None)
+            if approval is None:
+                PhysicalStackTask.approve_continuous_recipe(self, metadata, recipe, steps, expected_scene)
+            else:
+                approval(metadata, recipe, steps, expected_scene)
         motion_index, completed = 0, 0
         for step in steps:
             self.replay_checkpoint(metadata, step, expected_scene)
@@ -1579,6 +1719,11 @@ class PhysicalStackTask(AirTask):
     def run_motion(self, step, trajectory, metadata, scene_hash, index, total):
         preparation_began = time.monotonic()
         fast = getattr(self, 'prevalidated_replay', False)
+        extension = getattr(self, 'verified_holding_context', None) or {}
+        has_extension = (fast and extension.get('source') == 'local_cpp_finger_extension'
+                         and extension.get('step') == step['index'])
+        additional_finger_samples = extension['samples'] if has_extension else 0
+        additional_finger_validation_seconds = extension['validation_seconds'] if has_extension else 0.
         hand = step['kind'] == 'hand'
         action = GripperCommand if hand else FollowJointTrajectory
         endpoint = (('' if self.mock else '/gripper')+'/dh_ag95_gripper_controller/gripper_cmd'
@@ -1597,7 +1742,12 @@ class PhysicalStackTask(AirTask):
             self.guard(metadata, step, scene_hash)
         goal = action.Goal()
         if hand:
-            goal.command.position = float(step['hand_target'])
+            hand_target = (PhysicalStackTask.first_release_target(self) if step['phase']=='release_first'
+                           else float(step['hand_target']))
+            low, high = step['collision_certificate']['finger_range'] if fast else (0.,.93)
+            if not low <= hand_target <= high:
+                raise RuntimeError('실측 각도에 맞춘 열림 목표가 검증된 형상 범위를 벗어납니다.')
+            goal.command.position = hand_target
             goal.command.max_effort = 0.
         else:
             profile = (getattr(self, 'motion_execution_profile', None) or arm_execution_profile)()
@@ -1762,8 +1912,8 @@ class PhysicalStackTask(AirTask):
             if hand:
                 action_result = getattr(result, 'result', None)
                 hand_result = dict(
-                    phase=step['phase'], target=step['hand_target'], start=before[HAND],
-                    measured=self.values[HAND], position_error=self.values[HAND]-step['hand_target'],
+                    phase=step['phase'], target=hand_target, nominal_target=step['hand_target'], start=before[HAND],
+                    measured=self.values[HAND], position_error=self.values[HAND]-hand_target,
                     status=result.status, result_position=getattr(action_result, 'position', None),
                     reached_goal=getattr(action_result, 'reached_goal', None),
                     stalled=getattr(action_result, 'stalled', None),
@@ -1785,10 +1935,12 @@ class PhysicalStackTask(AirTask):
                     self.holding_reference = self.values[HAND]
                     self.verified_holding_context = None
                     self.observe_grasp_settle(before)
-                elif (result.status != 4 or abs(self.values[HAND]-step['hand_target']) > .003
+                elif (result.status != 4 or abs(self.values[HAND]-hand_target) > .003
                       or result.result.stalled or not result.result.reached_goal):
                     raise RuntimeError('검토한 그리퍼 준비·열림 위치를 확인하지 못했습니다. '+
                                        json.dumps(hand_result, sort_keys=True))
+                if step['phase']=='release_first':
+                    self.last_first_release_target = hand_target
             elif arm_result['classification'] != 'SUCCESS':
                 messages = {
                     'ARM_PATH_TOLERANCE_VIOLATED': '이동 중 팔 경로 추종 허용 오차를 벗어나 제어기가 중단했습니다.',
@@ -1802,7 +1954,11 @@ class PhysicalStackTask(AirTask):
                 print('STACK_REPLAY_STEP_TIMING '+json.dumps(dict(step=step['index'], phase=step['phase'],
                       prepare_seconds=round(began-preparation_began, 3),
                       action_seconds=round(terminal_at-began, 3),
-                      settle_seconds=round(time.monotonic()-terminal_at, 3), collision_rechecks=0)), flush=True)
+                      settle_seconds=round(time.monotonic()-terminal_at, 3),
+                      # One recheck is one additional grid-validation pass.
+                      collision_rechecks=int(has_extension),
+                      additional_finger_samples=additional_finger_samples,
+                      additional_finger_validation_seconds=round(additional_finger_validation_seconds, 3))), flush=True)
         finally:
             if not fast and 'queries' in locals():
                 self.destroy_flight_queries(queries)
@@ -2067,14 +2223,14 @@ class PhysicalStackTask(AirTask):
             raise ValueError('Physical stack mode must be physical_plan, physical_prepare or physical_run')
 
 
-def main():
+def main(task_class=PhysicalStackTask):
     domain = os.environ.get('ROS_DOMAIN_ID', '0')
     if not domain.isdigit():
         raise ValueError('ROS_DOMAIN_ID must be numeric')
     lock = os.open(f'/tmp/ur5e_air_task_{domain}.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
     fcntl.flock(lock, fcntl.LOCK_EX|fcntl.LOCK_NB)
     rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
-    task = PhysicalStackTask()
+    task = task_class()
     signal.signal(signal.SIGINT, lambda *_: stop_with_reason(task, 'PROCESS_SIGNAL', signal='SIGINT'))
     signal.signal(signal.SIGTERM, lambda *_: stop_with_reason(task, 'PROCESS_SIGNAL', signal='SIGTERM'))
     code = 0

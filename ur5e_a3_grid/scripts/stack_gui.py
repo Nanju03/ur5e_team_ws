@@ -27,6 +27,11 @@ from rclpy.qos import qos_profile_sensor_data
 from visualization_msgs.msg import Marker, MarkerArray
 from ur5e_block_bringup.plate_geometry import ALIGNMENT_GRIPPER_POSITION, ALIGNMENT_POLICY
 from ur5e_block_bringup.path_archive import archive_from_log
+from ur5e_block_bringup.physical_motion import ARM_SPEEDS, APPROACH_CLEARANCE, CONTACT_CLEARANCE, motion_parameters
+from ur5e_block_bringup.physical_motion import (FAST_LAYERS, PICKUP_SPEED, LOW_TOWER_SPEED,
+    HIGH_TOWER_SPEED, incremental_motion_parameters)
+from ur5e_block_bringup.incremental_state import POLICY as INCREMENTAL_POLICY
+from ur5e_block_bringup.physical_held import HOME_PRESERVE_POLICY, EMPTY_UNLOCK_POLICY
 import yaml
 
 
@@ -121,6 +126,7 @@ class StackGui:
         self.stop_stationary_since = None
         self.stop_requires_motion = False
         self.execution_mode = tk.StringVar(value=self.EXECUTION_LABELS["step"])
+        self.incremental_mode = tk.BooleanVar(value=self.real_backend)
         self.step_status = tk.StringVar(value="실행할 경로를 계획한 뒤 실행 방식을 선택하세요.")
         self.step_request = None
         self.step_client = None
@@ -139,7 +145,9 @@ class StackGui:
         self.selection_file = self.folder / f"layout_domain_{self.domain}{suffix}{geometry_suffix}.yaml"
         self.trajectory_file = self.folder / f"air_plan_domain{self.domain}{geometry_suffix}.cdr"
         self.air_trajectory_file = self.trajectory_file
-        self.physical_trajectory_file = self.folder / f"physical_plan_domain{self.domain}{geometry_suffix}.recipe.json"
+        self.full_physical_trajectory_file = self.folder / f"physical_plan_domain{self.domain}{geometry_suffix}.recipe.json"
+        self.incremental_trajectory_file = self.folder / f"physical_next_plan_domain{self.domain}{geometry_suffix}.recipe.json"
+        self.physical_trajectory_file = self.incremental_trajectory_file if self.real_backend else self.full_physical_trajectory_file
         self.recovery_trajectory_file = self.folder / f"recovery_domain{self.domain}{geometry_suffix}.recipe.json"
         self.plan_kind = "air"
         self.plan_manifest_file = self.trajectory_file.with_suffix(".gui.json")
@@ -358,9 +366,14 @@ class StackGui:
                                  values=tuple(self.PLACEMENT_LABELS.values()), width=28, state="readonly")
         placement.pack(fill="x", pady=(3, 0))
         self.controls.append(placement)
+        if self.real_backend:
+            incremental = ttk.Checkbutton(right, text="한 블록씩 계획·반복 실행 (시간 제한 없음)",
+                variable=self.incremental_mode, command=self.incremental_changed)
+            incremental.pack(fill="x", pady=(6, 3))
+            self.controls.append(incremental)
         actions = [("③ Gazebo 배치 초기화 / RViz에 표시" if getattr(self, "simulation_backend", "mock") == "gazebo" else "③ 선택 배치를 RViz에 표시", "scene")]
         if self.real_backend:
-            actions.append(("④ 저장 경로 불러오기 / 새 경로 계획", "physical_plan"))
+            actions.append(("④ 실물 경로 준비 (한 블록 / 전체)", "physical_plan"))
             actions.append(("저장 경로 사전 검사 (현재 정책)", "physical_prepare"))
             actions.append(("블록 없이 팔 경로 계획 · 시운전", "plan"))
         else:
@@ -370,6 +383,7 @@ class StackGui:
         if self.real_backend:
             actions.append(("장애물 위 XY 순회 경로", "scan"))
             actions.append(("안전 확인 후 초기 자세 복구", "recovery"))
+            actions.append(("빈 그리퍼 확인 · 중단 잠금 해제", "unlock_empty"))
         actions.append(("Gazebo / RViz 작업 물체 지우기" if getattr(self, "simulation_backend", "mock") == "gazebo" else "RViz 작업 물체 지우기", "reset"))
         for label, action in actions:
             button = ttk.Button(right, text=label, command=lambda action=action: self.launch_task(action))
@@ -384,7 +398,12 @@ class StackGui:
                                                  command=self.open_gripper_calibration)
             self.calibration_button.pack(fill="x", pady=(7, 2))
             self.controls.append(self.calibration_button)
-        guidance = ("파랑: 25mm 블록 / 빨강: 25×25×150mm 장애물\n노랑: 바닥 블록이 있는 쌓을 홈 / 회색: 빈칸\n\n실물 집기·쌓기: 잡기 0.73 → 놓기 0.70 → 0.60까지 연 뒤 팔 이동.\n집기·놓기 진입과 처음 40mm 이탈: 0.05 / 나머지 이동: 속도·가속도 1.00(설정 한계)입니다.\n실물 경로 계획 후 상단 실행과 OK로 승인합니다.\n팔 경로 시운전은 블록 없이 현재 그리퍼 자세를 유지합니다.\n모서리 맞춤은 그리퍼 0.65, 각 X/Y 위치에서 조정 후 OK로 재개합니다."
+        guidance = ("파랑: 25mm 블록 / 빨강: 25×25×150mm 장애물\n노랑: 바닥 블록이 있는 쌓을 홈 / 회색: 빈칸\n\n실물 집기·쌓기: 잡기 0.73 → 놓기 실측 기반 1차 열림(최대 0.70) → 0.60까지 연 뒤 팔 이동.\n"
+                    f"전체 경로 모드: 접촉 {ARM_SPEEDS['contact']:.2f} / 하강 {ARM_SPEEDS['descent_fast']:.2f} / 이동 {ARM_SPEEDS['transfer']:.2f}.\n"
+                    f"한 블록 모드: 집기 접근·하강 {PICKUP_SPEED[0]:.2f} / 운반→놓기 직전까지 한 번에 이동.\n"
+                    f"운반 속도·가속도: {FAST_LAYERS}층까지 {LOW_TOWER_SPEED[0]:.2f}/{LOW_TOWER_SPEED[1]:.2f}, "
+                    f"{FAST_LAYERS+1}층부터 {HIGH_TOWER_SPEED[0]:.2f}/{HIGH_TOWER_SPEED[1]:.2f}. 최종 놓기는 {ARM_SPEEDS['approach']:.2f}.\n"
+                    "실물 경로 계획 후 상단 실행과 OK로 승인합니다.\n팔 경로 시운전은 블록 없이 현재 그리퍼 자세를 유지합니다.\n모서리 맞춤은 그리퍼 0.65, 각 X/Y 위치에서 조정 후 OK로 재개합니다."
                     if self.real_backend else
                     ("파랑: 블록 / 빨강: 장애물\n노랑: 바닥 블록 1개가 있는 쌓을 홈 / 회색: 빈칸\n노란 블록은 유지하고 파란 블록을 2층부터 쌓습니다.\n" if self.plate_enabled else
                      "파랑: 블록 / 빨강: 장애물\n노랑: 탑 밑 블록 / 회색: 빈칸\n모든 파란 블록을 노란 칸에 쌓습니다.\n") +
@@ -634,7 +653,17 @@ class StackGui:
         if self.real_backend:
             data["/**"]["ros__parameters"]["physical_stack_task"] = getattr(self, "plan_kind", "air") == "physical"
             data["/**"]["ros__parameters"].update(
-                physical_approach_clearance=.04, descent_velocity_scaling=.20, descent_acceleration_scaling=.20)
+                physical_approach_clearance=APPROACH_CLEARANCE,
+                physical_contact_clearance=CONTACT_CLEARANCE,
+                descent_velocity_scaling=ARM_SPEEDS['descent_fast'],
+                descent_acceleration_scaling=ARM_SPEEDS['descent_fast'],
+                incremental_stack=self.incremental_enabled(), post_place_retreat_clearance=.050,
+                incremental_pickup_approach_clearance=.080, incremental_transfer_clearance=.050)
+            if data["/**"]["ros__parameters"]["physical_stack_task"]:
+                # Keep the selected empty-hand speed in the shared layout.
+                # The physical launch applies its own motion speed policy.
+                data["/**"]["ros__parameters"].update(motion_parameters(), velocity_scaling=speed)
+                data["/**"]["ros__parameters"].update(incremental_motion_parameters())
             try:
                 clearance = float(self.empty_hand_clearance.get()) / 1000.0
             except (ValueError, TypeError) as error:
@@ -928,6 +957,22 @@ class StackGui:
     def file_hash(path):
         return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
+    def incremental_enabled(self):
+        variable = getattr(self, "incremental_mode", None)
+        return self.real_backend and variable is not None and variable.get() is True
+
+    def incremental_changed(self):
+        self.invalidate_plan()
+        self.physical_trajectory_file = (self.incremental_trajectory_file if self.incremental_enabled()
+                                         else self.full_physical_trajectory_file)
+        if getattr(self, "plan_kind", "air") == "physical":
+            self.trajectory_file = self.physical_trajectory_file
+            self.plan_manifest_file = self.trajectory_file.with_suffix(".gui.json")
+        if hasattr(self, "footer_note"):
+            self.footer_note.set(self.air_path_note())
+        self.status.set("한 블록 경로 준비 후 반복 실행합니다. 기존 탑·남은 블록 장면을 유지하세요."
+                        if self.incremental_enabled() else "전체 경로를 먼저 계획하는 방식입니다.")
+
     def set_plan_kind(self, kind, restore=False):
         if kind not in ("air", "physical"):
             raise ValueError("Unknown reviewed task kind")
@@ -963,15 +1008,42 @@ class StackGui:
         if (self.job is None or self.job_action != "recovery" or not self.real_backend
                 or self.job_failed or self.user_stopped or self.stop_pending or self.close_requested):
             return
+        valid_preserved = False
+        if isinstance(payload,dict) and getattr(self,"job_recovery_preserve",False):
+            position=payload.get('gripper_position')
+            valid_preserved=(payload.get('policy')==HOME_PRESERVE_POLICY
+                and payload.get('gripper_preserved') is True and payload.get('scene_preserved') is True
+                and type(position) in (int,float) and math.isfinite(position) and 0 <= position <= .93
+                and type(payload.get('held_fault_retained')) is bool)
+        valid_legacy = (isinstance(payload,dict) and not getattr(self,"job_recovery_preserve",False)
+                        and payload.get('gripper_empty') is True and payload.get('scene_cleared') is True
+                        and type(payload.get('hand_target')) in (int,float) and payload['hand_target']==.4)
         if (not isinstance(payload, dict) or payload.get("plan_id") != self.job_plan_id
                 or not self.job_plan_id or payload.get("home_reached") is not True
-                or payload.get("gripper_empty") is not True or payload.get("scene_cleared") is not True
-                or isinstance(payload.get("hand_target"), bool) or payload.get("hand_target") != .4):
+                or not (valid_preserved or valid_legacy)):
             self.job_failed = True
             self.last_failure_message = "초기 자세 복구의 완료 증거를 확인하지 못했습니다. 현재 상태를 유지합니다."
             self.status.set(self.last_failure_message)
             return
         self.recovery_verified = True
+        self.job_succeeded = True
+        if valid_preserved:
+            self.recovery_held_fault_retained = payload['held_fault_retained']
+
+    def receive_empty_unlock_done(self, payload):
+        if (self.job is None or self.job_action != 'unlock_empty' or not self.real_backend
+                or self.job_failed or self.user_stopped or self.stop_pending or self.close_requested):
+            return
+        if (not isinstance(payload,dict) or payload.get('policy') != EMPTY_UNLOCK_POLICY
+                or not self.job_plan_id or payload.get('plan_id') != self.job_plan_id
+                or payload.get('gripper_empty') is not True or payload.get('fault_cleared') is not True
+                or payload.get('arm_motion') is not False or payload.get('gripper_motion') is not False
+                or payload.get('scene_preserved') is not True):
+            self.job_failed = True
+            self.last_failure_message = '빈 그리퍼 확인·잠금 해제 완료 증거가 일치하지 않습니다.'
+            self.status.set(self.last_failure_message)
+            return
+        self.recovery_verified = self.job_succeeded = True
 
     def finish_recovery(self):
         """Invalidate reviewed paths only after recovery and clean process exit."""
@@ -986,13 +1058,21 @@ class StackGui:
         self.step_seen_requests.clear()
         self.step_latest_index, self.step_total = 0, None
         self.job_plan_id = None
-        self.visible_layout = None
+        if not getattr(self,"job_recovery_preserve",False):
+            self.visible_layout = None
         self.refresh_run_button()
 
     def air_path_note(self):
         if getattr(self, "plan_kind", "air") == "physical":
-            return (f"ROS domain {self.domain} · 실물 집기·쌓기 · 0.73 잡기 명령 완료 후 상승 / 놓기 0.70→0.60 · "
-                    "최종 40mm·접촉 0.05 / 하강 0.20 / 이동 1.00 · 측면 10mm 높게 진입 후 내려놓기")
+            if self.incremental_enabled():
+                return (f"ROS domain {self.domain} · 한 블록 반복 · 집기 접근·하강 {PICKUP_SPEED[0]:.2f} 연속 · "
+                        f"운반 속도/가속도 {FAST_LAYERS}층까지 {LOW_TOWER_SPEED[0]:.2f}/{LOW_TOWER_SPEED[1]:.2f}, "
+                        f"{FAST_LAYERS+1}층부터 {HIGH_TOWER_SPEED[0]:.2f}/{HIGH_TOWER_SPEED[1]:.2f} · "
+                        f"최종 {APPROACH_CLEARANCE*1000:g}mm 저속 놓기 · 탑 위 50mm 통과·후퇴")
+            return (("한 블록씩 계획·실행 반복 / 놓은 탑 위 50mm 후퇴 · " if self.incremental_enabled() else "")
+                    + f"ROS domain {self.domain} · 실물 집기·쌓기 · 0.73 잡기 명령 완료 후 상승 / 놓기 실측 기반 열림→0.60 · "
+                    f"최종 {APPROACH_CLEARANCE*1000:g}mm·접촉 {ARM_SPEEDS['contact']:.2f} / "
+                    f"하강 {ARM_SPEEDS['descent_fast']:.2f} / 이동 {ARM_SPEEDS['transfer']:.2f} · 측면 10mm 높게 진입 후 내려놓기")
         if getattr(self, "plate_alignment", False):
             return (f"ROS domain {self.domain} · 모서리 X/Y 두 방향 8회 맞춤 · 그리퍼 {self.ALIGNMENT_HAND:g}rad / 끝은 상판 위 10mm · "
                     "상승 후 90° 회전 · 정지 후 판을 맞추고 손을 뺀 뒤 다음 OK")
@@ -1020,6 +1100,7 @@ class StackGui:
     def plan_fingerprints(self):
         return {
             "task_kind": getattr(self, "plan_kind", "air"),
+            "incremental_stack": self.incremental_enabled() and getattr(self, "plan_kind", "air") == "physical",
             "selection": self.file_hash(self.selection_file),
             "trajectory": self.file_hash(self.trajectory_file),
             "calibration": self.file_hash(self.calibration_file),
@@ -1077,7 +1158,7 @@ class StackGui:
         if action in ("physical_plan", "physical_prepare") and not self.real_backend:
             self.status.set("실물 집기·쌓기 계획은 실물 모드에서 사용하세요.")
             return
-        if action == "recovery" and not self.real_backend:
+        if action in ("recovery", "unlock_empty") and not self.real_backend:
             self.status.set("초기 자세 복구는 실물 모드에서 사용하세요.")
             return
         if self.real_backend and action in ("plan", "scan", "plate_align", "physical_plan", "physical_prepare"):
@@ -1118,15 +1199,24 @@ class StackGui:
             self.status.set(str(error))
             return
         preparation_id = None
+        if action == 'unlock_empty':
+            if not messagebox.askokcancel(
+                    '빈 그리퍼 확인 · 팔 이동 없음',
+                    '실제 그리퍼에 블록이 없는지 확인하세요.\n'
+                    '팔·그리퍼를 움직이지 않고 최신 빈 그리퍼 센서와 정지 상태를 확인합니다.\n'
+                    'RViz에 부착 블록이 없을 때만 이전 중단 잠금을 해제합니다.\n'
+                    '현재 탑·장애물·블록 장면은 유지합니다.',parent=self.root):
+                return
+            preparation_id = 'unlock_'+uuid.uuid4().hex
         if action == "recovery":
             if not messagebox.askokcancel(
-                    "초기 자세 복구 · 빈 그리퍼 확인",
-                    "잡혀 있던 블록을 안전하게 분리해 작업 영역 밖에 놓고, 그리퍼가 비었는지 확인하세요.\n"
-                    "필요하면 먼저 ‘25mm 파지 보정’ 창에서 블록을 받친 상태로 안전하게 놓으세요.\n"
+                    "초기 자세 복귀 · 현재 그리퍼 유지",
+                    "그리퍼의 현재 단계·열림 각도를 유지하며 팔을 초기 자세로 복귀합니다.\n"
+                    "실제 잡고 있는 블록과 RViz의 부착 물체가 일치하는지 확인하세요.\n"
                     "주변 사람과 물체를 치우고 비상정지 버튼을 사용할 준비가 되었는지 확인하세요.\n\n"
-                    "실제 센서에서 빈 그리퍼와 정지를 확인한 뒤, 현재 손가락 자세를 유지하며 상승·초기 자세 복귀를 계획합니다.\n"
-                    "초기 자세에 도착한 뒤 그리퍼를 0.4rad로 설정합니다. 실제 이동은 경로 확인 후 상단 OK로 승인합니다.\n"
-                    "완료하면 이전 실행 계획을 폐기하고 저장한 배치를 화면에 다시 표시합니다. 블록은 복귀 후 원래 칸에 맞춰 놓으세요.",
+                    "관절·그리퍼 피드백과 정지를 확인한 뒤, 현재 충돌 장면으로 복귀 경로를 계획합니다.\n"
+                    "그리퍼를 열거나 초기화하지 않으며, 쌓인 탑·남은 블록 장면을 유지합니다.\n"
+                    "실제 이동은 경로 확인 후 상단 OK로 승인합니다.",
                     parent=self.root):
                 return
             if not self.execution_ready():
@@ -1168,10 +1258,13 @@ class StackGui:
                 self.status.set("저장된 실행 계획 정보를 확인하지 못했습니다. 팔 경로를 다시 계획하세요.")
                 return
             physical = getattr(self, "plan_kind", "air") == "physical"
+            incremental = physical and self.incremental_enabled()
             path_description = ((f"선택한 공급 블록을 {self.target}번 홈의 바닥 블록 위 2층부터 쌓습니다. "
                                  "잡기 0.73rad 명령이 완료되면 잡힌 것으로 간주하고, 잡힘·이탈 센서 상태로 진행을 막지 않습니다. "
-                                 "놓기 0.70rad→0.60rad 순서이며, 손가락을 연 뒤 팔이 후퇴합니다. "
-                                 "마지막 40mm 하강·처음 40mm 이탈은 0.05, 그 위 하강은 0.20, 나머지 이동은 설정 한계 1.00입니다. "
+                                 "놓기는 실측 파지각보다 열리는 방향(최대 0.70rad)→0.60rad 순서이며, 손가락을 연 뒤 팔이 후퇴합니다. "
+                                 f"놓기 마지막 {APPROACH_CLEARANCE*1000:g}mm 하강·놓은 뒤 처음 {CONTACT_CLEARANCE*1000:g}mm 이탈은 "
+                                 f"속도·가속도 {ARM_SPEEDS['contact']:.2f}, 그 위 하강은 {ARM_SPEEDS['descent_fast']:.2f}, "
+                                 f"나머지 이동은 설정 한계 {ARM_SPEEDS['transfer']:.2f}입니다. "
                                  "20층부터는 받침면보다 10mm 높게 수평 진입한 뒤 수직으로 내려놓습니다.")
                                 if physical else
                                 (f"빈 플레이트의 모서리 홈 A→B→C→D에서 X/Y 두 방향으로 각각 정지합니다. 그리퍼는 {self.ALIGNMENT_HAND:g}rad, 끝은 상판보다 10mm 높게 유지합니다. "
@@ -1181,18 +1274,29 @@ class StackGui:
                                 "전체 24칸의 XY를 순회한 뒤 마지막 위치를 유지합니다. 잡기 동작은 없습니다."
                                 if self.scan_mode else
                                 f"테이블보다 {self.empty_hand_clearance.get()}mm 위의 저장 경로로 움직입니다.")
+            if incremental:
+                path_description += ("\n현재 준비한 한 블록을 쌓은 뒤, 갱신된 탑·남은 블록 상태에서 다음 한 블록의 경로를 계획·검사합니다. "
+                                     f"집기 하강은 {ARM_SPEEDS['descent_fast']:.2f}, 집은 뒤 수직 상승은 1.00 배율로 각각 한 번에 움직입니다. "
+                                     "탑 위 50mm와 경로상 높은 장애물을 넘는 높이를 계산한 뒤, 집은 곳에서 먼저 상승해 직접 이동합니다. "
+                                     "놓은 후 빈 그리퍼의 가장 낮은 부분이 완성된 탑 위 50mm가 되도록 후퇴합니다. "
+                                     "시간 제한은 없으며, 중지 버튼·블록 소진·가능한 직접 집기 경로 없음으로 종료합니다.")
             execution_description = ("단계별 확인: 구간마다 RViz 경로를 보고 상단 OK를 눌러야 다음 한 구간을 움직입니다."
                                      if execution_mode == "step" else
                                      "전체 연속 실행도 X/Y 맞춤 위치마다 반드시 멈춥니다. 총 8개 맞춤 구간을 각각 OK로 승인합니다."
                                      if getattr(self, "plate_alignment", False) else
                                      "전체 연속 실행: 전체 RViz 경로를 보고 상단 OK를 한 번 누르면 끝까지 이어서 움직입니다.")
+            if incremental and execution_mode == "continuous":
+                execution_description = ("한 블록씩 자동 반복: 첫 블록 경로를 확인하고 상단 OK를 누르면, "
+                                         "같은 배치·보정·로봇 설정 안에서 이후 블록도 계획·검사 후 자동 실행합니다. "
+                                         "이후 경로마다 OK를 다시 묻지 않습니다. 멈추려면 실행 중지를 누르세요.")
             if not messagebox.askokcancel(
                     "실제 팔·그리퍼 집기·쌓기 준비 확인" if physical else "실제 팔 실행 준비 확인",
                     ("배치와 같은 실제 블록을 놓은 상태에서 UR5e 팔과 AG95 그리퍼가 움직입니다.\n" if physical else
                      "블록이 없는 상태에서 실제 UR5e 팔이 움직입니다.\n") + path_description + "\n"
                     + execution_description + "\n"
                     "주변 사람과 물체를 치우고 비상정지 버튼을 사용할 준비가 되었는지 확인하세요.\n"
-                    + ("쌓을 홈의 바닥 블록 1개, 공급 블록·장애물 위치가 화면과 일치하는지 확인하세요.\n\n" if physical else
+                    + ("현재 탑의 높이, 남은 공급 블록·장애물 위치가 RViz 장면과 일치하는지 확인하세요.\n\n" if incremental else
+                       "쌓을 홈의 바닥 블록 1개, 공급 블록·장애물 위치가 화면과 일치하는지 확인하세요.\n\n" if physical else
                        "그리퍼의 열림 각도는 유지하며 손가락 구동 명령은 보내지 않습니다.\n\n") +
                     "경로 확인을 시작할까요? 실제 이동은 경로가 표시된 뒤 상단 OK를 눌러 시작합니다.",
                     parent=self.root):
@@ -1219,7 +1323,7 @@ class StackGui:
                                 if action in self.MOTION_ACTIONS else "계획이 완료되면 실행 방식을 선택하고 실행을 시작하세요.")
         self.step_seen_requests.clear()
         self.step_latest_index, self.step_total = 0, None
-        self.job_plan_id = (preparation_id if action in ("alignment_gripper", "recovery") else
+        self.job_plan_id = (preparation_id if action in ("alignment_gripper", "recovery", "unlock_empty") else
                             plan_id if self.real_backend and action == "run" else None)
         self.pending_alignment_plan = action == "alignment_gripper"
         self.recovery_verified = False
@@ -1230,6 +1334,11 @@ class StackGui:
         self.stop_acknowledged = False
         self.stop_backend_confirmed = False
         self.job_action = action
+        self.job_recovery_preserve = action == "recovery"
+        self.recovery_held_fault_retained = False
+        self.job_incremental_mode = (self.incremental_enabled() and getattr(self, "plan_kind", "air") == "physical"
+                                     and action in ("physical_plan", "physical_prepare", "run"))
+        self.incremental_finished_info = None
         self.alignment_paused = False
         self.alignment_stop = None
         self.visible_layout = None if action == "reset" else yaml.safe_load(self.selection_file.read_text())["/**"]["ros__parameters"]
@@ -1237,18 +1346,21 @@ class StackGui:
             self.visible_layout["_air_preview"] = True
         if self.real_backend:
             mode = {"plan": "dry_plan", "scan": "dry_plan", "plate_align": "dry_plan",
-                    "alignment_gripper": "alignment_prepare", "physical_plan": "physical_plan", "physical_prepare": "physical_prepare", "recovery": "physical_recover",
+                    "alignment_gripper": "alignment_prepare", "physical_plan": "physical_plan", "physical_prepare": "physical_prepare", "recovery": "physical_recover", "unlock_empty": "physical_unlock",
                     "run": "physical_run" if getattr(self, "plan_kind", "air") == "physical" else "dry_run"}.get(action, action)
             trajectory_file = (getattr(self, "recovery_trajectory_file", self.folder / "recovery.recipe.json")
-                               if action == "recovery" else self.trajectory_file)
+                               if action in ("recovery", "unlock_empty") else self.trajectory_file)
             command = ["ros2", "launch", "ur5e_block_bringup", "block_task.launch.py",
                        f"stack_mode:={mode}", f"selection_file:={self.selection_file}",
                        f"trajectory_file:={trajectory_file}", f"calibration_file:={self.calibration_file}",
                        f"physical_profile:={self.physical_profile}"]
             if getattr(self, "plan_kind", "air") == "physical" or action == "recovery":
                 command.append(f"recipe_manifest_file:={trajectory_file}")
+                command.append(f"incremental_stack:={'true' if self.job_incremental_mode else 'false'}")
             if action == "recovery":
-                command.append("recovery_empty_confirmed:=true")
+                command.append("recovery_preserve_gripper:=true")
+            if action == 'unlock_empty':
+                command.extend(['recovery_empty_confirmed:=true',f'preparation_id:={preparation_id}'])
             if action in self.MOTION_ACTIONS:
                 # This point is reached only after the actual-motion modal is accepted.
                 command.extend(["workspace_clear:=true", f"execution_mode:={execution_mode}"])
@@ -1269,12 +1381,12 @@ class StackGui:
             return
         self.busy(True)
         height_reference = "장애물 상단보다" if self.scan_mode else "테이블보다"
-        self.status.set({"scene": "RViz 배치 반영 중",
+        self.status.set({"scene": "RViz 배치 반영 중", "unlock_empty": "팔 이동 없이 빈 그리퍼·정지·중단 기록 확인 중",
                          "plate_align": f"모서리 X/Y 두 방향 맞춤 경로 계획 중 · 그리퍼 {self.ALIGNMENT_HAND:g}rad / 끝은 상판 위 10mm · 계획만으로 움직이지 않습니다.",
                          "alignment_gripper": f"그리퍼 {self.ALIGNMENT_HAND:g}rad 준비 경로 확인 중 · 상단 OK를 눌러야 움직입니다.",
                          "physical_plan": "일치하는 저장 경로를 찾는 중 · 없으면 새로 계획·사전 검사합니다. 로봇은 움직이지 않습니다.",
                          "physical_prepare": "현재 정책 경로의 사전 검사 결과를 저장 중 · 로봇은 움직이지 않습니다.",
-                         "recovery": "빈 그리퍼·정지 확인 및 초기 자세 복구 경로 계획 중 · 상단 OK로 승인해야 움직입니다.",
+                         "recovery": "현재 그리퍼·충돌 장면을 유지한 초기 자세 복귀 계획 중 · 상단 OK로 승인해야 움직입니다.",
                          "scan": (("장애물 선택이 없어 7번을 장애물로 가정했습니다. " if assumed_obstacle else "") +
                                   f"장애물 상단보다 {self.empty_hand_clearance.get()}mm 이상 여유로 24칸 XY 경로 계획 중 · 로봇은 움직이지 않습니다.")
                                  if self.real_backend else "",
@@ -1470,6 +1582,70 @@ class StackGui:
                                 "계획 작업을 중지했습니다. 실제 팔은 움직이지 않았습니다.")
             self.busy(False)
 
+    def process_incremental_event(self, line):
+        markers = ("STACK_INCREMENTAL_PLANNING_NEXT", "STACK_INCREMENTAL_PLAN ",
+                   "STACK_INCREMENTAL_PROGRESS ", "STACK_INCREMENTAL_FINISHED ")
+        marker = next((value for value in markers if value in line), None)
+        if marker is None:
+            return False
+        if (not getattr(self, "job_incremental_mode", False) or self.job is None
+                or self.job_failed or self.user_stopped or self.stop_pending or self.close_requested):
+            return True
+        if marker == markers[0]:
+            self.status.set("현재 탑·남은 블록을 유지하며 다음 한 블록의 경로를 계획·검사합니다.")
+            self.step_status.set("다음 블록 계획 중 · 현재 팔 자세 유지")
+            return True
+        raw = line.split(marker, 1)[1].strip()
+        # The C++ child also emits a plain diagnostic. Only the parent's
+        # structured terminal result can mark a complete incremental session.
+        if marker == markers[3] and not raw.startswith("{"):
+            return True
+        try:
+            data = json.loads(raw)
+            if marker == markers[1]:
+                if (not isinstance(data, dict) or type(data.get("source")) is not int
+                        or type(data.get("layer")) is not int or data['layer'] < 2
+                        or type(data.get("remaining")) is not int or data['remaining'] < 0):
+                    raise ValueError("다음 블록 계획 정보가 올바르지 않습니다.")
+                if self.job_action == "run":
+                    metadata = json.loads(self.trajectory_file.with_name(self.trajectory_file.name+".meta.json").read_text())
+                    if (metadata.get("plan_id") != data.get("plan_id")
+                            or metadata.get("recipe_policy") != INCREMENTAL_POLICY
+                            or metadata.get("path_kind") != "physical_stack"):
+                        raise ValueError("다음 한 블록의 저장 계획 정보를 확인하지 못했습니다.")
+                    self.clear_step_request("다음 한 블록 경로 준비 완료")
+                    self.step_latest_index, self.step_total = 0, None
+                    if getattr(self, "job_execution_mode", None) == "continuous":
+                        # This block is covered by the existing session
+                        # consent. Track its progress without creating OK.
+                        self.step_latest_index, self.step_total = 1, 1
+                    self.job_plan_id = data['plan_id']
+                self.status.set(f"다음 한 블록 준비: {data['source']}번 → {self.target}번 · {data['layer']}층 · 남을 블록 {data['remaining']}개")
+            elif marker == markers[2]:
+                self.status.set(f"한 블록 적층 완료 · 현재 {data['layers']}층 · 적재 {data['completed']}개 · 남은 {data['remaining']}개")
+            else:
+                if (not isinstance(data, dict) or data.get("reason") not in ("no_remaining_blocks", "no_feasible_direct_pick")
+                        or type(data.get("layers")) is not int or data['layers'] < 1
+                        or type(data.get("remaining")) is not int or data['remaining'] < 0
+                        or (data['reason'] == "no_remaining_blocks") != (data['remaining'] == 0)):
+                    raise ValueError("한 블록 반복 실행의 종료 정보가 올바르지 않습니다.")
+                self.incremental_finished_info = data
+                self.job_succeeded = True
+                self.status.set(self.incremental_finish_message())
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            self.job_failed = True
+            self.last_failure_message = str(error)
+            self.clear_step_request("한 블록 실행 상태 확인 오류 · 실행 중지 후 상태를 확인하세요.")
+            self.status.set(self.last_failure_message)
+        return True
+
+    def incremental_finish_message(self):
+        result = self.incremental_finished_info
+        if result['reason'] == "no_remaining_blocks":
+            return f"적층 완료 · 현재 {result['layers']}층 · 남은 공급 블록 없음"
+        return (f"반복 종료 · 현재 {result['layers']}층 · 남은 {result['remaining']}개는 직접 집기 경로를 찾지 못했습니다. "
+                "현재 배치를 유지하고 확인하세요.")
+
     def poll(self):
         if self.closing:
             return
@@ -1492,9 +1668,12 @@ class StackGui:
                     self.root.after(100, lambda value=line: self.events.put(("finished", value)))
                     continue
                 successful = (not self.job_failed and self.job_succeeded and self.job.returncode == 0
-                              and (self.job_action != "recovery" or getattr(self, "recovery_verified", False)))
+                              and (self.job_action not in ("recovery", "unlock_empty") or getattr(self, "recovery_verified", False)))
+                if (getattr(self, "job_incremental_mode", False) and self.job_action == "run"
+                        and getattr(self, "incremental_finished_info", None) is None):
+                    successful = False
                 restore_recovery_scene = False
-                if (self.job_action == "recovery" and self.job.returncode == 0 and self.job_succeeded
+                if (self.job_action in ("recovery", "unlock_empty") and self.job.returncode == 0 and self.job_succeeded
                         and not getattr(self, "recovery_verified", False) and not self.job_failed):
                     self.job_failed = True
                     self.last_failure_message = "초기 자세 복구 완료 증거가 없어 초기화하지 않았습니다. 아래 로그를 확인하세요."
@@ -1522,7 +1701,7 @@ class StackGui:
                             and not self.close_requested):
                         try:
                             self.finish_recovery()
-                            restore_recovery_scene = True
+                            restore_recovery_scene = not getattr(self,"job_recovery_preserve",False)
                         except OSError as error:
                             self.job_failed = True
                             self.last_failure_message = f"초기 자세 복귀는 완료했지만 이전 계획을 폐기하지 못했습니다: {error}"
@@ -1533,6 +1712,7 @@ class StackGui:
                                 "physical_plan": "실물 저장 경로를 준비했습니다. RViz 확인 후 ⑤와 OK로 실행하세요. 실행 중 경로 충돌 재검사는 생략합니다.",
                                 "physical_prepare": "현재 정책 경로의 사전 검사 결과를 별도 보관했습니다. 초기 배치를 맞추고 ④로 불러오세요.",
                                 "recovery": "초기 자세·그리퍼 0.4rad 복귀 완료 · 이전 계획을 폐기하고 저장한 배치를 다시 표시합니다.",
+                                "unlock_empty": "빈 그리퍼·정지·부착 물체 없음 확인 완료 · 중단 잠금 해제 · 새 배치는 ③, 현재 탑에서 계속하려면 ④를 사용하세요.",
                                 "scan": "24칸 XY 순회 경로를 저장했습니다. 장애물 위 전체 저장 경로를 RViz에서 확인한 뒤 실행하세요.",
                                 "plan": f"{self.empty_hand_clearance.get()}mm 위 공중 경로를 저장했습니다. RViz에서 전체 저장 경로를 확인한 뒤 실행하세요." if self.real_backend else
                                         "모든 블록의 경로 검사가 통과했습니다. 실행할 수 있습니다.",
@@ -1543,7 +1723,20 @@ class StackGui:
                                         f"{'장애물 상단보다' if self.scan_mode else '블록 지지면보다' if getattr(self, 'plate_enabled', False) else '테이블보다'} {self.empty_hand_clearance.get()}mm 이상 여유의 공중 경로 시운전을 완료했습니다. 그리퍼 명령은 보내지 않았습니다."
                                         if self.real_backend else "선택한 홈의 바닥 블록 위에 나머지 블록을 쌓았습니다."),
                                 "reset": "Gazebo / RViz 작업 물체를 지웠습니다." if getattr(self, "simulation_backend", "mock") == "gazebo" else "RViz 작업 물체를 지웠습니다."}
-                    if (not self.job_failed and (not (self.real_backend and self.job_action in ("plan", "scan", "plate_align", "physical_plan")) or self.remember_plan())):
+                    if self.job_action == 'recovery' and getattr(self,'job_recovery_preserve',False):
+                        messages['recovery'] = "팔 초기 자세 복귀 완료 · 그리퍼 각도와 탑·블록 장면을 유지했습니다."
+                        if self.recovery_held_fault_retained:
+                            messages['recovery'] += " 잡힌 블록 관련 중단 기록도 유지합니다."
+                    incremental_done = (getattr(self, "job_incremental_mode", False)
+                                        and getattr(self, "incremental_finished_info", None) is not None)
+                    if incremental_done:
+                        self.invalidate_plan()
+                        messages[self.job_action] = self.incremental_finish_message()
+                    elif getattr(self, "job_incremental_mode", False) and self.job_action == "physical_plan":
+                        messages['physical_plan'] = "다음 한 블록 경로를 준비했습니다. RViz 확인 후 실행하세요. 전체 연속 실행은 이후 블록도 계획·검사 후 자동 반복합니다."
+                    needs_manifest = (self.real_backend and self.job_action in ("plan", "scan", "plate_align", "physical_plan")
+                                      and not incremental_done)
+                    if (not self.job_failed and (not needs_manifest or self.remember_plan())):
                         message = messages[self.job_action]
                         if self.job_action == 'run' and getattr(self, 'saved_path_file', None):
                             message += '\n성공 경로 저장: '+self.saved_path_file
@@ -1568,6 +1761,8 @@ class StackGui:
             if int(self.log.index("end-1c").split(".")[0]) > 500:
                 self.log.delete("1.0", "80.0")
             self.log.see("end")
+            if self.process_incremental_event(line):
+                continue
             if self.process_step_event(line):
                 continue
             if "STACK_PATH_ARCHIVED " in line:
@@ -1581,6 +1776,14 @@ class StackGui:
                 self.job_failed = True
                 self.last_failure_message = '동작 후 성공 경로 저장 실패: '+line.split('STACK_ARCHIVE_ERROR ', 1)[1].strip()
                 self.status.set(self.last_failure_message)
+            elif "STACK_EMPTY_UNLOCK_DONE " in line:
+                try:
+                    self.receive_empty_unlock_done(json.loads(line.split('STACK_EMPTY_UNLOCK_DONE ',1)[1].strip()))
+                except (ValueError,TypeError) as error:
+                    if self.job_action == 'unlock_empty':
+                        self.job_failed = True
+                        self.last_failure_message = f'빈 그리퍼 확인 완료 정보를 읽지 못했습니다: {error}'
+                        self.status.set(self.last_failure_message)
             elif "STACK_RECOVERY_DONE " in line:
                 try:
                     self.receive_recovery_done(json.loads(line.split("STACK_RECOVERY_DONE ", 1)[1].strip()))
@@ -1629,7 +1832,7 @@ class StackGui:
                     self.status.set(f"기존 경로 1회 사전 검사: {match[1]}/{match[2]}단계 · {match[3]}개 상태 · 로봇은 움직이지 않습니다.")
             elif "STACK_PHYSICAL_VALIDATING " in line:
                 match = re.search(r"step=(\d+) total=(\d+) samples=(\d+)", line)
-                if (match and self.job_action == "physical_plan" and not self.job_failed
+                if (match and (self.job_action == "physical_plan" or getattr(self, "job_incremental_mode", False)) and not self.job_failed
                         and not self.user_stopped and not self.stop_pending):
                     self.status.set(f"실물 경로 충돌 검사: {match[1]}/{match[2]}단계 · {match[3]}개 상태 검사 · 로봇은 움직이지 않습니다.")
             elif "STACK_PLANNING " in line:

@@ -14,11 +14,11 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, SetParameter
 from launch_ros.parameter_descriptions import ParameterValue
 from moveit_configs_utils.launches import generate_move_group_launch
+from ur5e_block_bringup.gazebo_session import session_from_environment
 
 
 def start(context):
-    if os.environ.get('ROS_DOMAIN_ID') != '44' or os.environ.get('ROS_LOCALHOST_ONLY') != '1':
-        raise ValueError('Use start_block_gazebo.sh: Gazebo requires localhost ROS domain 44')
+    session = session_from_environment()
     share = Path(get_package_share_directory('ur5e_a3_grid'))
     gazebo = Path(get_package_share_directory('gazebo_ros'))
     spec = importlib.util.spec_from_file_location('ur5e_stack_model', share/'launch/stack_model.py')
@@ -46,7 +46,7 @@ def start(context):
                              model.robot_description_kinematics, model.joint_limits, model.planning_pipelines,
                              {'use_sim_time': True}], condition=IfCondition(LaunchConfiguration('use_rviz')), output='log'),
             IncludeLaunchDescription(PythonLaunchDescriptionSource(str(share/'launch/stack_gui.launch.py')),
-                launch_arguments={'backend': 'simulation', 'simulation_backend': 'gazebo', 'domain_id': '44',
+                launch_arguments={'backend': 'simulation', 'simulation_backend': 'gazebo', 'domain_id': str(session.domain),
                                   'simulation_riser_height': str(height), 'use_sim_time': 'true'}.items(),
                 condition=IfCondition(LaunchConfiguration('use_gui'))),
         ])]
@@ -54,7 +54,7 @@ def start(context):
     return [
         SetEnvironmentVariable('GAZEBO_MODEL_DATABASE_URI', ''),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(str(gazebo/'launch/gzserver.launch.py')),
-            launch_arguments={'world': str(share/'worlds/stack.world'), 'server_required': 'true',
+            launch_arguments={'world': LaunchConfiguration('world_file').perform(context) or str(share/'worlds/stack.world'), 'server_required': 'true',
                               'pause': 'false', 'verbose': LaunchConfiguration('verbose')}.items()),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(str(gazebo/'launch/gzclient.launch.py')),
                                  condition=IfCondition(LaunchConfiguration('gui'))),
@@ -73,5 +73,6 @@ def generate_launch_description():
         DeclareLaunchArgument('use_gui', default_value='true'),
         DeclareLaunchArgument('riser_height', default_value='0.016'),
         DeclareLaunchArgument('verbose', default_value='false'),
+        DeclareLaunchArgument('world_file', default_value=''),
         OpaqueFunction(function=start),
     ])

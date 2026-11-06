@@ -138,6 +138,111 @@ def test_confirmed_fresh_empty_stationary_state_passes_without_actuator_command(
     task.measured_stop.assert_called_once_with()
 
 
+@pytest.mark.parametrize('state',[0,1,2,3])
+def test_preserving_home_accepts_any_initial_grip_code_without_empty_declaration(state):
+    task=empty_task(state)
+    task.preserve_gripper=True
+    task.recovery_hand_position=.73
+    task.values={recovery.HAND:.73}
+    task.param=lambda name:name=='workspace_clear'
+    recovery.PhysicalRecoveryTask.require_empty(task)
+    assert recovery.PhysicalRecoveryTask.holding_ok(task)
+    task.measured_stop.assert_called_once_with()
+
+
+@pytest.mark.parametrize('fault',['stale','moving','hand_changed','not_confirmed'])
+def test_preserving_home_still_requires_feedback_and_an_unchanged_stationary_hand(fault):
+    task=empty_task(2,sensor_fresh=fault!='stale',quiet=fault!='moving',confirmed=fault!='not_confirmed')
+    task.preserve_gripper=True
+    task.recovery_hand_position=.73
+    task.values={recovery.HAND:.70 if fault=='hand_changed' else .73}
+    with pytest.raises(RuntimeError):
+        recovery.PhysicalRecoveryTask.require_empty(task)
+
+
+@pytest.mark.parametrize('initial,current,stop',[(2,3,True),(3,3,False),(2,2,False),(0,1,False)])
+def test_preserving_recovery_accepts_initial_stages_but_detects_a_new_payload_drop(monkeypatch,initial,current,stop):
+    task=recovery.PhysicalRecoveryTask.__new__(recovery.PhysicalRecoveryTask)
+    task.preserve_gripper=True
+    task.mock=False
+    task.goal_pending=object()
+    task.recovery_initial_grip_state=initial
+    task.sensor_fresh=lambda:True
+    task.sensor={}
+    monkeypatch.setattr(physical.PhysicalStackTask,'sensor_feedback',lambda self,msg:self.sensor.update(grip_state=current))
+    stopped=Mock()
+    monkeypatch.setattr(recovery,'stop_with_reason',stopped)
+    task.sensor_feedback(object())
+    assert stopped.called==stop
+    if stop:assert stopped.call_args.args[1]=='RECOVERY_PAYLOAD_DROPPED'
+
+
+class RecoveryFeedbackReady(Exception):
+    """Stop the preflight before model/services/planning or any motion."""
+
+
+def startup_feedback_task():
+    task = empty_task()
+    task.require_empty = lambda: recovery.PhysicalRecoveryTask.require_empty(task)
+    task.check_model = Mock(side_effect=RecoveryFeedbackReady)
+    task.sensor_stale_details = Mock(return_value=dict(sample_sequence=-1,last_rejection=None))
+    return task
+
+
+def test_recovery_waits_for_first_sensor_after_joint_feedback_before_empty_check():
+    task = startup_feedback_task()
+    task.sensor_fresh.return_value = False
+    def spin(predicate, seconds):
+        assert seconds == 5.
+        # This is the startup order that used to fail: all joints arrived but
+        # the sensor callback has not yet been dispatched by spin_once.
+        assert task.fresh() and not predicate()
+        task.measured_stop.assert_not_called()
+        task.check_model.assert_not_called()
+        task.sensor_fresh.return_value = True
+        assert predicate()
+    task.spin_until = spin
+    with pytest.raises(RecoveryFeedbackReady):
+        recovery.PhysicalRecoveryTask.plan_recovery(task)
+    task.measured_stop.assert_called_once_with()
+
+
+@pytest.mark.parametrize('state', [0, 2, 3])
+def test_sensor_startup_wait_does_not_treat_moving_held_or_drop_feedback_as_empty(state):
+    task = startup_feedback_task()
+    task.sensor['grip_state'] = state
+    task.spin_until = lambda predicate, seconds: predicate()
+    with pytest.raises(RuntimeError, match='빈 그리퍼 상태'):
+        recovery.PhysicalRecoveryTask.plan_recovery(task)
+    task.measured_stop.assert_not_called()
+    task.check_model.assert_not_called()
+
+
+def test_recovery_missing_first_sensor_times_out_without_planning_or_empty_override(capsys):
+    task = startup_feedback_task()
+    task.sensor_fresh.return_value = False
+    task.require_empty = Mock()
+    def spin(predicate, seconds):
+        assert not predicate()
+        raise TimeoutError('feedback unavailable')
+    task.spin_until = spin
+    with pytest.raises(RuntimeError, match='5초 동안'):
+        recovery.PhysicalRecoveryTask.plan_recovery(task)
+    task.require_empty.assert_not_called()
+    task.check_model.assert_not_called()
+    assert 'STACK_RECOVERY_FEEDBACK_TIMEOUT' in capsys.readouterr().out
+
+
+def test_operator_stop_during_first_sensor_wait_cannot_start_recovery_planning():
+    task = startup_feedback_task()
+    task.require_empty = Mock()
+    task.spin_until = Mock(side_effect=RuntimeError('operator stopped'))
+    with pytest.raises(RuntimeError, match='operator stopped'):
+        recovery.PhysicalRecoveryTask.plan_recovery(task)
+    task.require_empty.assert_not_called()
+    task.check_model.assert_not_called()
+
+
 def test_home_comes_from_exact_named_six_axis_state():
     assert recovery.home_joints(semantic([.1]*6), bounds()) == [.1]*6
 
@@ -417,6 +522,59 @@ def planning_task(tmp_path, monkeypatch):
     task.call = Mock(return_value=reply)
     monkeypatch.setattr(recovery, 'read_held_fault', Mock(return_value=None))
     return task
+
+
+def test_preserving_home_plans_only_arm_commands_and_keeps_the_measured_hand(tmp_path,monkeypatch):
+    task=planning_task(tmp_path,monkeypatch)
+    task.preserve_gripper=True
+    task.values[recovery.HAND]=.73
+    task.sensor={'grip_state':2}
+    planned=recovery.PhysicalRecoveryTask.plan_recovery(task)
+    assert planned and all(s['kind']=='arm' for s,_ in planned)
+    assert all(s['start_joints'][-1]==s['end_joints'][-1]==.73 for s,_ in planned)
+    assert task.recovery_metadata['policy']==recovery.HOME_PRESERVE_POLICY
+    assert task.recovery_metadata['gripper_position']==.73
+
+
+def test_preserving_home_already_at_home_needs_no_controller_goal(tmp_path,monkeypatch):
+    task=planning_task(tmp_path,monkeypatch)
+    task.preserve_gripper=True
+    task.sensor={'grip_state':3}
+    task.semantic=semantic([0.]*6)
+    planned=recovery.PhysicalRecoveryTask.plan_recovery(task)
+    assert planned==[]
+    task.call.assert_not_called()
+    task.mode='physical_recover'
+    task.acquire_stack_lock=Mock()
+    task.plan_recovery=lambda:planned
+    task.complete_recovery=Mock()
+    task.run_motion=Mock(side_effect=AssertionError('No goal for an already reached home'))
+    recovery.PhysicalRecoveryTask.run(task)
+    task.complete_recovery.assert_called_once_with(task.recovery_metadata)
+    task.run_motion.assert_not_called()
+
+
+@pytest.mark.parametrize('state,attached,clear',[(1,False,True),(1,True,False),(0,False,False),(2,True,False),(3,False,False)])
+def test_preserving_home_never_clears_the_scene_or_a_possibly_held_block_fault(monkeypatch,state,attached,clear):
+    scene=scene_with_owned_and_foreign()
+    if not attached:scene.robot_state.attached_collision_objects=[]
+    metadata=dict(plan_id='recover_current',gripper_position=.73,scene_sha256=scene_fingerprint(scene))
+    task=SimpleNamespace(preserve_gripper=True,mock=False,sensor={'grip_state':state},
+        values=dict(zip(JOINTS,[0.]*6+[.73])),recovery_home=[0.]*6,require_empty=Mock(),check_files=Mock(),
+        scene=lambda:scene,apply_snapshot=Mock(side_effect=AssertionError('Do not clear the scene')),
+        phase=Mock())
+    reset=Mock()
+    monkeypatch.setattr(recovery,'clear_held_fault',reset)
+    monkeypatch.setattr(recovery,'read_held_fault',lambda:None if reset.called else {'cause':'stopped'})
+    recovery.PhysicalRecoveryTask.complete_recovery(task,metadata)
+    assert reset.called==clear
+    task.apply_snapshot.assert_not_called()
+    event=task.phase.call_args
+    assert event.args==('STACK_RECOVERY_DONE',)
+    assert event.kwargs['gripper_preserved'] is True
+    assert event.kwargs['scene_preserved'] is True
+    assert event.kwargs['held_fault_retained'] is not clear
+    assert task.recovery_finished
 
 
 @pytest.mark.parametrize('change', ['arm', 'hand', 'scene', 'fault'])

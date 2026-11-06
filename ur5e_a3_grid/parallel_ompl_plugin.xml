@@ -1,0 +1,5 @@
+<library path="ur5e_parallel_ompl">
+  <class name="ur5e_a3_grid/ParallelOMPLPlanner" type="ur5e_a3_grid::ParallelOMPLPlanner" base_class_type="planning_interface::PlannerManager">
+    <description>MoveIt OMPL parallel candidates with a bounded thread budget.</description>
+  </class>
+</library>

@@ -89,7 +89,7 @@ class Root(Widget):
 def build_gui(monkeypatch, real, screen):
     for module, names in ((ui.tk, ('PanedWindow', 'Label', 'Button', 'Canvas', 'Text')),
                           (ui.ttk, ('Frame', 'Label', 'Button', 'LabelFrame', 'Scrollbar',
-                                    'Combobox', 'Radiobutton', 'Entry'))):
+                                    'Combobox', 'Radiobutton', 'Checkbutton', 'Entry'))):
         for name in names:
             monkeypatch.setattr(module, name, lambda master=None, kind=name, **options: Widget(kind, master, **options))
     monkeypatch.setattr(ui.tk, 'StringVar', Var)
@@ -99,7 +99,7 @@ def build_gui(monkeypatch, real, screen):
     obj.columns, obj.rows, obj.controls = 4, 6, []
     for name in ('connection', 'hardware_status', 'execution_mode', 'step_status', 'status', 'mode',
                  'summary', 'center_x', 'center_y', 'obstacle_height', 'speed', 'empty_hand_clearance',
-                 'placement_mode', 'corner_text'):
+                 'placement_mode', 'corner_text', 'incremental_mode'):
         setattr(obj, name, Var(name))
     obj.air_path_note = lambda: '공중 경로 안내'
     obj.launch_task, obj.approve_next_step, obj.stop = Mock(), Mock(), Mock()

@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 import time
 
+HOME_PRESERVE_POLICY = 'physical_home_preserve_gripper_v2'
+EMPTY_UNLOCK_POLICY = 'physical_verified_empty_unlock_v1'
+
 
 def held_fault_path(domain=None):
     domain = os.environ.get('ROS_DOMAIN_ID', '0') if domain is None else str(domain)

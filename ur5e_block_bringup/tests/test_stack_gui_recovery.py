@@ -39,7 +39,8 @@ def test_recovery_uses_a_new_review_identity_separate_path_and_selected_mode(mon
     obj.launch_task('recovery')
     command = start.call_args.args[0]
     assert 'stack_mode:=physical_recover' in command
-    assert 'workspace_clear:=true' in command and 'recovery_empty_confirmed:=true' in command
+    assert 'workspace_clear:=true' in command and 'recovery_preserve_gripper:=true' in command
+    assert 'recovery_empty_confirmed:=true' not in command
     assert f'execution_mode:={mode}' in command
     assert f'trajectory_file:={obj.recovery_trajectory_file}' in command
     assert f'recipe_manifest_file:={obj.recovery_trajectory_file}' in command
@@ -50,7 +51,7 @@ def test_recovery_uses_a_new_review_identity_separate_path_and_selected_mode(mon
     obj.invalidate_plan.assert_not_called()
     obj.plan_matches_selection.assert_not_called()
     assert obj.node.clients == [] and obj.step_request is None
-    assert '작업 영역 밖' in modal.call_args.args[1]
+    assert '그리퍼를 열거나 초기화하지 않으며' in modal.call_args.args[1]
     assert '상단 OK' in modal.call_args.args[1]
     assert not obj.recovery_verified
 
@@ -172,6 +173,28 @@ def test_recovery_done_and_clean_exit_invalidate_both_plan_kinds_then_restore_sc
     obj.launch_task.assert_not_called()
     callbacks[0]()
     obj.launch_task.assert_called_once_with('scene')
+
+
+@pytest.mark.parametrize('fault', [False,True])
+def test_preserved_home_completion_keeps_the_tower_and_never_resets_the_scene(monkeypatch,tmp_path,fault):
+    obj=poll_gui(tmp_path)
+    obj.job_recovery_preserve=True
+    obj.visible_layout={'target_cell':19,'obstacle_cells':[10]}
+    original=obj.visible_layout.copy()
+    payload=dict(plan_id=obj.job_plan_id,policy=ui.HOME_PRESERVE_POLICY,home_reached=True,
+                 gripper_preserved=True,gripper_position=.73,scene_preserved=True,held_fault_retained=fault)
+    obj.events.put(('job','STACK_RECOVERY_DONE '+json.dumps(payload)))
+    obj.events.put(('finished','recovery.log'))
+    monkeypatch.setattr(ui.rclpy,'ok',lambda:False)
+    obj.poll()
+    assert obj.recovery_verified
+    assert obj.visible_layout==original
+    assert obj.recovery_held_fault_retained==fault
+    callbacks=[call.args[1] for call in obj.root.after.call_args_list
+               if getattr(call.args[1],'__name__','')=='<lambda>']
+    assert callbacks==[]
+    obj.launch_task.assert_not_called()
+    assert '그리퍼 각도와 탑·블록 장면을 유지' in obj.status.get()
 
 
 @pytest.mark.parametrize('failure', ['error', 'exit_failure', 'missing_done', 'wrong_done', 'stop', 'closing'])

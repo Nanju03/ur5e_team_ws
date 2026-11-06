@@ -15,6 +15,7 @@ setup(
     description='Existing UR5e/AG95 drivers with the user block model.',
     entry_points={'console_scripts': ['air_task = ur5e_block_bringup.air_task:main',
                                     'physical_stack = ur5e_block_bringup.physical_stack:main',
+                                    'physical_incremental = ur5e_block_bringup.physical_incremental:main',
                                     'physical_recovery = ur5e_block_bringup.physical_recovery:main',
                                     'gripper_calibration_gui = ur5e_block_bringup.gripper_calibration_gui:main',
                                     'gripper_calibration_node = ur5e_block_bringup.gripper_calibration_node:main']},

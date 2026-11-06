@@ -15,14 +15,16 @@ SPEC.loader.exec_module(module)
 
 @pytest.fixture
 def prepare(monkeypatch, tmp_path):
-    monkeypatch.setattr(module, 'LaunchConfiguration', lambda name: SimpleNamespace(perform=lambda context: context[name]))
+    monkeypatch.setattr(module, 'LaunchConfiguration', lambda name, default=None:
+                        SimpleNamespace(perform=lambda context: context.get(name, default)))
     monkeypatch.setattr(module, 'Node', lambda **values: values)
     monkeypatch.setattr(module, 'load_moveit_settings', lambda *args: {'robot_description': '<robot />'})
     monkeypatch.setattr(module, 'load_calibration_profile', lambda **kwargs: None)
     monkeypatch.setattr(module, 'get_package_share_directory', lambda name: str(ROOT/name))
     monkeypatch.setattr(module, 'physical_held_path', lambda: tmp_path/'held.json')
 
-    def run(mode='dry_plan', preparation_id='', recovery_empty_confirmed='false', **params):
+    def run(mode='dry_plan', preparation_id='', recovery_empty_confirmed='false', incremental='false',
+            preserve='false',**params):
         selected = dict(geometry_profile='cube_plate_v1', plate_enabled=True,
                         plate_center_xy=[.4, 0.], plate_yaw_deg=-90.,
                         empty_hand_clearance=.05, velocity_scaling=.05)
@@ -32,11 +34,38 @@ def prepare(monkeypatch, tmp_path):
         context = dict(calibration_file='calibration.yaml', physical_profile='physical.yaml',
                        selection_file=str(path), stack_mode=mode, trajectory_file=str(tmp_path/'plan.cdr'),
                        workspace_clear='false', allow_mock_hardware='false', execution_mode='step',
-                       preparation_id=preparation_id, recovery_empty_confirmed=recovery_empty_confirmed)
+                       preparation_id=preparation_id, recovery_empty_confirmed=recovery_empty_confirmed,
+                       incremental_stack=incremental,recovery_preserve_gripper=preserve)
         context['recipe_manifest_file'] = ''
         run.last_node = module.start(context)[0]
         return run.last_node['parameters'][0]
     return run
+
+
+def test_gui_preserving_recovery_needs_no_empty_state_declaration(prepare):
+    p=prepare('physical_recover',preparation_id='recover_current',preserve='true')
+    assert prepare.last_node['executable']=='physical_recovery'
+    assert p['recovery_preserve_gripper'] is True
+    assert p['recovery_empty_confirmed'] is False
+
+
+@pytest.mark.parametrize('mode', ['physical_plan', 'physical_run', 'physical_prepare'])
+def test_incremental_mode_uses_one_block_executor_with_50mm_retreat(prepare, mode):
+    p = prepare(mode, incremental='true')
+    assert prepare.last_node['executable'] == 'physical_incremental'
+    assert p['incremental_stack'] is True
+    assert p['post_place_retreat_clearance'] == .050
+    assert p['incremental_pickup_approach_clearance'] == .080
+    assert p['physical_contact_clearance'] == p['physical_approach_clearance'] == .02
+    assert p['approach_velocity_scaling'] == p['approach_acceleration_scaling'] == .10
+    assert p['descent_velocity_scaling'] == p['descent_acceleration_scaling'] == .50
+    assert p['transfer_velocity_scaling'] == p['transfer_acceleration_scaling'] == 1.
+
+
+def test_recovery_ignores_incremental_checkbox_and_never_starts_a_pick_loop(prepare):
+    p = prepare('physical_recover', preparation_id='recover_session', incremental='true')
+    assert prepare.last_node['executable'] == 'physical_recovery'
+    assert p['incremental_stack'] is False
 
 
 def test_air_pattern_raises_logical_targets_but_never_the_plate_or_obstacle(prepare):
@@ -69,6 +98,29 @@ def test_obstacle_scan_keeps_the_obstacle_anchored_to_its_pocket_floor(prepare):
 def test_scene_display_cannot_reuse_a_motion_mode_flag(prepare):
     p = prepare('scene', empty_xy_scan=True, plate_alignment_test=True)
     assert not p['empty_xy_scan'] and not p['plate_alignment_test']
+
+
+@pytest.mark.parametrize('mode', ['scene', 'reset', 'plan', 'reach'])
+def test_scene_and_planning_accept_a_saved_physical_speed_profile(prepare, mode):
+    p = prepare(mode, physical_stack_task=True, **module.motion_parameters())
+    assert prepare.last_node['package'] == 'ur5e_a3_grid'
+    assert prepare.last_node['executable'] == 'stack_blocks'
+    assert p['stack_mode'] == mode
+    assert p['velocity_scaling'] == 1.
+
+
+@pytest.mark.parametrize('mode', ['dry_plan', 'dry_run', 'alignment_prepare'])
+@pytest.mark.parametrize('speed', [0., -.01, .051, 1., float('nan'), float('inf')])
+def test_empty_hand_trials_still_reject_invalid_or_physical_speeds(prepare, mode, speed):
+    with pytest.raises(ValueError, match='Physical empty-hand trial speed'):
+        prepare(mode, preparation_id='prep_speed_limit', velocity_scaling=speed)
+
+
+def test_empty_hand_trial_preserves_a_selected_slower_speed(prepare):
+    p = prepare(velocity_scaling=.02)
+    assert prepare.last_node['executable'] == 'air_task'
+    assert p['velocity_scaling'] == .02
+    assert p['acceleration_scaling'] == .05
 
 
 def test_old_uniform_grid_selection_requires_explicit_migration(prepare):
@@ -117,7 +169,7 @@ def test_alignment_floor_does_not_follow_the_selected_stack_pocket_support(prepa
     assert p['plate_alignment_cell_ids'] == [1, 4, 24, 21]
 
 
-@pytest.mark.parametrize('mode', ['physical_plan', 'physical_run'])
+@pytest.mark.parametrize('mode', ['physical_plan', 'physical_prepare', 'physical_run'])
 def test_physical_stack_routes_to_reviewed_executor_and_preserves_support_heights(prepare, mode):
     p = prepare(mode, target_cell=11, plate_alignment_test=True, empty_xy_scan=True)
     assert prepare.last_node['executable'] == 'physical_stack'
@@ -130,14 +182,14 @@ def test_physical_stack_routes_to_reviewed_executor_and_preserves_support_height
     assert p['gripper_open_position'] == .4 and p['gripper_grasp_position'] == .73
     assert 'gripper_pregrasp_position' not in p
     assert p['release_first_position'] == .70 and p['release_clearance_position'] == .60
-    assert p['approach_velocity_scaling'] == .05 and p['transfer_velocity_scaling'] == 1.
-    assert p['approach_acceleration_scaling'] == .05 and p['transfer_acceleration_scaling'] == 1.
+    assert p['approach_velocity_scaling'] == .10 and p['transfer_velocity_scaling'] == 1.
+    assert p['approach_acceleration_scaling'] == .10 and p['transfer_acceleration_scaling'] == 1.
     assert p['split_stack_speeds'] is True
-    assert p['velocity_scaling'] == 1. and p['acceleration_scaling'] == .05
-    assert p['physical_contact_clearance'] == .04
-    assert p['physical_approach_clearance'] == .04
+    assert p['velocity_scaling'] == 1. and p['acceleration_scaling'] == .10
+    assert p['physical_contact_clearance'] == .02
+    assert p['physical_approach_clearance'] == .02
     assert p['side_entry_clearance'] == .010
-    assert p['descent_velocity_scaling'] == p['descent_acceleration_scaling'] == .20
+    assert p['descent_velocity_scaling'] == p['descent_acceleration_scaling'] == .50
     assert p['vertical_placement_layers'] == 19
     assert p['placement_approach_clearance'] == .12
 
@@ -157,20 +209,21 @@ def test_saved_uniform_speed_profile_cannot_override_physical_phase_acceleration
                 approach_velocity_scaling=.8, transfer_velocity_scaling=.9,
                 approach_acceleration_scaling=.8, transfer_acceleration_scaling=.9)
     assert p['split_stack_speeds'] is True
-    assert p['approach_velocity_scaling'] == p['approach_acceleration_scaling'] == .05
+    assert p['approach_velocity_scaling'] == p['approach_acceleration_scaling'] == .10
     assert p['transfer_velocity_scaling'] == p['transfer_acceleration_scaling'] == 1.
-    assert p['stack_acceleration_scaling'] == .05
+    assert p['stack_acceleration_scaling'] == .10
 
 
 @pytest.mark.parametrize('mode', ['physical_plan', 'physical_run'])
 def test_saved_old_transition_and_low_approach_cannot_override_physical_placement(prepare, mode):
     p = prepare(mode, vertical_placement_layers=10, placement_approach_clearance=.04,
-                side_entry_clearance=0., physical_approach_clearance=.001,
+                side_entry_clearance=0., physical_contact_clearance=.04, physical_approach_clearance=.001,
                 descent_velocity_scaling=1., descent_acceleration_scaling=1.)
     assert p['vertical_placement_layers'] == 19
     assert p['placement_approach_clearance'] == .12
-    assert p['side_entry_clearance'] == .010 and p['physical_approach_clearance'] == .04
-    assert p['descent_velocity_scaling'] == p['descent_acceleration_scaling'] == .20
+    assert p['side_entry_clearance'] == .010
+    assert p['physical_contact_clearance'] == p['physical_approach_clearance'] == .02
+    assert p['descent_velocity_scaling'] == p['descent_acceleration_scaling'] == .50
 
 
 @pytest.mark.parametrize('mode', ['scene', 'plan', 'reach', 'reset', 'dry_plan', 'dry_run', 'alignment_prepare'])
@@ -202,6 +255,16 @@ def test_recovery_routes_held_fault_to_guarded_executor_without_clearing_it(prep
     assert p['workspace_clear'] is False
     assert not p['empty_hand_test'] and not p['plate_alignment_test'] and not p['empty_xy_scan']
     assert held.read_text() == '{"cause":"stopped grasp"}'
+
+
+def test_empty_unlock_routes_to_read_only_backend_and_keeps_fault_until_verified(prepare):
+    held = module.physical_held_path()
+    held.write_text('{"cause":"stopped grasp"}')
+    p = prepare('physical_unlock', preparation_id='unlock_current', recovery_empty_confirmed='true', incremental='true')
+    assert prepare.last_node['executable']=='physical_recovery'
+    assert p['stack_mode']=='physical_unlock' and p['recovery_empty_confirmed'] is True
+    assert p['incremental_stack'] is False
+    assert held.read_text()=='{"cause":"stopped grasp"}'
 
 
 @pytest.mark.parametrize('preparation_id', ['', '../bad', 'x'*129])

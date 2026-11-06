@@ -10,6 +10,8 @@ find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_core REQUIRED)
 find_package(moveit_msgs REQUIRED)
 find_package(moveit_ros_planning REQUIRED)
+find_package(moveit_planners_ompl REQUIRED)
+find_package(pluginlib REQUIRED)
 find_package(controller_manager_msgs REQUIRED)
 find_package(shape_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -43,6 +45,12 @@ ament_target_dependencies(stack_blocks
   rclcpp rcl_interfaces visualization_msgs moveit_ros_planning_interface moveit_ros_planning
   moveit_core moveit_msgs controller_manager_msgs shape_msgs sensor_msgs std_srvs geometric_shapes)
 ament_target_dependencies(stack_blocks hardware_interface gazebo_msgs control_msgs rclcpp_action)
+
+add_library(ur5e_parallel_ompl SHARED src/parallel_ompl_planner.cpp)
+target_compile_features(ur5e_parallel_ompl PUBLIC cxx_std_17)
+ament_target_dependencies(ur5e_parallel_ompl rclcpp moveit_core moveit_planners_ompl pluginlib)
+pluginlib_export_plugin_description_file(moveit_core parallel_ompl_plugin.xml)
+install(TARGETS ur5e_parallel_ompl LIBRARY DESTINATION lib)
 
 add_executable(plate_placement_check src/plate_placement_check.cpp)
 target_compile_features(plate_placement_check PUBLIC cxx_std_17)

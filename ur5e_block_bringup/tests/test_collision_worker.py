@@ -133,6 +133,39 @@ def test_actual_checker_checks_world_attached_geometry_acm_and_bounds(tmp_path, 
             worker.validate(scene, [(0., bad)])
 
 
+def test_bounded_carried_surface_contact_rejects_penetration_hidden_by_acm(tmp_path, actual_model):
+    parameters, scene, values = actual_model
+    # Isolate two 25mm cubes well above the robot. Their allowed support pair
+    # must allow exact contact and reject 1mm penetration in continuous mode.
+    carried = giant_box()
+    carried.id = 'ur5e_stack/block_99'
+    carried.primitives[0].dimensions = [.025]*3
+    carried.pose.position.z = 5.
+    support = copy.deepcopy(carried)
+    support.id = 'offline_support'
+    support.pose.position.z = 4.975
+    scene.robot_state.attached_collision_objects = [
+        AttachedCollisionObject(link_name='base_link', object=carried, touch_links=['base_link'])]
+    scene.world.collision_objects = [support]
+    matrix = scene.allowed_collision_matrix
+    for name in (carried.id, support.id):
+        for row in matrix.entry_values:
+            row.enabled.append(False)
+        matrix.entry_names.append(name)
+        matrix.entry_values.append(AllowedCollisionEntry(enabled=[False]*len(matrix.entry_names)))
+    a, b = [matrix.entry_names.index(name) for name in (carried.id,support.id)]
+    matrix.entry_values[a].enabled[b] = matrix.entry_values[b].enabled[a] = True
+    penetrating = copy.deepcopy(scene)
+    penetrating.world.collision_objects[0].pose.position.z += .001
+    with CollisionWorker(parameters,tmp_path,lambda:None) as unbounded:
+        assert unbounded.validate(penetrating,[(0.,values)]) == 1
+    with CollisionWorker(dict(parameters,bounded_surface_contacts=True),tmp_path,lambda:None) as bounded:
+        assert bounded.validate(scene,[(0.,values)]) == 1
+        with pytest.raises(RuntimeError,match='충돌 검사 실패'):
+            bounded.validate(penetrating,[(0.,values)])
+        assert bounded.validate(scene,[(0.,values)]) == 1
+
+
 def test_snapshot_and_sample_shape_are_rejected_before_ipc(tmp_path):
     with fake_worker(tmp_path, 'print(json.dumps(dict(ok=True,checked=count)),flush=True)') as worker:
         diff = PlanningScene(is_diff=True)

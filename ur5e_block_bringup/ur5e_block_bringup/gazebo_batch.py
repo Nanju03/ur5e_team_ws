@@ -1,4 +1,4 @@
-"""Resumable adjacent-diagonal contact trials, confined to localhost Gazebo 44.
+"""Resumable adjacent-diagonal contact trials in isolated localhost Gazebo sessions.
 
 Each attempt owns a fresh simulator and the existing continuous stacking launch.
 There is no alternate executor, collision exemption, or physical-driver startup.
@@ -32,6 +32,7 @@ import yaml
 
 from .path_archive import checked_artifact, seal_successful_archive, sha256
 from .plate_geometry import plate_parameters
+from .gazebo_session import GazeboSession, MAX_CASE_JOBS, session_from_environment
 
 FAILED = {'failed', 'timeout', 'environment_error', 'archive_error'}
 FINISHED = FAILED | {'succeeded'}
@@ -61,6 +62,35 @@ def adjacent_diagonals(columns=4, rows=6):
 
 def key(pair):
     return f'obstacle_{pair[0]}_target_{pair[1]}'
+
+
+def available_cpus():
+    try:
+        return len(os.sched_getaffinity(0))
+    except AttributeError:
+        return os.cpu_count() or 1
+
+
+def parallel_world(source, workers):
+    """Change scheduling only: retain the 1ms step, solver and contact model."""
+    tree = ET.fromstring(source)
+    physics = tree.find('world/physics')
+    if physics is None or physics.get('type') != 'ode':
+        raise ValueError('병렬 시험에는 기존 ODE world가 필요합니다.')
+    solver = physics.find('ode/solver')
+    if solver is None:
+        raise ValueError('ODE solver 설정이 없습니다.')
+    # ODE's zero disables its island thread pool. A one-worker pool still
+    # queues every island, so the one-CPU setting should use the serial path.
+    for name, value in (('island_threads', str(workers if workers > 1 else 0)), ('thread_position_correction', 'true' if workers > 1 else 'false')):
+        element = solver.find(name)
+        if element is None:
+            element = ET.SubElement(solver, name)
+        element.text = value
+    # Keep the startup time cap: an unthrottled empty world can advance 120
+    # simulation seconds while the robot's meshes/plugins are still loading,
+    # causing gazebo_ros_factory to report a spawn timeout.
+    return ET.tostring(tree, encoding='unicode')+'\n'
 
 
 def atomic_text(path, value):
@@ -102,7 +132,7 @@ def write_reports(folder, state):
     write_json(folder/'summary.json', dict(total=len(records), counts=counts,
                status=state.get('status'), message=state.get('message', ''), updated_at=state['updated_at']))
     write_json(folder/'failed_cases.json', dict(count=len(failures), cases=failures))
-    columns = ['obstacle', 'target', 'status', 'stage', 'attempts', 'moved', 'last_source', 'last_layer', 'elapsed_s',
+    columns = ['obstacle', 'target', 'worker_id', 'ros_domain', 'status', 'stage', 'attempts', 'moved', 'last_source', 'last_layer', 'elapsed_s',
                'reason', 'log', 'archive_directory', 'successful_path']
     for name, rows in (('results.csv', records), ('failed_cases.csv', failures)):
         output = io.StringIO()
@@ -131,7 +161,7 @@ def write_reports(folder, state):
             'table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:7px}'
             '.succeeded{background:#cff0d7}.failed,.timeout,.archive_error,.environment_error{background:#ffd8d8}'
             '.running{background:#fff0b5}td:last-child{max-width:650px;overflow-wrap:anywhere}</style>',
-            '<h1>Gazebo · 이웃 대각선 60가지</h1>',
+            f'<h1>Gazebo · 이웃 대각선 {len(records)}가지</h1>',
             '<p>'+esc(state.get('message', ''))+'</p>',
             '<p>'+esc(' / '.join(f'{LABELS[s]} {n}' for s, n in counts.items()))+'</p>',
             '<p>15초마다 갱신 · <a href="failed_cases.md">실패 목록</a> · '
@@ -143,14 +173,16 @@ def write_reports(folder, state):
             if row.get(field):
                 target = os.path.relpath(row[field], folder) if Path(row[field]).is_absolute() else row[field]
                 links.append(f'<a href="{esc(target)}">{label}</a>')
+        worker = f"작업자 {row['worker_id']} · ROS {row.get('ros_domain')} · " if row.get('worker_id') else ''
         body.append(f'<tr class="{esc(row["status"])}"><td>{row["obstacle"]}</td><td>{row["target"]}</td>'
-                    f'<td>{esc(LABELS[row["status"]])}</td><td>{esc(row.get("stage", ""))} · {row.get("moved", 0)}/22</td>'
+                    f'<td>{esc(LABELS[row["status"]])}</td><td>{esc(worker)}{esc(row.get("stage", ""))} · {row.get("moved", 0)}/22</td>'
                     f'<td>{" · ".join(links)} {esc(row.get("reason", ""))}</td></tr>')
     atomic_text(folder/'report.html', '\n'.join(body+['</table>']))
 
 
 class Campaign:
-    def __init__(self, folder, signature, metadata):
+    def __init__(self, folder, signature, metadata, cases=None):
+        cases = adjacent_diagonals() if cases is None else cases
         self.folder = Path(folder).expanduser().resolve()
         self.folder.mkdir(parents=True, exist_ok=True)
         self.lock = (self.folder/'.lock').open('a+')
@@ -159,7 +191,7 @@ class Campaign:
             path = self.folder/'state.json'
             if path.exists():
                 self.state = read_json(path)
-                if self.state.get('signature') != signature or self.state.get('cases') != [list(p) for p in adjacent_diagonals()]:
+                if self.state.get('signature') != signature or self.state.get('cases') != [list(p) for p in cases]:
                     raise ValueError('모델·설정·코드가 다른 시험 폴더입니다. --output-dir로 새 폴더를 지정하세요.')
                 for row in self.state['results'].values():
                     if row['status'] == 'running':
@@ -171,7 +203,7 @@ class Campaign:
                             raise ValueError('보관한 성공 ZIP이 없거나 변경되었습니다: '+str(bundle))
             else:
                 self.state = dict(schema=1, signature=signature, metadata=metadata,
-                                  created_at=now(), cases=[list(p) for p in adjacent_diagonals()], results={})
+                                  created_at=now(), cases=[list(p) for p in cases], results={})
         except BaseException:
             self.lock.close()
             raise
@@ -309,7 +341,7 @@ def initial_feedback_problem(home, feedback, stamp):
 
 
 class RosMonitor:
-    def __init__(self, urdf, home, cancelled):
+    def __init__(self, urdf, home, cancelled, session=None):
         import rclpy
         from rclpy.context import Context
         from rclpy.executors import SingleThreadedExecutor
@@ -324,9 +356,10 @@ class RosMonitor:
         from moveit_msgs.srv import GetPlanningScene
         from std_srvs.srv import Trigger
         self.rclpy, self.Trigger = rclpy, Trigger
+        self.session = session or GazeboSession()
         self.context = Context()
-        rclpy.init(args=[], context=self.context, domain_id=44, signal_handler_options=SignalHandlerOptions.NO)
-        self.node = rclpy.create_node('ur5e_gazebo_diagonal_batch', context=self.context)
+        rclpy.init(args=[], context=self.context, domain_id=self.session.domain, signal_handler_options=SignalHandlerOptions.NO)
+        self.node = rclpy.create_node(f'ur5e_gazebo_diagonal_batch_{self.session.domain}', context=self.context)
         self.executor = SingleThreadedExecutor(context=self.context)
         self.executor.add_node(self.node)
         self.urdf, self.home, self.cancelled = urdf, home, cancelled
@@ -395,7 +428,7 @@ class RosMonitor:
             self.pump()
             others = set(self.node.get_node_names())-{self.node.get_name()}
             with socket.socket() as probe:
-                busy = probe.connect_ex(('127.0.0.1', 11355)) == 0
+                busy = probe.connect_ex(('127.0.0.1', self.session.port)) == 0
             if not others and not busy:
                 if clear_since is None:
                     clear_since = time.monotonic()
@@ -406,7 +439,7 @@ class RosMonitor:
                     return
             else:
                 clear_since = None
-        raise TrialError('ROS 44 / Gazebo 11355가 사용 중입니다. 기존 Gazebo 시작 터미널을 Ctrl+C로 종료하세요. '
+        raise TrialError(f'ROS {self.session.domain} / Gazebo {self.session.port}가 사용 중입니다. 기존 Gazebo 시작 터미널을 Ctrl+C로 종료하세요. '
                          +', '.join(sorted(others)), 'environment_error')
 
     def check_model(self):
@@ -514,7 +547,7 @@ class RunEvents:
         if 'STACK_SUCCESS ' in line:
             self.success = line.split('STACK_SUCCESS ', 1)[1].strip()
 
-    def approval_service(self, pair, archive_root, expected_model_hash):
+    def approval_service(self, pair, archive_root, expected_model_hash, expected_domain=None):
         data = self.ready
         if (not self.preflight or self.archive is None or self.reason or not isinstance(data, dict)
                 or data.get('plan_id') != self.plan_id or data.get('index') != 1 or data.get('total') != 1
@@ -530,6 +563,7 @@ class RunEvents:
         recipe = read_json(self.archive/'plan.recipe.json')
         settings = yaml.safe_load((self.archive/'selection.yaml').read_text())['/**']['ros__parameters']
         if (context.get('backend') != 'gazebo' or context.get('obstacle_cells') != [pair[0]]
+                or (expected_domain is not None and context.get('ros_domain') != str(expected_domain))
                 or context.get('target_cell') != pair[1] or context.get('model_sha256') != expected_model_hash
                 or result.get('status') not in ('planned', 'running') or result.get('plan_id') != self.plan_id
                 or result.get('backend') != 'gazebo' or result.get('target_cell') != pair[1]
@@ -582,9 +616,10 @@ def load_configuration(workspace, height):
         raise ValueError('팔 초기 자세 6개 관절이 없습니다.')
     home['left_outer_knuckle_joint'] = .4
     prefix = Path(get_package_prefix('ur5e_a3_grid'))
-    files = [prefix/'lib/ur5e_a3_grid/stack_blocks', prefix/'lib/libur5e_a3_mimic.so',
+    files = [prefix/'lib/ur5e_a3_grid/stack_blocks', prefix/'lib/libur5e_a3_mimic.so', prefix/'lib/libur5e_parallel_ompl.so',
              prefix/'lib/ur5e_a3_grid/gazebo_layout', Path(__file__), Path(__file__).with_name('path_archive.py'),
-             Path(__file__).with_name('plate_geometry.py'), workspace/'scripts/gazebo_env.bash']
+             Path(__file__).with_name('plate_geometry.py'), Path(__file__).with_name('gazebo_session.py'),
+             Path(__file__).with_name('gazebo_parallel.py'), workspace/'scripts/gazebo_env.bash']
     files += [p for sub in ('config', 'launch', 'worlds') for p in sorted((share/sub).glob('*')) if p.is_file()]
     metadata = dict(backend='gazebo', ros_domain=44, master_uri='http://127.0.0.1:11355',
                     scope='adjacent_diagonal_directed_60_v1', riser_height=height,
@@ -603,7 +638,8 @@ class Runner:
         self.env = {**os.environ, 'PYTHONUNBUFFERED': '1', 'RCUTILS_COLORIZED_OUTPUT': '0'}
 
     def check(self):
-        if self.stopping:
+        if self.stopping or (getattr(self, 'external_cancelled', lambda: False)()):
+            self.stopping = True
             raise Interrupted()
         if self.server is not None and self.server.poll() is not None:
             raise TrialError('Gazebo/MoveIt 실행 프로세스가 종료됨. simulator.log를 확인하세요.', 'environment_error')
@@ -642,9 +678,18 @@ class Runner:
                 raise TrialError(events.reason)
             if execution and events.ready is not None and not events.approved:
                 service = events.approval_service(pair, self.args.archive_root,
-                    self.campaign.state['metadata']['model_sha256'])
+                    self.campaign.state['metadata']['model_sha256'], expected_domain=self.env.get('ROS_DOMAIN_ID'))
                 write_json(events.archive/'batch_verification.json', dict(status='pending',
                     obstacle_cells=[pair[0]], target_cell=pair[1], campaign_signature=self.campaign.state['signature']))
+                if getattr(self.args, 'world_file', None):
+                    shutil.copy2(self.args.world_file, events.archive/'parallel.world')
+                    write_json(events.archive/'parallelism.json', dict(
+                        planner_workers=self.args.workers, physics_threads=self.args.physics_threads,
+                        worker_id=getattr(self.args, 'worker_id', None),
+                        cpu_affinity=getattr(self.args, 'cpu_affinity', None),
+                        cpu_pinning=getattr(self.args, 'pin_cpus', False),
+                        ros_domain=self.env.get('ROS_DOMAIN_ID'), master_uri=self.env.get('GAZEBO_MASTER_URI'),
+                        world_sha256=sha256(self.args.world_file)))
                 self.check()
                 self.monitor.approve(service)
                 events.approved = True
@@ -684,22 +729,43 @@ class Runner:
         row = dict(obstacle=pair[0], target=pair[1], status='running', stage='starting', moved=0,
                    attempts=number, started_at=now(), history=previous.get('history', []),
                    log=str((directory/'simulator.log').relative_to(self.campaign.folder)))
+        if hasattr(self.args, 'worker_id'):
+            row.update(worker_id=self.args.worker_id, ros_domain=int(self.env['ROS_DOMAIN_ID']),
+                       master_uri=self.env['GAZEBO_MASTER_URI'], cpu_affinity=self.args.cpu_affinity)
         self.campaign.state['results'][key(pair)] = row
         started = time.monotonic()
         self.update(row)
         print(f'BATCH_START 장애물={pair[0]} 목표={pair[1]} 시도={number}', flush=True)
         events = RunEvents()
+        startup_gate = getattr(self, 'startup_gate', None)
+        startup_acquired = False
         try:
             self.check()
             self.monitor.wait_idle()
-            self.server = self.process_factory(['ros2', 'launch', 'ur5e_a3_grid', 'stack_gazebo.launch.py',
+            if startup_gate is not None:
+                self.update(row, stage='waiting_startup')
+                while not startup_gate.acquire(timeout=.1):
+                    self.check()
+                startup_acquired = True
+                self.check()
+                self.update(row, stage='starting')
+            server_command = ['ros2', 'launch', 'ur5e_a3_grid', 'stack_gazebo.launch.py',
                 'use_gui:=false', f'gui:={str(self.args.show_gazebo).lower()}',
-                f'use_rviz:={str(self.args.show_rviz).lower()}', f'riser_height:={self.args.riser_height}'],
+                f'use_rviz:={str(self.args.show_rviz).lower()}', f'riser_height:={self.args.riser_height}']
+            if getattr(self.args, 'world_file', None):
+                server_command.append(f'world_file:={self.args.world_file}')
+            self.server = self.process_factory(server_command,
                 directory/'simulator.log', self.env)
             deadline = time.monotonic()+self.args.startup_timeout
+            next_startup_report = time.monotonic()+15.
             while not self.monitor.ready():
                 self.monitor.pump()
                 self.check()
+                if time.monotonic() >= next_startup_report:
+                    problem = getattr(self.monitor, 'readiness_problem', '')
+                    self.update(row, startup_problem=problem)
+                    print(f'BATCH_STARTUP_WAIT 장애물={pair[0]} 목표={pair[1]} {problem}', flush=True)
+                    next_startup_report = time.monotonic()+15.
                 if time.monotonic() > deadline:
                     raise TrialError('Gazebo 초기 자세·제어기 준비 시간 초과: '+
                                      getattr(self.monitor, 'readiness_problem', ''), 'environment_error')
@@ -711,6 +777,9 @@ class Runner:
             self.task = self.process_factory(self.command('scene', selection), directory/'scene.log', self.env)
             self.wait_task(row, RunEvents(), pair)
             self.task.stop()
+            if startup_acquired:
+                startup_gate.release()
+                startup_acquired = False
             self.task = self.process_factory(self.command('run', selection), directory/'run.log', self.env)
             self.wait_task(row, events, pair, execution=True)
             self.update(row, stage='verifying_tower', archive_directory=str(events.archive))
@@ -737,6 +806,8 @@ class Runner:
         except (OSError, ValueError, KeyError, TypeError) as error:
             row.update(status='environment_error', reason=f'{type(error).__name__}: {error}')
         finally:
+            if startup_acquired:
+                startup_gate.release()
             cleanup_errors = []
             if row['status'] != 'succeeded' and self.task is not None:
                 try:
@@ -770,7 +841,7 @@ class Runner:
         pairs = pending_pairs(self.campaign.state, self.args.retry_failed)
         if self.args.max_cases:
             pairs = pairs[:self.args.max_cases]
-        self.campaign.state.update(status='running', message=f'이번 실행 {len(pairs)}건 · 전체 60건')
+        self.campaign.state.update(status='running', message=f"이번 실행 {len(pairs)}건 · 전체 {len(self.campaign.state['cases'])}건")
         self.campaign.checkpoint()
         environments = 0
         for pair in pairs:
@@ -805,7 +876,13 @@ class Runner:
 def parse_args(argv=None):
     workspace = Path(os.environ.get('UR5E_WS', Path.home()/'ur5e_team_ws')).resolve()
     parser = argparse.ArgumentParser(description='Gazebo 이웃 대각선 60가지 자동 시험·성공 궤적 저장·실패 목록. 기존 Gazebo는 먼저 종료하세요.')
-    parser.add_argument('--output-dir', type=Path, default=workspace/'log/gazebo_diagonal_tests')
+    parser.add_argument('--output-dir', type=Path, default=None)
+    parser.add_argument('--jobs', type=int, default=None, help='케이스별 병렬 작업자 수 1..8 (권장 4). 각 작업자가 독립 Gazebo 사용')
+    parser.add_argument('--pin-cpus', action='store_true', help='병렬 작업자 CPU 고정 (기본은 운영체제 자동 배분)')
+    parser.add_argument('--obstacle', type=int, help='단일 시험의 장애물 칸 (--target과 함께 지정)')
+    parser.add_argument('--target', type=int, help='단일 시험의 쌓을 칸 (--obstacle과 함께 지정)')
+    parser.add_argument('--workers', type=int, default=0, help='OMPL 병렬 후보 수. 0=자동(CPU 수-2), 최대 64')
+    parser.add_argument('--physics-threads', type=int, default=1, help='ODE 스레드 수. 기본 1=직렬, 0=workers와 동일')
     parser.add_argument('--archive-root', type=Path, default=workspace/'saved_paths/gazebo')
     parser.add_argument('--retry-failed', action='store_true', help='기존 실패한 배치만 재시험 (성공·미시험은 제외)')
     parser.add_argument('--max-cases', type=int, default=0, help='이번에 실행할 최대 배치 수. 0=전체')
@@ -819,6 +896,25 @@ def parse_args(argv=None):
     parser.add_argument('--min-free-gb', type=float, default=2.)
     parser.add_argument('--list', action='store_true', help='60가지 목록만 출력. 파일/ROS 노드/시뮬레이터를 만들지 않음')
     args = parser.parse_args(argv)
+    args.case_parallel = args.jobs is not None
+    args.jobs = 1 if args.jobs is None else args.jobs
+    if not 1 <= args.jobs <= MAX_CASE_JOBS:
+        parser.error('jobs는 1..8 범위여야 합니다.')
+    if (args.obstacle is None) != (args.target is None):
+        parser.error('--obstacle과 --target을 함께 지정하세요.')
+    if args.obstacle is not None and (args.obstacle, args.target) not in adjacent_diagonals():
+        parser.error('이웃 대각선 배치만 지정할 수 있습니다 (예: --obstacle 1 --target 6).')
+    if not 0 <= args.workers <= 64 or not 0 <= args.physics_threads <= 64:
+        parser.error('workers와 physics-threads는 0..64 범위여야 합니다.')
+    args.workers = args.workers or (min(2, max(1, (available_cpus()-2)//args.jobs))
+                                    if args.case_parallel else min(64, max(1, available_cpus()-2)))
+    args.physics_threads = args.physics_threads or args.workers
+    args.cases = [(args.obstacle, args.target)] if args.obstacle is not None else adjacent_diagonals()
+    if args.output_dir is None:
+        name = f'gazebo_{args.obstacle}_{args.target}_parallel' if args.obstacle is not None else 'gazebo_diagonal_tests'
+        if args.case_parallel:
+            name = f'gazebo_{args.obstacle}_{args.target}_case_parallel' if args.obstacle is not None else 'gazebo_diagonal_case_parallel'
+        args.output_dir = workspace/'log'/name
     if (args.max_cases < 0 or not math.isfinite(args.riser_height) or not 0 <= args.riser_height <= .3
             or any(not math.isfinite(v) or v <= 0 for v in (args.startup_timeout, args.scene_timeout,
                 args.planning_timeout, args.execution_timeout, args.min_free_gb))):
@@ -832,34 +928,51 @@ def parse_args(argv=None):
 def main(argv=None):
     args = parse_args(argv)
     if args.list:
-        for o, t in adjacent_diagonals():
+        for o, t in args.cases:
             print(f'장애물 {o:2d} / 목표 {t:2d}')
-        print('총 60가지 (장애물·목표 역할을 바꾸면 별도 시험)')
+        print(f'총 {len(args.cases)}가지 (장애물·목표 역할을 바꾸면 별도 시험)')
         return 0
-    if (os.environ.get('ROS_DOMAIN_ID') != '44' or os.environ.get('ROS_LOCALHOST_ONLY') != '1'
-            or os.environ.get('GAZEBO_MASTER_URI') != 'http://127.0.0.1:11355'):
+    try:
+        session = session_from_environment()
+    except ValueError:
         print('BATCH_ERROR test_block_diagonals.sh로 localhost Gazebo 44 환경에서 실행하세요.', file=sys.stderr)
         return 2
+    if args.case_parallel:
+        if session.slot is not None:
+            print('BATCH_ERROR 병렬 조정기는 기본 Gazebo 실행 환경에서 시작하세요.', file=sys.stderr)
+            return 2
+        from .gazebo_parallel import main as parallel_main
+        return parallel_main(args)
     campaign = monitor = None
     domain_lock = None
     old_signals = {}
     try:
         # A second output folder must not bypass the shared domain lock.
-        fd = os.open('/tmp/ur5e_gazebo_diagonal_batch_44.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        fd = os.open(f'/tmp/ur5e_gazebo_diagonal_batch_{session.domain}.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
         domain_lock = os.fdopen(fd, 'a+')
         try:
             fcntl.flock(domain_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise ValueError('다른 대각선 자동 시험이 ROS 44를 사용 중입니다.') from None
+            raise ValueError(f'다른 대각선 자동 시험이 ROS {session.domain}를 사용 중입니다.') from None
         settings, urdf, srdf, home, signature, metadata = load_configuration(args.workspace, args.riser_height)
-        campaign = Campaign(args.output_dir, signature, metadata)
+        from ament_index_python.packages import get_package_share_directory
+        source = (Path(get_package_share_directory('ur5e_a3_grid'))/'worlds/stack.world').read_text()
+        world = parallel_world(source, args.physics_threads)
+        metadata.update(cases=[list(pair) for pair in args.cases], planner_workers=args.workers,
+                        physics_threads=args.physics_threads, world_sha256=hashlib.sha256(world.encode()).hexdigest())
+        signature = hashlib.sha256(json.dumps(metadata, sort_keys=True).encode()).hexdigest()
+        campaign = Campaign(args.output_dir, signature, metadata, cases=args.cases)
+        args.world_file = campaign.folder/'parallel.world'
+        atomic_text(args.world_file, world)
+        settings['planner_workers'] = args.workers
+        print(f'BATCH_CPU available={available_cpus()} planner_workers={args.workers} physics_threads={args.physics_threads} cases={len(args.cases)}', flush=True)
         if args.retry_failed and not any(r['status'] in FAILED for r in campaign.state['results'].values()):
             print('기록된 실패 배치가 없습니다.', flush=True)
             return 0
         runner = Runner(args, campaign, settings, None)
         for sig in (signal.SIGINT, signal.SIGTERM):
             old_signals[sig] = signal.signal(sig, lambda *_: setattr(runner, 'stopping', True))
-        monitor = RosMonitor(urdf, home, lambda: runner.stopping)
+        monitor = RosMonitor(urdf, home, lambda: runner.stopping, session=session)
         runner.monitor = monitor
         monitor.wait_idle(seconds=5.)  # Fail before recording any case if a user's session exists.
         atomic_text(campaign.folder/'robot.urdf', urdf)

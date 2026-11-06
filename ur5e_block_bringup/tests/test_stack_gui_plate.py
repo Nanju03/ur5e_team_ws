@@ -116,8 +116,8 @@ def test_save_keeps_a_foundation_block_in_the_selected_stack_pocket(tmp_path):
     assert value['vertical_placement_layers'] == 19
     assert value['placement_approach_clearance'] == .12
     assert value['side_entry_clearance'] == .010
-    assert value['physical_approach_clearance'] == .04
-    assert value['descent_velocity_scaling'] == value['descent_acceleration_scaling'] == .20
+    assert value['physical_approach_clearance'] == value['physical_contact_clearance'] == .02
+    assert value['descent_velocity_scaling'] == value['descent_acceleration_scaling'] == .50
 
 
 def test_live_translation_moves_pockets_corners_and_stack_together(tmp_path):
@@ -240,6 +240,22 @@ def test_regular_plate_plan_requires_operator_selected_pocket(tmp_path, monkeypa
     assert '쌓을 칸' in obj.status.get()
 
 
+@pytest.mark.parametrize('speed', [.02, .05])
+def test_physical_selection_preserves_the_empty_hand_speed_across_task_switches(tmp_path, speed):
+    obj = gui(tmp_path)
+    obj.speed.set(str(speed))
+    obj.set_plan_kind('physical')
+    obj.save_selection()
+    value = selection(obj)
+    assert value['physical_stack_task'] is True
+    assert value['velocity_scaling'] == speed
+    assert value['approach_velocity_scaling'] == value['approach_acceleration_scaling'] == .10
+    assert value['transfer_velocity_scaling'] == value['transfer_acceleration_scaling'] == 1.
+    obj.set_plan_kind('air')
+    obj.save_selection()
+    assert selection(obj)['velocity_scaling'] == speed
+
+
 def test_physical_plan_has_separate_recipe_and_explicit_user_gripper_sequence(tmp_path, monkeypatch):
     obj = gui(tmp_path)
     obj.target = 11
@@ -258,7 +274,8 @@ def test_physical_plan_has_separate_recipe_and_explicit_user_gripper_sequence(tm
     assert not value['plate_alignment_test'] and not value['empty_xy_scan']
     assert value['gripper_grasp_position'] == .73
     assert value['release_first_position'] == .70 and value['release_clearance_position'] == .60
-    assert value['approach_velocity_scaling'] == .05 and value['transfer_velocity_scaling'] == 1.
+    assert value['approach_velocity_scaling'] == value['approach_acceleration_scaling'] == .10
+    assert value['transfer_velocity_scaling'] == value['transfer_acceleration_scaling'] == 1.
     assert value['gripper_open_position'] == .4
     assert 'workspace_clear:=true' not in command
     assert not obj.visible_layout.get('_air_preview', False)
@@ -284,7 +301,7 @@ def test_physical_run_requires_its_reviewed_recipe_and_actual_gripper_modal(tmp_
     assert obj.job_plan_id == 'physical_recipe' and obj.node.clients == []
     title, description = modal.call_args.args[:2]
     assert '팔·그리퍼' in title and '실제 블록' in description
-    assert all(token in description for token in ('0.73', '0.70', '0.60', '0.05', '1.00', '40mm', '바닥 블록'))
+    assert all(token in description for token in ('0.73', '0.70', '0.60', '0.10', '0.50', '1.00', '20mm', '바닥 블록'))
     assert '블록이 없는 상태' not in description
 
 

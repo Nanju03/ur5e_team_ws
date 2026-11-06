@@ -78,7 +78,7 @@ def test_preparation_covers_every_accepted_finger_range_and_wrist_shape(package)
     worker = SimpleNamespace(validate=Mock(side_effect=lambda scene, samples: len(samples)))
     task.certify_motion(worker, PlanningScene(), arm, trajectory(arm), True)
     samples = worker.validate.call_args.args[1]
-    assert min(q[-1] for _, q in samples) == .70
+    assert min(q[-1] for _, q in samples) == replay.HOLDING_LOWER
     assert max(q[-1] for _, q in samples) == .733
     assert min(q[5] for _, q in samples) == -.01
     assert max(q[5] for _, q in samples) == .01
@@ -244,7 +244,7 @@ def test_uncovered_runtime_geometry_stops_without_falling_back_to_slow_validatio
     step, scene = package[1]['steps'][4], SCENE
     motion = trajectory(step)
     if change == 'reference':
-        task.holding_reference = .704
+        task.holding_reference = .59
     elif change == 'actual':
         task.values[physical.HAND] = .7
     elif change == 'trajectory':

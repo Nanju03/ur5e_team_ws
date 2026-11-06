@@ -56,6 +56,8 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include "rearrangement.hpp"
+#include "incremental_geometry.hpp"
+#include "bounded_surface_contacts.hpp"
 #include "gazebo_settling.hpp"
 
 namespace {
@@ -121,6 +123,7 @@ struct Lock {
 struct Step {
   std::string label;
   std::string phase;
+  std::string motion_role;
   bool hand=false, event=false;
   moveit_msgs::msg::RobotTrajectory trajectory;
   moveit_msgs::msg::PlanningScene diff;
@@ -148,14 +151,42 @@ public:
   explicit StackTask(rclcpp::Node::SharedPtr node):node_(std::move(node)),logger_(node_->get_logger()) {
     mode_=parameter<std::string>(node_,"stack_mode","scene");
     physical_stack_=parameter<bool>(node_,"physical_stack_task",false);
-    physical_contact_clearance_=parameter<double>(node_,"physical_contact_clearance",.04);
-    if(physical_stack_&&(!std::isfinite(physical_contact_clearance_)||std::abs(physical_contact_clearance_-.04)>1e-9))
-      throw std::runtime_error("Physical fast transport requires the reviewed 40mm contact clearance");
-    physical_approach_clearance_=parameter<double>(node_,"physical_approach_clearance",.04);
+    incremental_=parameter<bool>(node_,"incremental_stack",false)&&physical_stack_&&mode_=="plan";
+    post_place_retreat_clearance_=parameter<double>(node_,"post_place_retreat_clearance",.050);
+    incremental_pickup_clearance_=parameter<double>(node_,"incremental_pickup_approach_clearance",.080);
+    incremental_transfer_clearance_=parameter<double>(node_,"incremental_transfer_clearance",.050);
+    holding_finger_lower_=parameter<double>(node_,"holding_finger_lower",.690);
+    holding_finger_upper_=parameter<double>(node_,"holding_finger_upper",.733);
+    if(!std::isfinite(holding_finger_lower_)||!std::isfinite(holding_finger_upper_)||
+       holding_finger_lower_<.60||holding_finger_lower_>.70||std::abs(holding_finger_upper_-.733)>1e-9)
+      throw std::runtime_error("Invalid physical holding finger geometry range");
+    incremental_fast_layers_=parameter<int>(node_,"incremental_fast_layers",10);
+    incremental_pickup_vel_=parameter<double>(node_,"incremental_pickup_velocity_scaling",1.);
+    incremental_pickup_acc_=parameter<double>(node_,"incremental_pickup_acceleration_scaling",1.);
+    incremental_low_vel_=parameter<double>(node_,"incremental_low_velocity_scaling",1.);
+    incremental_low_acc_=parameter<double>(node_,"incremental_low_acceleration_scaling",1.);
+    incremental_high_vel_=parameter<double>(node_,"incremental_high_velocity_scaling",.35);
+    incremental_high_acc_=parameter<double>(node_,"incremental_high_acceleration_scaling",.20);
+    for(double value:{incremental_pickup_vel_,incremental_pickup_acc_,incremental_low_vel_,incremental_low_acc_,
+                      incremental_high_vel_,incremental_high_acc_})
+      if(!std::isfinite(value)||value<=0.||value>1.)throw std::runtime_error("Invalid incremental motion scaling");
+    if(incremental_fast_layers_<1||incremental_fast_layers_>99||incremental_high_vel_>incremental_low_vel_||
+       incremental_high_acc_>incremental_low_acc_)throw std::runtime_error("Invalid incremental layer speed transition");
+    if(!std::isfinite(post_place_retreat_clearance_)||post_place_retreat_clearance_<.02||post_place_retreat_clearance_>.10||
+       !std::isfinite(incremental_pickup_clearance_)||incremental_pickup_clearance_<.04||incremental_pickup_clearance_>.20)
+      throw std::runtime_error("Invalid incremental retreat/pickup clearance");
+    if(!std::isfinite(incremental_transfer_clearance_)||std::abs(incremental_transfer_clearance_-.050)>1e-9)
+      throw std::runtime_error("Incremental direct transport requires 50mm tower clearance");
+    physical_contact_clearance_=parameter<double>(node_,"physical_contact_clearance",.02);
+    if(physical_stack_&&(!std::isfinite(physical_contact_clearance_)||std::abs(physical_contact_clearance_-.02)>1e-9))
+      throw std::runtime_error("Physical fast transport requires the reviewed 20mm contact clearance");
+    physical_approach_clearance_=parameter<double>(node_,"physical_approach_clearance",physical_stack_?.02:.04);
     if(!std::isfinite(physical_approach_clearance_)||physical_approach_clearance_<.02||physical_approach_clearance_>.08||
-       (physical_stack_&&std::abs(physical_approach_clearance_-.04)>1e-9))
-      throw std::runtime_error("Physical descent requires the reviewed final 40mm contact zone");
+       (physical_stack_&&std::abs(physical_approach_clearance_-.02)>1e-9))
+      throw std::runtime_error("Physical descent requires the reviewed final 20mm contact zone");
     simulation_backend_=parameter<std::string>(node_,"simulation_backend","mock");
+    planner_workers_=parameter<int>(node_,"planner_workers",2);
+    if(planner_workers_<1||planner_workers_>64)throw std::runtime_error("planner_workers must be 1..64");
     if(simulation_backend_!="mock"&&simulation_backend_!="gazebo")throw std::runtime_error("Invalid simulation_backend");
     release_lift_=parameter<double>(node_,"placement_release_lift",0.);
     if(!std::isfinite(release_lift_)||release_lift_<0.||release_lift_>.01||
@@ -246,13 +277,13 @@ public:
     vel_=parameter<double>(node_,"velocity_scaling",.25);
     acc_=parameter<double>(node_,"acceleration_scaling",.3);
     split_speeds_=parameter<bool>(node_,"split_stack_speeds",true);
-    approach_vel_=parameter<double>(node_,"approach_velocity_scaling",.05);
-    transfer_vel_=parameter<double>(node_,"transfer_velocity_scaling",.20);
-    stack_acc_=parameter<double>(node_,"stack_acceleration_scaling",.05);
+    approach_vel_=parameter<double>(node_,"approach_velocity_scaling",physical_stack_?.10:.05);
+    transfer_vel_=parameter<double>(node_,"transfer_velocity_scaling",physical_stack_?1.:.20);
+    stack_acc_=parameter<double>(node_,"stack_acceleration_scaling",physical_stack_?.10:.05);
     approach_acc_=parameter<double>(node_,"approach_acceleration_scaling",stack_acc_);
-    transfer_acc_=parameter<double>(node_,"transfer_acceleration_scaling",.20);
-    descent_vel_=parameter<double>(node_,"descent_velocity_scaling",.20);
-    descent_acc_=parameter<double>(node_,"descent_acceleration_scaling",.20);
+    transfer_acc_=parameter<double>(node_,"transfer_acceleration_scaling",physical_stack_?1.:.20);
+    descent_vel_=parameter<double>(node_,"descent_velocity_scaling",physical_stack_?.50:.20);
+    descent_acc_=parameter<double>(node_,"descent_acceleration_scaling",physical_stack_?.50:.20);
     staged_release_=parameter<bool>(node_,"staged_release_enabled",true);
     release_first_=parameter<double>(node_,"release_first_position",.70);
     release_clearance_=parameter<double>(node_,"release_clearance_position",.60);
@@ -360,6 +391,9 @@ public:
     scene_=readScene();
     initialiseGeometry(*measured);
     if(empty_xy_scan_||plate_alignment_||(mode_!="scene"&&mode_!="reset"))initialiseGripperBounds();
+    // One-block planning starts from the committed live scene. In particular,
+    // never recreate floor blocks that have already been placed in the tower.
+    if(incremental_)return planNextBlock(*measured);
     auto initial=makeInitialScene();
     scene_->setPlanningSceneDiffMsg(initial);
     apply(initial);
@@ -594,10 +628,143 @@ private:
     }
     throw std::runtime_error("No fully validated rearrangement after bounded route retries: "+last_failure+"; NOTHING executed");
   }
+  std::string incrementalStateJson(const Layout& layout)const {
+    auto array=[](const auto& values) {
+      std::ostringstream out;out<<'[';bool comma=false;
+      for(int value:values){if(comma)out<<',';out<<value;comma=true;}out<<']';return out.str();
+    };
+    std::vector<int> remaining;
+    for(const auto& [cell,tower]:layout.towers)if(cell!=target_&&!tower.empty()) {
+      if(tower.size()!=1)throw std::runtime_error("Incremental mode requires single exposed source blocks");
+      remaining.push_back(tower.front());
+    }
+    return "{\"schema\":1,\"target_cell\":"+std::to_string(target_)+
+      ",\"target_blocks\":"+array(layout.towers.at(target_))+",\"remaining_sources\":"+array(remaining)+
+      ",\"obstacle_cells\":"+array(obstacles_)+",\"empty_cells\":"+array(empty_)+"}";
+  }
+  Layout readIncrementalLayout()const {
+    if(!plate_enabled_||independent_target_||!target_has_foundation_||target_<=0)
+      throw std::runtime_error("Incremental stacking requires the pocket plate and its original target foundation");
+    if(!scene_->getWorld()->hasObject(plateId()))throw std::runtime_error("Apply the initial layout once before incremental planning");
+    Layout layout;layout.target=target_;std::map<int,int> layers;std::set<std::string> expected;
+    auto position=[&](const std::string& id,const Eigen::Vector3d& size) {
+      const auto object=scene_->getWorld()->getObject(id);
+      if(!object||object->shapes_.size()!=1||object->global_shape_poses_.size()!=1||object->shapes_[0]->type!=shapes::BOX)
+        throw std::runtime_error("Missing or changed incremental object: "+id);
+      const auto* shape=static_cast<const shapes::Box*>(object->shapes_[0].get());
+      for(int axis=0;axis<3;++axis)if(std::abs(shape->size[axis]-size[axis])>1e-7)
+        throw std::runtime_error("Incremental block/obstacle dimensions changed: "+id);
+      T pose=world_frame_.inverse()*object->global_shape_poses_[0];
+      if(!pose.matrix().allFinite()||!incremental_geometry::levelBox(pose.linear(),size))
+        throw std::runtime_error("Incremental object is tilted: "+id);
+      return pose.translation().eval();
+    };
+    for(int id=1;id<=columns_*rows_;++id) {
+      if(empty_.count(id))continue;
+      if(obstacles_.count(id)) {
+        const auto name=PREFIX+"obstacle_"+std::to_string(id);expected.insert(name);
+        const auto p=position(name,obstacle_);
+        if((p-Eigen::Vector3d(cells_[id-1].x(),cells_[id-1].y(),obstacle_surface_z_+obstacle_.z()/2.)).norm()>.001)
+          throw std::runtime_error("Incremental obstacle differs from the selected layout");
+        continue;
+      }
+      const auto name=blockId(id);expected.insert(name);const auto p=position(name,block_);
+      if((p.head<2>()-targetXY()).norm()<.001) {
+        const int layer=static_cast<int>(std::llround((p.z()-stack_surface_z_)/block_.z()+.5));
+        if(layer<1||layer>columns_*rows_||
+           std::abs(p.z()-(stack_surface_z_+block_.z()*(layer-.5)))>.001||!layers.emplace(layer,id).second)
+          throw std::runtime_error("Incremental target tower has a gap or overlapping layer");
+      } else {
+        if((p-Eigen::Vector3d(cells_[id-1].x(),cells_[id-1].y(),source_surface_z_+block_.z()/2.)).norm()>.001)
+          throw std::runtime_error("A remaining block moved or is on a temporary support; recover the scene before restarting");
+        layout.towers[id]={id};
+      }
+    }
+    for(const auto& id:scene_->getWorld()->getObjectIds())
+      if((id.rfind(PREFIX+"block_",0)==0||id.rfind(PREFIX+"obstacle_",0)==0)&&!expected.count(id))
+        throw std::runtime_error("Unexpected task object in the incremental scene: "+id);
+    if(layers.empty()||layers.begin()->first!=1||layers.begin()->second!=target_)
+      throw std::runtime_error("The original foundation block must remain at target layer 1");
+    int layer=0;for(const auto& [height,id]:layers) {
+      if(height!=++layer)throw std::runtime_error("Incremental tower layers are not contiguous");
+      layout.towers[target_].push_back(id);
+    }
+    return layout;
+  }
+  bool finishIncrementalPlanning(const Layout& layout,const std::string& reason)const {
+    if(recipe_file_.empty())throw std::runtime_error("Incremental planning requires a recipe manifest");
+    const auto path=std::filesystem::absolute(recipe_file_);
+    std::filesystem::create_directories(path.parent_path());
+    std::ofstream out(path);out<<"{\"schema\":1,\"incremental_status\":"<<jsonString(reason)
+      <<",\"state\":"<<incrementalStateJson(layout)<<"}\n";
+    if(!out)throw std::runtime_error("Cannot save incremental completion state");
+    RCLCPP_INFO(logger_,"STACK_INCREMENTAL_FINISHED reason=%s",reason.c_str());return true;
+  }
+  bool planNextBlock(const State& measured) {
+    std::vector<const moveit::core::AttachedBody*> attached;
+    scene_->getCurrentState().getAttachedBodies(attached);
+    for(const auto* body:attached)if(body->getName().rfind(PREFIX+"block_",0)==0)
+      throw std::runtime_error("Incremental planning cannot start while a task block is attached");
+    State current(scene_->getCurrentState());current.setVariablePositions(measured.getVariablePositions());current.update();
+    scene_->setCurrentState(current);
+    const Layout layout=readIncrementalLayout();
+    incremental_before_=std::make_unique<Layout>(layout);
+    std::vector<int> sources;
+    for(const auto& [cell,tower]:layout.towers)if(cell!=target_)sources.push_back(tower.back());
+    if(sources.empty())return finishIncrementalPlanning(layout,"no_remaining_blocks");
+    if(!valid(current))throw std::runtime_error("Incremental measured start violates collision, bounds or wrist limits");
+    const auto start=(world_frame_.inverse()*current.getGlobalLinkTransform(tcp_)).translation().head<2>().eval();
+    std::stable_sort(sources.begin(),sources.end(),[&](int a,int b) {
+      const auto cost=[&](int id){return (cells_[id-1]-start).norm()+(cells_[id-1]-targetXY()).norm();};
+      return cost(a)<cost(b);
+    });
+    total_=transport_total_=1;initial_state_=std::make_shared<State>(current);
+    scene_->getPlanningSceneMsg(recipe_initial_scene_);
+    rearrangement_scene_=planning_scene::PlanningScene::clone(scene_);
+    initialisePipeline();
+    hand_=std::make_unique<MGI>(node_,hand_group_,nullptr,rclcpp::Duration::from_seconds(15));hand_stop_=hand_.get();
+    for(int source:sources) {
+      checkStop();scene_=planning_scene::PlanningScene::clone(rearrangement_scene_);steps_.clear();
+      placement_transit_check_=placement_crossing_=side_hover_check_=false;
+      const Move move{source,layout.locate(source).first,target_,false};int completed=0;
+      try {
+        if(!accessible(layout,source))continue;
+        planTransfer(layout,move,completed,1);
+      }catch(const std::exception& error) {
+        checkStop();RCLCPP_WARN(logger_,"STACK_INCREMENTAL_CANDIDATE_REJECTED block=%d reason=%s",source,error.what());
+        continue;
+      }
+      incremental_source_=source;incremental_after_=std::make_unique<Layout>(layout.moved(move));
+      RCLCPP_INFO(logger_,"STACK_INCREMENTAL_SELECTED block=%d layer=%d remaining=%zu",source,foundationLayers()+1,sources.size()-1);
+      RCLCPP_INFO(logger_,"STACK_PREFLIGHT_PASSED moves=1 layers=%d segments=%zu",foundationLayers()+1,steps_.size());
+      showPlan();exportRecipe(recipe_file_);status("PLAN_READY",0);return true;
+    }
+    return finishIncrementalPlanning(layout,"no_feasible_direct_pick");
+  }
+  void planPostPlacementRetreat(int layer,const std::string& label) {
+    State state(scene_->getCurrentState());state.update();
+    T target=world_frame_.inverse()*state.getGlobalLinkTransform(tcp_);
+    double minimum=std::numeric_limits<double>::infinity();
+    // Include the empty-finger replay envelope, not just the nominal 0.60rad.
+    const auto& bounds=model_->getVariableBounds(hand_joint_);
+    for(int sample=0;sample<=4;++sample) {
+      const double hand=std::clamp(release_clearance_-.006+.012*sample/4.,bounds.min_position_,bounds.max_position_);
+      state.setJointGroupActivePositions(gripper_group_,std::vector<double>{hand});state.update();
+      minimum=std::min(minimum,minimumGripperZ(state));
+    }
+    const double top=stack_surface_z_+block_.z()*layer;
+    target.translation().z()+=std::max(0.,top+post_place_retreat_clearance_-minimum);
+    beginMotion("retreat");
+    planStraight(target,label);
+    finishMotion(label);
+    RCLCPP_INFO(logger_,"STACK_POST_PLACE_RETREAT layer=%d tower_top=%.4f tcp_z=%.4f minimum_clearance=%.4f",layer,top,
+      target.translation().z(),post_place_retreat_clearance_);
+  }
   void planTransfer(const Layout& layout,const Move& move,int& completed,std::size_t transport) {
     placement_retreat_.clear();
     checkStop();const auto object=blockId(move.block);const auto& from=layout.towers.at(move.from);
     const auto& destination=layout.towers.at(move.to);const int layer=destination.size()+1;
+    motion_layer_=layer;
     RCLCPP_INFO(logger_,"STACK_PLANNING source=%d target=%d layer=%d/%zu",move.block,move.to,layer,move.temporary?std::size_t(2):total_+foundationLayers());
     RCLCPP_INFO(logger_,"STACK_ROUTE_MOVE transport=%zu block=%d from=%d to=%d temporary=%d layer=%d",transport,move.block,move.from,move.to,move.temporary,layer);
     planHand(open_,"Open before picking block "+std::to_string(move.block));
@@ -606,12 +773,13 @@ private:
     const T current=world_frame_.inverse()*cube->global_shape_poses_.front();
     contacts(object,true);
     const auto pickup=at(current.translation().head<2>(),current.translation().z()-block_.z()/2+grip_height_);
-    const auto pickup_z=std::max(travel_z_,current.translation().z()+.08);
+    const auto pickup_z=incremental_?pickup.translation().z()+incremental_pickup_clearance_:
+      std::max(travel_z_,current.translation().z()+.08);
     const auto pickup_scene=planning_scene::PlanningScene::clone(scene_);const auto pickup_steps=steps_.size();
     std::pair<T,T> grasp;
     try {grasp=planApproach(pickup,pickup_z,"Source "+std::to_string(move.block));}
     catch(const std::exception&) {
-      checkStop();if(!physical_stack_)throw;
+      checkStop();if(!physical_stack_||incremental_)throw;
       scene_=planning_scene::PlanningScene::clone(pickup_scene);steps_.resize(pickup_steps);
       RCLCPP_INFO(logger_,"STACK_PICKUP_STAGING fallback=neutral block=%d",move.block);
       planNeutral("Prepare pickup staging fallback");
@@ -619,9 +787,11 @@ private:
     }
     planHand(close_,"Close on block "+std::to_string(move.block));
     attach(object,move.block);
-    planContactDeparture(grasp.second,"Lift block "+std::to_string(move.block));
-    tableContact(object,false);
-    if(from.size()>1)supportContact(object,blockId(from[from.size()-2]),false);
+    if(!incremental_) {
+      planContactDeparture(grasp.second,"Lift block "+std::to_string(move.block));
+      tableContact(object,false);
+      if(from.size()>1)supportContact(object,blockId(from[from.size()-2]),false);
+    }
     const std::string support=destination.empty()?plateId():blockId(destination.back());
     std::pair<T,T> placement;
     if(move.temporary) {
@@ -638,7 +808,8 @@ private:
     steps_.back().completed=completed;steps_.back().block=move.block;
     steps_.back().destination=move.to;steps_.back().temporary=move.temporary;
     if(staged_release_)planHand(release_clearance_,"Release block "+std::to_string(move.block)+" clearance opening before retreat");
-    if(placement_retreat_.empty())planContactDeparture(placement.second,"Retreat from layer "+std::to_string(layer));
+    if(incremental_)planPostPlacementRetreat(layer,"Retreat from layer "+std::to_string(layer));
+    else if(placement_retreat_.empty())planContactDeparture(placement.second,"Retreat from layer "+std::to_string(layer));
     else {
       planContactDeparture(placement_retreat_.front(),"Retreat from layer "+std::to_string(layer)+" vertical clearance");
       planContactDeparture(placement_retreat_.back(),"Retreat from layer "+std::to_string(layer)+" horizontal withdrawal");
@@ -677,7 +848,7 @@ private:
   }
   void initialisePipeline() {
     pipeline_=std::make_unique<planning_pipeline::PlanningPipeline>(model_,node_,"ompl",
-        "ompl_interface/OMPLPlanner",std::vector<std::string>{});
+        planner_workers_>2?"ur5e_a3_grid/ParallelOMPLPlanner":"ompl_interface/OMPLPlanner",std::vector<std::string>{});
     pipeline_stop_=pipeline_.get();
     // Match the planner's edge checks to the dense validation in save(). The
     // OMPL default can skip a thin block/obstacle between distant joint states.
@@ -1064,7 +1235,9 @@ private:
       std::to_string(alignment_stops_.size())+"}";
     RCLCPP_INFO(logger_,"%s %s",marker.c_str(),data.c_str());
   }
-  int foundationLayers()const{return target_has_foundation_?1:0;}
+  int foundationLayers()const {
+    return incremental_&&incremental_before_?incremental_before_->towers.at(target_).size():(target_has_foundation_?1:0);
+  }
   Eigen::Vector2d targetXY()const {
     if(independent_target_)return target_xy_;
     if(target_<1||target_>static_cast<int>(cells_.size()))throw std::runtime_error("No stack target is selected");
@@ -1166,6 +1339,11 @@ private:
       if(label.rfind("Release block ",0)==0)return "release";
       return "open";
     }
+    if(incremental_&&!motion_role_.empty()) {
+      if(motion_role_=="place")return "approach";
+      if(motion_role_=="retreat")return "retreat";
+      return "transfer";
+    }
     if(label.find(" contact clearance")!=std::string::npos)return "contact";
     if(label.find(" fast descent")!=std::string::npos)return "descent_fast";
     if(label.rfind("Lift block ",0)==0)return "lift";
@@ -1174,6 +1352,7 @@ private:
     return "transfer";
   }
   void commit(const moveit_msgs::msg::PlanningScene& update,const std::string& label) {
+    if(collecting_motion_)throw std::runtime_error("Scene event inside continuous motion: "+label);
     Step event;event.label=label;event.event=true;event.diff=update;event.phase=recipePhase(label,false,true);
     if(captureRecipe()) {
       scene_->getPlanningSceneMsg(event.before_scene);
@@ -1227,7 +1406,12 @@ private:
       if(bounds.position_bounded_&&(q<bounds.min_position_+PHYSICAL_WRIST_MARGIN||
                                    q>bounds.max_position_-PHYSICAL_WRIST_MARGIN))return false;
     }
-    if(!state.satisfiesBounds(arm_group_)||scene_->isStateColliding(state,"",false))return false;
+    if(!state.satisfiesBounds(arm_group_))return false;
+    if(motion_acm_) {
+      collision_detection::CollisionRequest request;collision_detection::CollisionResult result;
+      scene_->checkCollision(request,result,state,*motion_acm_);
+      if(result.collision)return false;
+    } else if(scene_->isStateColliding(state,"",false))return false;
     if(placement_transit_check_&&!placementTransitClear(state))return false;
     if(side_hover_check_) {
       const T cube=world_frame_.inverse()*state.getGlobalLinkTransform(tcp_)*carry_fixed_;
@@ -1251,12 +1435,24 @@ private:
   }
   std::pair<T,T> planApproach(const T& base,double pre_z,const std::string& label) {
     State original(scene_->getCurrentState());const auto count=steps_.size();
+    const double minimum_pre_z=pre_z;
+    if(incremental_)pre_z=std::max(pre_z,(world_frame_.inverse()*original.getGlobalLinkTransform(tcp_)).translation().z());
     std::vector<double> heights{pre_z};
     // Keep successful home-height approaches; if blocked, shorten the vertical
     // segment and let collision-aware free transit reach that lower pre-grasp.
     for(double clearance:{.06,.10,.16}) {
       double z=base.translation().z()+clearance;
-      if(z<pre_z-1e-6)heights.push_back(z);
+      if(!incremental_&&z<pre_z-1e-6)heights.push_back(z);
+    }
+    if(incremental_) {
+      // Prefer a level approach, then one vertical descent from that height.
+      // Only use the original 80mm hover as a reachability fallback.
+      if(minimum_pre_z<pre_z-1e-6)heights.push_back(minimum_pre_z);
+      for(double clearance:{.10,.16}) {
+        const double z=base.translation().z()+clearance;
+        if(z>pre_z+1e-6)heights.push_back(z);
+      }
+      if(travel_z_>pre_z+1e-6)heights.push_back(travel_z_);
     }
     std::vector<int> turns{0,1,2,3};
     if(physical_stack_) {
@@ -1266,25 +1462,39 @@ private:
                orientation.angularDistance(Eigen::Quaterniond(Eigen::AngleAxisd(b*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*base.linear()));
       });
     }
+    // Try compact Cartesian routes at every height/yaw before accepting a
+    // wide side staging route for the first orientation that happens to work.
+    for(int search=0;search<(incremental_?2:1);++search)
     for(double approach_z:heights)for(int reverse=0;reverse<2;++reverse)for(int turn:turns) {
+      const bool compact=incremental_&&search==0;
+      if(compact&&reverse)continue;
+      cancelMotion();
       checkStop();scene_->setCurrentState(original);steps_.resize(count);
       T low=base;low.linear()=Eigen::AngleAxisd(turn*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*base.linear();
       T pre=low;pre.translation().z()=approach_z;
       try {
         State grasp(original);if(!solve(low,grasp))continue;
-        if(!reverse){planFree(pre,label+" approach");planDescent(low,label);}
+        if(incremental_)beginMotion("pickup");
+        if(!reverse) {
+          planFree(pre,label+" approach",compact);
+          if(incremental_)planStraight(low,label+" fast descent single pickup");
+          else planDescent(low,label);
+        }
         else {
           // Solve the approach backwards from a valid grasp, then ask OMPL for
           // that exact pre-grasp posture instead of changing IK branches.
           scene_->setCurrentState(grasp);robot_trajectory::RobotTrajectory up(model_,group_);
-          if(!cartesian({pre},up))continue;
+          if(!cartesian({pre},up)){cancelMotion();continue;}
           State ready(up.getLastWayPoint());ready.update();scene_->setCurrentState(original);
           planJoint(ready,pre,label+" approach (reverse IK)");
-          up.reverse();saveDescent(up,label);
+          up.reverse();
+          if(incremental_)save(up,label+" fast descent single pickup");else saveDescent(up,label);
         }
+        if(incremental_)finishMotion("Pickup "+label+" continuous approach and descent");
         RCLCPP_INFO(logger_,"STACK_YAW degrees=%d reverse_ik=%d pre_z=%.4f label=%s",turn*90,reverse,approach_z,label.c_str());
         return {low,pre};
       }catch(const std::exception& error){
+        cancelMotion();
         checkStop();
         RCLCPP_WARN(logger_,"STACK_APPROACH_RETRY yaw=%d reverse=%d pre_z=%.4f label=%s reason=%s",turn*90,reverse,approach_z,label.c_str(),error.what());
       }
@@ -1363,7 +1573,8 @@ private:
     });
     const double tower_top=stack_surface_z_+block_.z()*(layer-1);
     T high=low;
-    high.translation().z()+=std::max(placement_clearance_,tower_top+placement_clearance_-minimum);
+    const double clearance=incremental_?incremental_transfer_clearance_:placement_clearance_;
+    high.translation().z()+=std::max(clearance,tower_top+clearance-minimum);
     return high;
   }
   bool placementTransitClear(const State& state)const {
@@ -1374,11 +1585,104 @@ private:
     return eachPlacementBound(state,tcp,carry_fixed_,[&](const auto& corners) {
       Eigen::Vector3d low=Eigen::Vector3d::Constant(std::numeric_limits<double>::infinity()),high=-low;
       for(const auto& point:corners){low=low.cwiseMin(point);high=high.cwiseMax(point);}
-      if(placement_crossing_)return low.z()>=placement_tower_top_+placement_clearance_-.002;
+      if(placement_crossing_)return low.z()>=placement_tower_top_+
+        (incremental_?incremental_transfer_clearance_:placement_clearance_)-.002;
       return high.x()<targetXY().x()-half.x()-.01||low.x()>targetXY().x()+half.x()+.01||
              high.y()<targetXY().y()-half.y()-.01||low.y()>targetXY().y()+half.y()+.01||
-             low.z()>=placement_tower_top_+.02;
+             low.z()>=placement_tower_top_+(incremental_?incremental_transfer_clearance_-.002:.02);
     });
+  }
+  void planIncrementalPlacementTransit(const T& target,int layer,const std::string& object,const std::string& label) {
+    // Prefer a vertical lift and level direct crossing. If the source is too
+    // far from the base to reach that height, rise along one direct TCP path
+    // after a short vertical departure. Both use a single timed carry goal.
+    State original(scene_->getCurrentState());original.update();
+    const T start=world_frame_.inverse()*original.getGlobalLinkTransform(tcp_);
+    Eigen::Vector3d minimum=Eigen::Vector3d::Constant(std::numeric_limits<double>::infinity()),maximum=-minimum;
+    const Eigen::Quaterniond first(start.linear()),last(target.linear());
+    const int orientation_samples=std::max(1,static_cast<int>(std::ceil(first.angularDistance(last)/.01)));
+    std::vector<double> fingers{close_};
+    const int finger_count=std::max(1,static_cast<int>(std::ceil((holding_finger_upper_-holding_finger_lower_)/.005)));
+    for(int i=0;i<=finger_count;++i)fingers.push_back(holding_finger_lower_+(holding_finger_upper_-holding_finger_lower_)*i/finger_count);
+    for(double finger:fingers) {
+      State shape(original);shape.setJointGroupActivePositions(gripper_group_,std::vector<double>{finger});shape.update();
+      for(int sample=0;sample<=orientation_samples;++sample) {
+        T pose=T::Identity();pose.linear()=first.slerp(static_cast<double>(sample)/orientation_samples,last).toRotationMatrix();
+        eachPlacementBound(shape,pose,carry_fixed_,[&](const auto& corners) {
+          for(const auto& point:corners){minimum=minimum.cwiseMin(point);maximum=maximum.cwiseMax(point);}return true;
+        });
+      }
+    }
+    placement_tower_top_=stack_surface_z_+block_.z()*(layer-1);
+    double floor=placement_tower_top_+incremental_transfer_clearance_;
+    // Raise for a taller obstacle only when the carried envelope's direct XY
+    // sweep overlaps it. This avoids using the global home/travel height.
+    for(int id:obstacles_) {
+      const auto half=(rotation_.cwiseAbs()*obstacle_/2.).head<2>().eval();
+      const Eigen::Vector2d low=cells_[id-1]-half-maximum.head<2>();
+      const Eigen::Vector2d high=cells_[id-1]+half-minimum.head<2>();
+      double enter=0.,leave=1.;bool overlap=true;
+      for(int axis=0;axis<2;++axis) {
+        const double p=start.translation()[axis],delta=target.translation()[axis]-p;
+        if(std::abs(delta)<1e-10){if(p<low[axis]||p>high[axis])overlap=false;}
+        else {
+          double a=(low[axis]-p)/delta,b=(high[axis]-p)/delta;if(a>b)std::swap(a,b);
+          enter=std::max(enter,a);leave=std::min(leave,b);
+        }
+      }
+      if(overlap&&enter<=leave)floor=std::max(floor,obstacle_surface_z_+obstacle_.z()+physical_contact_clearance_);
+    }
+    T up=start;up.translation().z()=std::max(start.translation().z(),floor-minimum.z()+.002);
+    placement_transit_check_=placement_crossing_=false;
+    try {
+      planStraight(up,"Lift block "+object.substr(object.find_last_of('_')+1)+" single vertical pickup");
+      // End the complete carry before changing scene permissions. During the
+      // macro, the bounded ACM permits only numerical surface contact.
+      placement_transit_check_=placement_crossing_=true;
+      T across=target;across.translation().z()=up.translation().z();
+      planDirectTcpTransfer(across,label+" direct above tower crossing");
+      placement_transit_check_=placement_crossing_=false;
+      RCLCPP_INFO(logger_,"STACK_DIRECT_PICKUP layer=%d tower_top=%.4f required_bottom=%.4f tcp_z=%.4f lift_segments=1",layer,
+        placement_tower_top_,floor,up.translation().z());
+    }catch(const std::exception& error) {
+      placement_transit_check_=placement_crossing_=false;checkStop();
+      if(!collecting_motion_||motion_role_!="carry")throw;
+      RCLCPP_INFO(logger_,"STACK_DIRECT_RISING_TRANSFER layer=%d reason=%s",layer,error.what());
+      collected_motion_->clear();scene_->setCurrentState(original);
+      try {
+        T departure=start;departure.translation().z()+=incremental_pickup_clearance_;
+        planStraight(departure,label+" vertical departure before rising transfer");
+        // Outside the tower footprint no global tower-height lift is needed.
+        // Every bound must already be 50mm above the top before it overlaps
+        // that footprint; full scene collision checks still include obstacles.
+        placement_transit_check_=true;placement_crossing_=false;
+        T across=target;across.translation().z()=up.translation().z();
+        planDirectTcpTransfer(across,label+" direct rising transfer");
+        placement_transit_check_=placement_crossing_=false;
+      }catch(...) {placement_transit_check_=placement_crossing_=false;throw;}
+    }
+  }
+  void planDirectTcpTransfer(const T& target,const std::string& label) {
+    State previous(scene_->getCurrentState());previous.update();
+    const T start=world_frame_.inverse()*previous.getGlobalLinkTransform(tcp_);
+    const Eigen::Quaterniond first(start.linear()),last(target.linear());
+    const int count=std::max({1,static_cast<int>(std::ceil((target.translation()-start.translation()).norm()/step_)),
+      static_cast<int>(std::ceil(first.angularDistance(last)/.01))});
+    robot_trajectory::RobotTrajectory path(model_,group_);path.addSuffixWayPoint(previous,0.);
+    for(int index=1;index<=count;++index) {
+      checkStop();const double fraction=static_cast<double>(index)/count;
+      T waypoint=T::Identity();waypoint.translation()=start.translation()+fraction*(target.translation()-start.translation());
+      waypoint.linear()=first.slerp(fraction,last).toRotationMatrix();
+      State next(previous);
+      if(!solve(waypoint,next))throw std::runtime_error("Direct TCP crossing blocked: "+label);
+      for(const auto& name:arm_group_->getVariableNames())
+        if(std::abs(next.getVariablePosition(name)-previous.getVariablePosition(name))>.5)
+          throw std::runtime_error("Direct TCP crossing changes IK branch: "+label);
+      path.addSuffixWayPoint(next,0.);previous=next;
+    }
+    // Interpolating tool0 when turning an offset TCP makes the grasp point
+    // follow an arc. Solve the straight grasp-link path itself instead.
+    save(path,label);
   }
   void planPlacementTransit(const T& target,int layer,const std::string& label) {
     State original(scene_->getCurrentState());original.update();const auto count=steps_.size();
@@ -1442,15 +1746,26 @@ private:
         State probe(original);if(!solve(pre,probe))continue;
         T high=raisedPlacement(candidate.second,layer,carry_fixed_);
         high.translation().z()=std::max(high.translation().z(),pre.translation().z());
-        planPlacementTransit(high,layer,label);
-        planDescent(pre,label+" side outside tower");
+        if(incremental_) {
+          beginMotion("carry");
+          planIncrementalPlacementTransit(high,layer,object,label);
+          planStraight(pre,label+" side outside tower");
+          finishMotion("Carry block to layer "+std::to_string(layer));
+          tableContact(object,false);
+          supportContact(object,support);
+          beginMotion("place");
+        } else {
+          planPlacementTransit(high,layer,label);
+          planDescent(pre,label+" side outside tower");
+        }
         side_hover_floor_=stack_surface_z_+block_.z()*(layer-1)+lift+release_lift_;
         side_hover_check_=lift>0.;
         planStraight(entry,label+" horizontal insert above support");
         side_hover_check_=false;
         // The carried cube may touch its support only after XY alignment.
-        supportContact(object,support);
+        if(!incremental_)supportContact(object,support);
         if(lift>0.)planDescent(candidate.first,label+" side setdown");
+        if(incremental_)finishMotion("Place block on layer "+std::to_string(layer));
         placed_cube_=candidate.first*carry_fixed_;
         if(lift>0.)placement_retreat_={entry,pre};
         RCLCPP_INFO(logger_,"STACK_SIDE_HOVER layer=%d lift=%.4f support_top_z=%.4f cube_bottom_z=%.4f",layer,
@@ -1460,24 +1775,43 @@ private:
           (candidate.first.linear()*tcp_approach_.linear())(1,2),
           (candidate.first.linear()*tcp_approach_.linear())(2,2));
         return {candidate.first,pre};
-      }catch(const std::exception& error){side_hover_check_=false;placement_retreat_.clear();checkStop();RCLCPP_WARN(logger_,"STACK_SIDE_RETRY layer=%d reason=%s",layer,error.what());}
+      }catch(const std::exception& error){cancelMotion();side_hover_check_=false;placement_retreat_.clear();checkStop();RCLCPP_WARN(logger_,"STACK_SIDE_RETRY layer=%d reason=%s",layer,error.what());}
     }
     scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
     if(!vertical&&layer>vertical_fallback_)throw std::runtime_error("No collision-free side placement: "+label);
     T place=at(targetXY(),stack_surface_z_+block_.z()*(layer-1)+grip_height_+release_lift_);
-    for(int turn=0;turn<4;++turn) {
+    std::vector<int> turns{0,1,2,3};
+    if(incremental_) {
+      const Eigen::Quaterniond orientation((world_frame_.inverse()*original.getGlobalLinkTransform(tcp_)).linear());
+      std::stable_sort(turns.begin(),turns.end(),[&](int a,int b) {
+        return orientation.angularDistance(Eigen::Quaterniond(Eigen::AngleAxisd(a*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*place.linear()))<
+               orientation.angularDistance(Eigen::Quaterniond(Eigen::AngleAxisd(b*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*place.linear()));
+      });
+    }
+    for(int turn:turns) {
       checkStop();scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
       T low=place;low.linear()=Eigen::AngleAxisd(turn*PI/2.,Eigen::Vector3d::UnitZ()).toRotationMatrix()*place.linear();
       try {
         const T high=raisedPlacement(low,layer,carry_fixed_);
-        planPlacementTransit(high,layer,label);
+        if(incremental_) {
+          beginMotion("carry");
+          planIncrementalPlacementTransit(high,layer,object,label);
+          T near=low;near.translation().z()+=physical_approach_clearance_;
+          planStraight(near,label+" fast to final contact zone");
+          finishMotion("Carry block to layer "+std::to_string(layer));
+          tableContact(object,false);
+        } else planPlacementTransit(high,layer,label);
         // Only the final straight descent may touch the intended support.
         supportContact(object,support);
-        planDescent(low,label);
+        if(incremental_) {
+          beginMotion("place");
+          planStraight(low,label+" final slow setdown");
+          finishMotion("Place block on layer "+std::to_string(layer));
+        } else planDescent(low,label);
         placed_cube_=low*carry_fixed_;
         RCLCPP_INFO(logger_,"STACK_PLACEMENT layer=%d mode=vertical pre_z=%.4f",layer,high.translation().z());
         return {low,high};
-      }catch(const std::exception& error){checkStop();RCLCPP_WARN(logger_,"STACK_VERTICAL_RETRY layer=%d yaw=%d reason=%s",layer,turn*90,error.what());}
+      }catch(const std::exception& error){cancelMotion();checkStop();RCLCPP_WARN(logger_,"STACK_VERTICAL_RETRY layer=%d yaw=%d reason=%s",layer,turn*90,error.what());}
     }
     scene_->setCurrentState(original);scene_->getAllowedCollisionMatrixNonConst()=acm;steps_.resize(count);
     throw std::runtime_error("No collision-free raised vertical placement: "+label);
@@ -1564,8 +1898,37 @@ private:
     if(fraction<1.-1e-6||states.empty())return false;
     for(auto& s:states)output.addSuffixWayPoint(s,0.0);return true;
   }
+  void cancelMotion() {
+    collecting_motion_=false;collected_motion_.reset();motion_acm_.reset();motion_role_.clear();
+  }
+  void beginMotion(const std::string& role) {
+    if(!incremental_||collecting_motion_||!motion_role_.empty())throw std::runtime_error("Invalid continuous motion boundary");
+    motion_role_=role;collecting_motion_=true;
+    collected_motion_=std::make_unique<robot_trajectory::RobotTrajectory>(model_,group_);
+    motion_acm_=std::make_unique<collision_detection::AllowedCollisionMatrix>(scene_->getAllowedCollisionMatrix());
+    incremental_motion::boundSurfaceContacts(*scene_,*motion_acm_);
+  }
+  void finishMotion(const std::string& label) {
+    if(!collecting_motion_||!collected_motion_||collected_motion_->empty())
+      throw std::runtime_error("Empty continuous motion: "+label);
+    collecting_motion_=false;
+    // Save once, with one timing pass and only the macro endpoints at rest.
+    scene_->setCurrentState(collected_motion_->getFirstWayPoint());
+    save(*collected_motion_,label);
+    RCLCPP_INFO(logger_,"STACK_CONTINUOUS_MOTION role=%s layer=%d points=%zu velocity=%.3f acceleration=%.3f",motion_role_.c_str(),
+      motion_layer_,collected_motion_->getWayPointCount(),steps_.back().velocity_scaling,steps_.back().acceleration_scaling);
+    cancelMotion();
+  }
   void save(robot_trajectory::RobotTrajectory& trajectory,const std::string& label,bool hand=false) {
     checkStop();
+    if(collecting_motion_) {
+      if(hand)throw std::runtime_error("Gripper command inside continuous arm motion");
+      for(std::size_t i=0;i<trajectory.getWayPointCount();++i)
+        if(collected_motion_->empty()||collected_motion_->getLastWayPoint().distance(trajectory.getWayPoint(i),arm_group_)>1e-8)
+          collected_motion_->addSuffixWayPoint(trajectory.getWayPoint(i),0.);
+      if(!collected_motion_->empty())scene_->setCurrentState(collected_motion_->getLastWayPoint());
+      return;
+    }
     if(empty_hand_test_) {
       if(hand)throw std::runtime_error("A gripper trajectory appeared in the empty-hand plan");
       for(std::size_t i=0;i<trajectory.getWayPointCount();++i) {
@@ -1588,8 +1951,14 @@ private:
     // Only final grasp/place entry uses the lower velocity and acceleration.
     // Lifting, retreating, reorientation and transport use the faster profile.
     const bool near_contact=phase=="approach"||phase=="contact";
-    const double velocity=hand?.4:(split?(phase=="descent_fast"?descent_vel_:near_contact?approach_vel_:transfer_vel_):vel_);
-    const double acceleration=hand?.4:(split?(phase=="descent_fast"?descent_acc_:near_contact?approach_acc_:transfer_acc_):acc_);
+    double velocity=hand?.4:(split?(phase=="descent_fast"?descent_vel_:near_contact?approach_vel_:transfer_vel_):vel_);
+    double acceleration=hand?.4:(split?(phase=="descent_fast"?descent_acc_:near_contact?approach_acc_:transfer_acc_):acc_);
+    if(incremental_&&!hand&&!motion_role_.empty()) {
+      if(motion_role_=="pickup"){velocity=incremental_pickup_vel_;acceleration=incremental_pickup_acc_;}
+      else if(motion_role_=="place"){velocity=approach_vel_;acceleration=approach_acc_;}
+      else if(motion_layer_<=incremental_fast_layers_){velocity=incremental_low_vel_;acceleration=incremental_low_acc_;}
+      else {velocity=incremental_high_vel_;acceleration=incremental_high_acc_;}
+    }
     trajectory_processing::IterativeParabolicTimeParameterization time;
     if(!time.computeTimeStamps(trajectory,velocity,acceleration))throw std::runtime_error("Timing failed: "+label);
     for(std::size_t i=1;i<trajectory.getWayPointCount();++i)
@@ -1621,6 +1990,7 @@ private:
       previous=next;
     }
     Step step;step.label=label;step.hand=hand;step.phase=phase;
+    if(incremental_&&!hand)step.motion_role=motion_role_;
     step.velocity_scaling=velocity;step.acceleration_scaling=acceleration;
     trajectory.getRobotTrajectoryMsg(step.trajectory);
     if(captureRecipe()) {
@@ -1640,7 +2010,7 @@ private:
   }
   void saveDescent(robot_trajectory::RobotTrajectory& path,const std::string& label) {
     // Keep the reverse-IK branch and all its exact geometric waypoints. Split
-    // only the timing, leaving at least 40mm (plus one Cartesian step) slow.
+    // only the timing, keeping the configured final contact zone (plus one step) slow.
     const T first=world_frame_.inverse()*path.getFirstWayPoint().getGlobalLinkTransform(tcp_);
     const T last=world_frame_.inverse()*path.getLastWayPoint().getGlobalLinkTransform(tcp_);
     std::size_t split=0;
@@ -1683,21 +2053,72 @@ private:
     planStraight(clear,label+" contact clearance");
     if(distance>physical_contact_clearance_+1e-6)planStraight(target,label);
   }
-  void planFree(const T& target,const std::string& label) {
+  double emptyPickupCrossingHeight(const State& current,const T& start,const T& target)const {
+    Eigen::Vector3d minimum=Eigen::Vector3d::Constant(std::numeric_limits<double>::infinity()),maximum=-minimum;
+    const Eigen::Quaterniond first(start.linear()),last(target.linear());
+    const int turns=std::max(1,static_cast<int>(std::ceil(first.angularDistance(last)/.01)));
+    const auto& bounds=model_->getVariableBounds(hand_joint_);
+    const double nominal=current.getVariablePosition(hand_joint_);
+    for(int finger=0;finger<=4;++finger) {
+      State shape(current);
+      shape.setJointGroupActivePositions(gripper_group_,std::vector<double>{
+        std::clamp(nominal-.006+.012*finger/4.,bounds.min_position_,bounds.max_position_)});
+      shape.update();const T tcp=shape.getGlobalLinkTransform(tcp_);
+      for(int turn=0;turn<=turns;++turn) {
+        T orientation=T::Identity();orientation.linear()=first.slerp(static_cast<double>(turn)/turns,last).toRotationMatrix();
+        for(const auto& bound:gripper_bounds_) {
+          const T relative=orientation*tcp.inverse()*shape.getGlobalLinkTransform(bound.link);
+          for(const auto& corner:bound.corners) {
+            const Eigen::Vector3d point=relative*corner;
+            minimum=minimum.cwiseMin(point);maximum=maximum.cwiseMax(point);
+          }
+        }
+      }
+    }
+    double high=std::max(start.translation().z(),target.translation().z());
+    for(int id:obstacles_) {
+      const auto half=(rotation_.cwiseAbs()*obstacle_/2.).head<2>().eval();
+      const Eigen::Vector2d low=cells_[id-1]-half-maximum.head<2>();
+      const Eigen::Vector2d upper=cells_[id-1]+half-minimum.head<2>();
+      double enter=0.,leave=1.;bool overlap=true;
+      for(int axis=0;axis<2;++axis) {
+        const double p=start.translation()[axis],delta=target.translation()[axis]-p;
+        if(std::abs(delta)<1e-10){if(p<low[axis]||p>upper[axis])overlap=false;}
+        else {
+          double a=(low[axis]-p)/delta,b=(upper[axis]-p)/delta;if(a>b)std::swap(a,b);
+          enter=std::max(enter,a);leave=std::min(leave,b);
+        }
+      }
+      if(overlap&&enter<=leave)
+        high=std::max(high,obstacle_surface_z_+obstacle_.z()+physical_contact_clearance_-minimum.z()+.002);
+    }
+    return high;
+  }
+  void planFree(const T& target,const std::string& label,bool compact_only=false) {
     State current(scene_->getCurrentState());current.update();T start=world_frame_.inverse()*current.getGlobalLinkTransform(tcp_);
     std::vector<std::vector<T>> routes{{target}};
-    double high=std::max({start.translation().z(),target.translation().z(),travel_z_});
+    double high=std::max(start.translation().z(),target.translation().z());
+    if(!incremental_)high=std::max(high,travel_z_);
     T up=start,across=target;up.translation().z()=high;across.translation().z()=high;routes.push_back({up,across,target});
+    std::size_t raised=std::numeric_limits<std::size_t>::max();
+    if(incremental_) {
+      const double over=emptyPickupCrossingHeight(current,start,target);
+      if(over>high+1e-6) {
+        T lift=start,cross=target;lift.translation().z()=cross.translation().z()=over;
+        raised=routes.size();routes.push_back({lift,cross,target});
+      }
+    }
     // Side staging lets the arm approach a high tower without lifting a distant source beyond its reach.
     Eigen::Vector2d near=start.translation().head<2>();
     if(target.translation().z()>start.translation().z())near=target.translation().head<2>();
     double toward=std::atan2(-near.y(),-near.x());
-    for(double radius:{.10,.14})for(int direction=0;direction<8;++direction) {
+    const auto compact_count=routes.size();
+    if(!compact_only)for(double radius:{.10,.14})for(int direction=0;direction<8;++direction) {
       double angle=toward+direction*PI/4.;Eigen::Vector2d side=near+radius*Eigen::Vector2d(std::cos(angle),std::sin(angle));
       routes.push_back({at(side,start.translation().z()),at(side,target.translation().z()),target});
     }
     for(std::size_t index=0;index<routes.size();++index) {
-      if(physical_stack_&&index==1) {
+      if(physical_stack_&&((!incremental_&&index==1)||(incremental_&&!compact_only&&index==compact_count))) {
         State goal(current);
         if(solve(target,goal)&&tryJointShortcut(goal,target,label))return;
       }
@@ -1705,13 +2126,17 @@ private:
       if(cartesian(routes[index],path)) {
         try {
           save(path,label);
-          RCLCPP_INFO(logger_,"STACK_ROUTE strategy=%zu label=%s",index,label.c_str());return;
+          if(index==raised)RCLCPP_INFO(logger_,"STACK_ROUTE strategy=LOCAL_ABOVE_OBSTACLE tcp_z=%.4f label=%s",
+            routes[index].front().translation().z(),label.c_str());
+          else RCLCPP_INFO(logger_,"STACK_ROUTE strategy=%zu label=%s",index,label.c_str());
+          return;
         }catch(const std::exception& error){
           checkStop();scene_->setCurrentState(current);
           RCLCPP_WARN(logger_,"STACK_ROUTE_RETRY strategy=%zu label=%s reason=%s",index,label.c_str(),error.what());
         }
       }
     }
+    if(compact_only)throw std::runtime_error("Compact pickup route blocked at this height/yaw: "+label);
     // OMPL searches around world obstacles and the carried cube if Cartesian staging is insufficient.
     State goal(current);if(!solve(target,goal))throw std::runtime_error("Unreachable transfer target: "+label);
     planJoint(goal,target,label);
@@ -1787,7 +2212,7 @@ private:
     if(physical_stack_&&tryJointShortcut(goal,target,label))return;
     State current(scene_->getCurrentState());current.update();
     planning_interface::MotionPlanRequest request;request.group_name=group_;
-    request.allowed_planning_time=5.;request.num_planning_attempts=2;
+    request.allowed_planning_time=5.;request.num_planning_attempts=planner_workers_;
     moveit::core::robotStateToRobotStateMsg(current,request.start_state);
     request.goal_constraints.push_back(kinematic_constraints::constructGoalConstraints(goal,arm_group_,.0001));
     request.path_constraints=transitConstraints(current,target);
@@ -1921,16 +2346,31 @@ private:
     strings(out,joint_names);out<<",\"initial_joints\":";numbers(out,recipeJoints(*initial_state_));
     out<<",\"target_cell\":"<<target_<<",\"foundation_layers\":"<<foundationLayers()
        <<",\"moves\":"<<total_<<",\"layers\":"<<total_+foundationLayers()
-       <<",\"routing_policy\":\"open_gripper_buffer_v1\",\"transport_moves\":"<<transport_total_
+       <<",\"routing_policy\":"<<jsonString(incremental_?"incremental_continuous_v3":"open_gripper_buffer_v1")
+       <<",\"transport_moves\":"<<transport_total_
        <<",\"buffer_selection_policy\":"<<jsonString(rearrangement::BUFFER_SELECTION_POLICY)
        <<",\"buffer_moves\":"<<transport_total_-total_
        <<",\"source_cells\":[";
     bool separator=false;
-    for(int id=1;id<=columns_*rows_;++id)if((independent_target_||id!=target_)&&!obstacles_.count(id)&&!empty_.count(id)) {
+    for(int id=1;id<=columns_*rows_;++id)if(incremental_?id==incremental_source_:
+        ((independent_target_||id!=target_)&&!obstacles_.count(id)&&!empty_.count(id))) {
       if(separator)out<<',';out<<id;separator=true;
     }
-    out<<']'
-       <<",\"placement_policy\":\"raised_tower_hover_setdown_v2\",\"placement_mode\":"<<jsonString(placement_mode_)
+    out<<']';
+    if(incremental_)out<<",\"incremental_state_before\":"<<incrementalStateJson(*incremental_before_)
+       <<",\"incremental_state_after\":"<<incrementalStateJson(*incremental_after_)
+       <<",\"post_place_retreat_clearance\":"<<post_place_retreat_clearance_
+       <<",\"incremental_pickup_approach_clearance\":"<<incremental_pickup_clearance_
+       <<",\"incremental_transfer_clearance\":"<<incremental_transfer_clearance_
+       <<",\"incremental_pickup_policy\":\"continuous_pick_carry_place_v2\""
+       <<",\"incremental_route_policy\":\"compact_above_obstacle_before_staging_v1\""
+       <<",\"surface_contact_policy\":\"bounded_depth_1e-5_v1\""
+       <<",\"incremental_motion_profile\":{\"fast_layers\":"<<incremental_fast_layers_
+       <<",\"pickup\":["<<incremental_pickup_vel_<<','<<incremental_pickup_acc_
+       <<"],\"low\":["<<incremental_low_vel_<<','<<incremental_low_acc_
+       <<"],\"high\":["<<incremental_high_vel_<<','<<incremental_high_acc_
+       <<"],\"place\":["<<approach_vel_<<','<<approach_acc_<<"]}";
+    out<<",\"placement_policy\":\"raised_tower_hover_setdown_v2\",\"placement_mode\":"<<jsonString(placement_mode_)
        <<",\"vertical_placement_layers\":"<<vertical_placement_layers_
        <<",\"placement_approach_clearance\":"<<placement_clearance_
        <<",\"side_entry_clearance\":"<<side_entry_clearance_
@@ -1964,6 +2404,8 @@ private:
       if(step.phase=="place")out<<",\"block_id\":"<<step.block<<",\"destination_cell\":"<<step.destination
         <<",\"temporary\":"<<(step.temporary?"true":"false");
       if(step.hand)out<<",\"hand_target\":"<<step.end_joints.back();
+      if(!step.motion_role.empty())out<<",\"motion_role\":"<<jsonString(step.motion_role)
+        <<",\"surface_contact_policy\":\"bounded_depth_1e-5_v1\"";
       if(!step.event) {
         const auto& duration=step.trajectory.joint_trajectory.points.back().time_from_start;
         out<<",\"duration\":"<<duration.sec+duration.nanosec*1e-9;
@@ -2420,17 +2862,29 @@ private:
   std::size_t archive_completed_commands_=0;
   int archive_completed_moves_=0;
   std::vector<AlignmentStop> alignment_stops_;
-  int target_,columns_,rows_,vertical_fallback_,vertical_placement_layers_;std::set<int> obstacles_,empty_;std::size_t total_=0;
+  int target_,columns_,rows_,vertical_fallback_,vertical_placement_layers_,planner_workers_=2;std::set<int> obstacles_,empty_;std::size_t total_=0;
   double width_,height_,table_z_,grip_height_,clearance_,side_clearance_,vel_,acc_,open_,close_,step_,travel_z_,release_lift_;
   double placement_clearance_=.12,placement_tower_top_=0.,side_entry_clearance_=.01,side_hover_floor_=0.;
   bool side_hover_check_=false;
   std::vector<T> placement_retreat_;
   bool placement_transit_check_=false,placement_crossing_=false;
   bool split_speeds_=true,staged_release_=true,physical_stack_=false;
+  bool incremental_=false;
+  bool collecting_motion_=false;
+  std::string motion_role_;
+  int motion_layer_=0,incremental_fast_layers_=10;
+  double incremental_pickup_vel_=1.,incremental_pickup_acc_=1.,incremental_low_vel_=1.,incremental_low_acc_=1.;
+  double incremental_high_vel_=.35,incremental_high_acc_=.20;
+  std::unique_ptr<robot_trajectory::RobotTrajectory> collected_motion_;
+  std::unique_ptr<collision_detection::AllowedCollisionMatrix> motion_acm_;
+  double post_place_retreat_clearance_=.050,incremental_pickup_clearance_=.080,incremental_transfer_clearance_=.050;
+  int incremental_source_=0;
+  std::unique_ptr<rearrangement::Layout> incremental_before_,incremental_after_;
   double approach_vel_=.05,transfer_vel_=.20,stack_acc_=.05,approach_acc_=.05,transfer_acc_=.20;
-  double physical_contact_clearance_=.04;
+  double physical_contact_clearance_=.02;
   double physical_approach_clearance_=.04,descent_vel_=.20,descent_acc_=.20;
   double release_first_=.70,release_clearance_=.60;
+  double holding_finger_lower_=.690,holding_finger_upper_=.733;
   bool empty_hand_test_=false,empty_xy_scan_=false,scan_floor_check_=false;
   bool plate_enabled_=false,independent_target_=false,target_has_foundation_=false,plate_alignment_=false;
   double plate_bottom_z_=0.,source_surface_z_=0.,stack_surface_z_=0.,obstacle_surface_z_=0.,plate_yaw_=0.,alignment_clearance_=.05;
